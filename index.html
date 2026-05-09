@@ -293,9 +293,10 @@ button{
   box-shadow:inset 0 0 24px rgba(255,248,231,.15);
 }
 .room-logic{background:linear-gradient(135deg,#0E7490 0%,#581C87 100%)}
+.room-speed{background:linear-gradient(135deg,#DC2626 0%,#7C2D12 100%)}
 .room-daily{background:linear-gradient(135deg,#10B981 0%,#064E3B 100%)}
 .lobby-foot{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
   margin-top:8px;
 }
 .foot-btn{
@@ -899,7 +900,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.3.0 · 14 games · 7 rooms · avatar designer · 🙏</div>
+  <div class="splash-foot">v0.4.0 · 17 games · 8 rooms · battle pass · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -978,6 +979,10 @@ button{
         <div><div class="em">🧩</div><div class="name">Logic Lab</div></div>
         <div class="sub">puzzles · patterns</div>
       </button>
+      <button class="room-door room-speed" onclick="App.openRoom('speed')">
+        <div><div class="em">⚡</div><div class="name">Speed Wing</div></div>
+        <div class="sub">reflex · color · code</div>
+      </button>
       <button class="room-door room-daily" onclick="App.openRoom('daily')">
         <div><div class="em">🎲</div><div class="name">Daily Court</div></div>
         <div class="sub">spotlight · 2x rewards</div>
@@ -985,7 +990,8 @@ button{
     </div>
     <div class="lobby-foot">
       <button class="foot-btn" onclick="App.openStats()"><span class="em">🏆</span>STATS</button>
-      <button class="foot-btn" onclick="App.openAch()"><span class="em">🎖️</span>ACHIEVEMENTS</button>
+      <button class="foot-btn" onclick="App.openAch()"><span class="em">🎖️</span>ACH</button>
+      <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
       <button class="foot-btn" onclick="App.openAbout()"><span class="em">ℹ️</span>ABOUT</button>
     </div>
   </div>
@@ -1036,7 +1042,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 
 // ----- STATE -----
 const State = {
@@ -1059,6 +1065,8 @@ const DEFAULT_SAVE = {
   avatar:{character:'monk',hat:'none',face:'none',aura:'none',pet:'none',outfit:'plain'},
   activityLog:[], // recent events {ts, type, msg}
   brainDNA:{memory:0,speed:0,pattern:0,logic:0,word:0,faith:0}, // accumulating per-room scores
+  // v0.4 additions
+  bp:{xp:0, claimed:[]}, // battle pass state
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -1229,6 +1237,12 @@ const ACHIEVEMENTS = [
   {id:'lights_perfect',em:'💡',t:'Pure Light',d:'Clear Lights Out in ≤6 moves'},
   {id:'avatar_designer',em:'👤',t:'Style Saint',d:'Customize your avatar'},
   {id:'dna_balanced',em:'🧬',t:'Balanced Mind',d:'5+ wins in every Brain DNA axis'},
+  // v0.4 additions
+  {id:'speed_5',em:'⚡',t:'Speedster I',d:'Win 5 speed games'},
+  {id:'speed_25',em:'⚡',t:'Speedster II',d:'Win 25 speed games'},
+  {id:'bp_tier3',em:'🎫',t:'Pass Starter',d:'Claim Battle Pass tier 3'},
+  {id:'bp_tier10',em:'👑',t:'Pentecost Brain',d:'Claim final Battle Pass tier'},
+  {id:'iq_2000',em:'🌟',t:'Apostle Sage',d:'Reach IQ 2000'},
 ];
 
 // ====================================================================
@@ -1285,7 +1299,7 @@ const DNA = {
   bumpFromRoom(room){
     const d = State.data;
     if(!d.brainDNA) d.brainDNA = {memory:0,speed:0,pattern:0,logic:0,word:0,faith:0};
-    const map = {word:'word', brain:'memory', mind:'pattern', num:'logic', script:'faith', logic:'logic', daily:'speed'};
+    const map = {word:'word', brain:'memory', mind:'pattern', num:'logic', script:'faith', logic:'logic', speed:'speed', daily:'speed'};
     const axis = map[room]; if(axis) d.brainDNA[axis]++;
   },
   axes(){
@@ -1381,8 +1395,14 @@ const Ach = {
     if(d.iq>=1500) Ach.unlock('iq_1500');
     if(sum('logic')>=5) Ach.unlock('logic_5');
     if(sum('logic')>=25) Ach.unlock('logic_25');
-    // try-everything: played all 13 non-daily games
-    const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt'];
+    if(sum('speed')>=5) Ach.unlock('speed_5');
+    if(sum('speed')>=25) Ach.unlock('speed_25');
+    if(d.iq>=2000) Ach.unlock('iq_2000');
+    // BP-based
+    if((d.bp?.claimed?.length||0)>=3) Ach.unlock('bp_tier3');
+    if((d.bp?.claimed?.length||0)>=10) Ach.unlock('bp_tier10');
+    // try-everything: played all 16 non-daily games
+    const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
     // dna_balanced: 5+ in every axis
     const dna = State.data.brainDNA||{};
@@ -1562,6 +1582,11 @@ const ROOMS = {
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
     {id:'spot',em:'🔍',name:'Spot Different',sub:'find the odd one out · 45 sec',launch:()=>SpotGame.start()},
     {id:'hunt',em:'🔢',name:'Number Hunt',sub:'find the duplicate pair · 45 sec',launch:()=>HuntGame.start()},
+  ]},
+  speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
+    {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
+    {id:'whack',em:'🌟',name:'Whack-a-Star',sub:'tap stars · NOT bombs · 30 sec',launch:()=>WhackGame.start()},
+    {id:'code',em:'🔑',name:'Code Sprint',sub:'memorize 4-digit codes · 5 rounds',launch:()=>CodeSprintGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -1812,6 +1837,45 @@ const App = {
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
   },
+  openBP(){
+    document.getElementById('aux-title').innerHTML = '🎫 Battle Pass · S1';
+    const bp = State.data.bp || {xp:0, claimed:[]};
+    const cur = BP.currentTier();
+    const nextTier = BP_TIERS[cur+1];
+    const progress = nextTier ? Math.min(100, Math.round((bp.xp / nextTier.xp)*100)) : 100;
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center">
+        <b style="color:var(--gold-bright);font-size:18px">PENTECOST BRAIN · Season 1</b><br>
+        <span class="dim">XP: ${bp.xp}${nextTier?` / ${nextTier.xp}`:' · MAX'}</span>
+        <div style="background:rgba(255,255,255,.1);height:10px;border-radius:99px;margin-top:8px;overflow:hidden">
+          <div style="background:linear-gradient(90deg,var(--gold),var(--gold-bright));height:100%;width:${progress}%;transition:width .3s"></div>
+        </div>
+      </div>`;
+    BP_TIERS.forEach((t,i)=>{
+      const claimed = bp.claimed.includes(i);
+      const canClaim = bp.xp >= t.xp && !claimed;
+      const cls = claimed ? 'opacity:.5' : canClaim ? 'border-color:#FBBF24;background:rgba(245,158,11,.15)' : '';
+      const status = claimed ? '✅ claimed' : canClaim ? '🎁 claim!' : `🔒 ${t.xp} XP`;
+      const btn = canClaim ? `<button class="btn-primary" style="padding:8px 14px;font-size:12px;width:auto" onclick="App.claimBP(${i})">CLAIM</button>` : `<span style="font-size:11px;font-weight:700;${claimed?'color:var(--good)':'opacity:.7'}">${status}</span>`;
+      html += `<div class="setting-row" style="${cls}">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">${t.em}</span>
+          <div><b style="display:block">Tier ${i+1}</b><span style="font-size:11px;opacity:.85">${t.name}</span></div>
+        </div>
+        ${btn}
+      </div>`;
+    });
+    html += `</div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  claimBP(i){
+    if(BP.claim(i)){
+      Toast.show(`🎫 Tier ${i+1} claimed!`);
+      App.openBP();
+      UI.updateWallet();
+    }
+  },
   openAvatar(){
     Ach.unlock('avatar_designer');
     const av = State.data.avatar || {...DEFAULT_SAVE.avatar};
@@ -1892,10 +1956,12 @@ function recordResult(roomId, gameId, won, rewards={}){
     Wallet.add(rewards);
     DNA.bumpFromRoom(roomId);
     Activity.log('win','🏆',`won ${gName}`);
+    BP.addXp(2);
   }else{
     d.totals.losses++;
     d.iq = Math.max(800, d.iq - 4);
     Activity.log('loss','💪',`played ${gName}`);
+    BP.addXp(1);
   }
   Save.write();
   Ach.check();
@@ -2889,15 +2955,288 @@ const HuntGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 15 · DAILY (rotating mini)
+// 🎮 GAME 15 · COLOR MATCH (Speed Wing)
+// ====================================================================
+const ColorMatchGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=30;
+    this.colors = [
+      {n:'RED',hex:'#EF4444'},{n:'BLUE',hex:'#3B82F6'},
+      {n:'GREEN',hex:'#10B981'},{n:'YELLOW',hex:'#F59E0B'},
+      {n:'PURPLE',hex:'#A855F7'},{n:'CYAN',hex:'#22D3EE'},
+    ];
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    UI.show('game');
+  },
+  next(){
+    this.target = this.colors[Math.floor(Math.random()*this.colors.length)];
+    const distract = [];
+    while(distract.length<3){
+      const c = this.colors[Math.floor(Math.random()*this.colors.length)];
+      if(c.n!==this.target.n && !distract.find(d=>d.n===c.n)) distract.push(c);
+    }
+    this.options = [this.target, ...distract].sort(()=>Math.random()-.5);
+    this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>⚡ Color Match</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap the color shown'));
+    const w = el('div','stroop-word', this.target.n);
+    w.style.color = this.target.hex;
+    wrap.appendChild(w);
+    const grid = el('div','stroop-grid');
+    this.options.forEach(c=>{
+      const b = el('button','stroop-btn', '');
+      b.style.background = c.hex;
+      b.style.aspectRatio = '1.6';
+      b.onclick = ()=>this.tap(c);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  tap(c){
+    if(c.n===this.target.n){ this.score++; SFX.correct(); haptic(8); }
+    else{ this.score=Math.max(0,this.score-1); SFX.wrong(); haptic(20); }
+    this.next();
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=15;
+    const rewards = won ? {coin:30+this.score*3, brain:3} : {coin:Math.max(10,this.score*2)};
+    recordResult('speed','colormatch',won,rewards);
+    if(won) Modal.win({rewards, title:`Matched ${this.score}!`, emoji:'🎨',
+      retry:()=>ColorMatchGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`Score ${this.score}`,msg:'aim for 15+ matches!',
+      retry:()=>ColorMatchGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 16 · WHACK-A-TARGET (Speed Wing)
+// ====================================================================
+const WhackGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=30;
+    this.activeIdx = -1;
+    this.target = '🌟';
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    this.spawnTimer = setInterval(()=>this.spawn(), 800);
+    this.spawn();
+    UI.show('game');
+  },
+  spawn(){
+    const idx = Math.floor(Math.random()*9);
+    const isTarget = Math.random()<.6;
+    this.activeIdx = idx;
+    this.activeIsTarget = isTarget;
+    this.activeEmoji = isTarget ? this.target : ['❌','💣','🚫'][Math.floor(Math.random()*3)];
+    this.render();
+  },
+  next(){ this.render(); },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>⚡ Whack-a-Star</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap 🌟 only · NOT bombs/Xs'));
+    const grid = el('div','');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(3,76px);gap:8px;margin:14px 0';
+    for(let i=0;i<9;i++){
+      const c = el('div','');
+      const isActive = i===this.activeIdx;
+      c.style.cssText = `aspect-ratio:1;border-radius:14px;background:${isActive?'rgba(245,158,11,.25)':'rgba(255,255,255,.08)'};border:2px solid ${isActive?'#F59E0B':'rgba(255,255,255,.16)'};display:grid;place-items:center;font-size:42px;cursor:pointer`;
+      c.textContent = isActive ? this.activeEmoji : '';
+      c.onclick=()=>this.tap(i);
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  tap(i){
+    if(i!==this.activeIdx) return;
+    if(this.activeIsTarget){ this.score++; SFX.correct(); haptic(8); }
+    else{ this.score=Math.max(0,this.score-2); SFX.wrong(); haptic(30); }
+    this.activeIdx = -1;
+    this.render();
+  },
+  end(){
+    clearInterval(this.timer);
+    clearInterval(this.spawnTimer);
+    const won = this.score>=12;
+    const rewards = won ? {coin:30+this.score*4, brain:3} : {coin:Math.max(10,this.score*2)};
+    recordResult('speed','whack',won,rewards);
+    if(won) Modal.win({rewards, title:`Whacked ${this.score}!`, emoji:'🌟',
+      retry:()=>WhackGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`Score ${this.score}`,msg:'aim for 12+ stars!',
+      retry:()=>WhackGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){
+    if(this.timer) clearInterval(this.timer);
+    if(this.spawnTimer) clearInterval(this.spawnTimer);
+  }
+};
+
+// ====================================================================
+// 🎮 GAME 17 · CODE SPRINT (Speed Wing)
+// ====================================================================
+const CodeSprintGame = {
+  start(){
+    State.gameInst=this;
+    this.round=0; this.score=0;
+    this.next();
+    UI.show('game');
+  },
+  next(){
+    if(this.round>=5){this.end();return;}
+    this.round++;
+    this.code = '';
+    for(let i=0;i<4;i++) this.code += Math.floor(Math.random()*10);
+    this.input = '';
+    this.phase = 'show';
+    this.render();
+    this.showTimer = setTimeout(()=>{
+      this.phase = 'input';
+      this.render();
+    }, 1500);
+  },
+  press(n){
+    if(this.phase!=='input') return;
+    if(this.input.length>=4) return;
+    this.input += n;
+    SFX.tap();
+    haptic(4);
+    if(this.input.length===4){
+      // submit
+      if(this.input===this.code){ this.score++; SFX.correct(); haptic(15); }
+      else{ SFX.wrong(); haptic(30); }
+      setTimeout(()=>this.next(), 600);
+    }
+    this.render();
+  },
+  delPress(){
+    if(this.phase!=='input') return;
+    this.input = this.input.slice(0,-1);
+    haptic(4);
+    this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>⚡ Code Sprint</b> · round <b>${this.round}/5</b> · score <b>${this.score}</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    if(this.phase==='show'){
+      wrap.appendChild(el('div','dim','memorize this code · 1.5s'));
+      const big = el('div','math-q', this.code.split('').join(' '));
+      big.style.color = 'var(--gold-bright)';
+      big.style.fontSize='56px';
+      wrap.appendChild(big);
+    }else{
+      wrap.appendChild(el('div','dim','type the code'));
+      const inp = el('div','math-input', this.input + '_'.repeat(4-this.input.length));
+      inp.style.letterSpacing = '.4em';
+      wrap.appendChild(inp);
+      const pad = el('div','math-pad');
+      ['1','2','3','4','5','6','7','8','9'].forEach(n=>{
+        const b = el('button','math-key', n);
+        b.onclick = ()=>this.press(n);
+        pad.appendChild(b);
+      });
+      const del = el('button','math-key del','⌫');
+      del.onclick = ()=>this.delPress();
+      pad.appendChild(del);
+      const z = el('button','math-key', '0');
+      z.onclick = ()=>this.press('0');
+      pad.appendChild(z);
+      const sk = el('button','math-key','SKIP');
+      sk.style.background='rgba(255,255,255,.1)';
+      sk.style.fontSize='13px';
+      sk.onclick = ()=>this.next();
+      pad.appendChild(sk);
+      wrap.appendChild(pad);
+    }
+    area.appendChild(wrap);
+  },
+  end(){
+    const won = this.score>=3;
+    const rewards = won ? {coin:40+this.score*15, brain:4} : {coin:Math.max(10,this.score*8)};
+    recordResult('speed','code',won,rewards);
+    if(won) Modal.win({rewards, title:`${this.score}/5 codes!`, emoji:'🔑',
+      retry:()=>CodeSprintGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/5`,msg:'aim for 3+ codes!',
+      retry:()=>CodeSprintGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.showTimer) clearTimeout(this.showTimer); }
+};
+
+// ====================================================================
+// 🎫 BATTLE PASS S1 (v0.4)
+// ====================================================================
+const BP_TIERS = [
+  {xp:5,em:'🪙',name:'100 coins',reward:{coin:100}},
+  {xp:15,em:'💎',name:'1 gem',reward:{gem:1}},
+  {xp:30,em:'🪙',name:'200 coins',reward:{coin:200}},
+  {xp:50,em:'🗝️',name:'5 keys',reward:{key:5}},
+  {xp:75,em:'🎫',name:'1 ticket',reward:{ticket:1}},
+  {xp:110,em:'🪙',name:'500 coins',reward:{coin:500}},
+  {xp:150,em:'💎',name:'5 gems',reward:{gem:5}},
+  {xp:200,em:'✝️',name:'10 faith stars',reward:{faith:10}},
+  {xp:260,em:'🪙',name:'1k coins',reward:{coin:1000}},
+  {xp:340,em:'👑',name:'PENTECOST title',reward:{coin:500,gem:10}},
+];
+const BP = {
+  addXp(n){
+    if(!State.data.bp) State.data.bp = {xp:0, claimed:[]};
+    State.data.bp.xp += n;
+    Save.write();
+  },
+  currentTier(){
+    if(!State.data.bp) return -1;
+    let tier = -1;
+    BP_TIERS.forEach((t,i)=>{ if(State.data.bp.xp>=t.xp) tier = i; });
+    return tier;
+  },
+  claim(idx){
+    const bp = State.data.bp;
+    if(bp.claimed.includes(idx)) return false;
+    if(bp.xp < BP_TIERS[idx].xp) return false;
+    bp.claimed.push(idx);
+    Wallet.add(BP_TIERS[idx].reward);
+    Activity.log('ach','🎫',`Battle Pass tier ${idx+1} claimed`);
+    Save.write();
+    SFX.holy();
+    haptic(30);
+    confetti();
+    return true;
+  }
+};
+
+// ====================================================================
+// 🎮 GAME 18 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
-    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame];
+    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame];
     const pickIdx = day % games.length;
     const pick = games[pickIdx];
-    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt'];
+    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color Match','🌟 Whack','🔑 Code Sprint'];
     Toast.show(`🎲 today's spotlight: <b>${names[pickIdx]}</b> · 2x rewards!`);
     State._dailyMultiplier = 2;
     setTimeout(()=>pick.start(), 800);
