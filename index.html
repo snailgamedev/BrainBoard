@@ -1052,6 +1052,31 @@ button{
 @keyframes avWobble{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 @keyframes avRise{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-10px);filter:brightness(1.2) drop-shadow(0 0 16px gold)}}
 
+/* ==================== v0.7.1 STICKY PREVIEW ==================== */
+.av-sticky-preview{
+  position:sticky;
+  top:0;
+  z-index:60;
+  background:linear-gradient(180deg, rgba(30,58,138,.97) 0%, rgba(30,58,138,.92) 70%, rgba(30,58,138,0) 100%);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  padding:8px 0 18px;
+  margin:-12px -8px 8px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:center;
+}
+.av-sticky-preview .av-frame-wrap,
+.av-sticky-preview .av-scene-wrap{
+  margin:4px auto 0;
+}
+/* shrink the big preview a touch when sticky for the onboarding card */
+#ob-step2 .av-sticky-preview .av-scene-wrap{
+  width:140px;height:140px;
+}
+#ob-step2 .av-sticky-preview .av-scene-wrap span{font-size:64px !important}
+/* smooth scroll for the screens */
+#aux,#onboard{scroll-behavior:smooth}
+
 /* DNA Radar */
 .dna-radar{
   width:240px;height:240px;
@@ -1108,7 +1133,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.7.0 · CRAFT SUPREMACY · themes · titles · scenes · 🙏</div>
+  <div class="splash-foot">v0.7.1 · always-seen saint · sticky preview · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1123,9 +1148,11 @@ button{
       <button class="mood-btn" data-mood="prayerful"><span class="em">🙏</span>prayerful</button>
     </div>
     <div id="ob-step2" style="display:none">
-      <div class="avatar-big" id="ob-preview" style="margin:8px auto 12px"></div>
-      <div class="av-tools" style="margin-bottom:8px">
-        <button class="av-tool-btn" type="button" onclick="App.obRandom()">🎲 SURPRISE</button>
+      <div class="av-sticky-preview">
+        <div class="avatar-big" id="ob-preview"></div>
+        <div class="av-tools" style="margin:6px 0 0">
+          <button class="av-tool-btn" type="button" onclick="App.obRandom()">🎲 SURPRISE</button>
+        </div>
       </div>
       <div id="ob-slots"></div>
       <input id="ob-name" class="name-input" placeholder="your name" maxlength="20">
@@ -1249,7 +1276,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 
 // ----- STATE -----
 const State = {
@@ -2415,17 +2442,19 @@ const App = {
     const slots = ['character','hat','face','outfit','pet','aura'];
     const slotEmoji = {character:'🧑',hat:'🎩',face:'👀',outfit:'👕',pet:'🐾',aura:'✨'};
     let html = `<div class="av-designer">
-      <div style="text-align:center">${renderAvatarBig(av,{hue,size,scene,frame,anim,saturation:sat,brightness:bri,glow})}</div>
-      ${title?`<div class="text-center"><span class="title-chip">${title}</span></div>`:''}
-      ${bio?`<div class="bio-quote">"${bio}"</div>`:''}
-      <p class="dim text-center" style="margin:6px 0 12px">build your saint · 12 themes · 250+ emojis · scenes · frames · animations</p>
-      <div class="av-tools">
-        <button class="av-tool-btn" onclick="App.randomizeAvatar()">🎲 RANDOMIZE</button>
-        <button class="av-tool-btn" onclick="App.saveLoadout()">💾 SAVE LOOK</button>
-        <button class="av-tool-btn ${size==='S'?'active':''}" onclick="App.setAvatarSize('S')">📏 S</button>
-        <button class="av-tool-btn ${size==='M'?'active':''}" onclick="App.setAvatarSize('M')">📏 M</button>
-        <button class="av-tool-btn ${size==='L'?'active':''}" onclick="App.setAvatarSize('L')">📏 L</button>
+      <div class="av-sticky-preview">
+        ${renderAvatarBig(av,{hue,size,scene,frame,anim,saturation:sat,brightness:bri,glow})}
+        ${title?`<div style="margin-top:4px"><span class="title-chip">${title}</span></div>`:''}
+        ${bio?`<div class="bio-quote" style="margin:4px auto">"${bio}"</div>`:''}
+        <div class="av-tools" style="margin-top:6px">
+          <button class="av-tool-btn" onclick="App.randomizeAvatar()">🎲 RANDOM</button>
+          <button class="av-tool-btn" onclick="App.saveLoadout()">💾 SAVE</button>
+          <button class="av-tool-btn ${size==='S'?'active':''}" onclick="App.setAvatarSize('S')">S</button>
+          <button class="av-tool-btn ${size==='M'?'active':''}" onclick="App.setAvatarSize('M')">M</button>
+          <button class="av-tool-btn ${size==='L'?'active':''}" onclick="App.setAvatarSize('L')">L</button>
+        </div>
       </div>
+      <p class="dim text-center" style="margin:8px 0 12px">build your saint · scroll to mix themes · scenes · frames · animations</p>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎭 ONE-TAP THEMES</h3>
       <div class="theme-grid">
         ${THEME_PRESETS.map(t=>`<div class="theme-tile" onclick="App.applyTheme('${t.id}')"><span class="em">${t.em}</span><span class="lbl">${t.name}</span></div>`).join('')}
