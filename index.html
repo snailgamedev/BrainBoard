@@ -958,6 +958,100 @@ button{
   font-size:11px;font-weight:600;
 }
 
+/* ==================== v0.7 CRAFT SUPREMACY ==================== */
+.av-scene-wrap{
+  position:relative;display:inline-flex;
+  align-items:center;justify-content:center;
+  width:200px;height:200px;
+  border-radius:24px;
+  overflow:hidden;
+  margin:8px auto;
+}
+.av-scene-bg{
+  position:absolute;inset:0;z-index:0;
+  border-radius:inherit;
+}
+.av-frame-wrap{
+  position:relative;
+  border-radius:24px;
+  padding:8px;
+  display:inline-block;
+  margin:8px auto;
+}
+.title-chip{
+  display:inline-block;
+  background:linear-gradient(90deg,var(--gold),var(--gold-bright));
+  color:var(--ink);
+  font-family:'Cinzel',serif;
+  font-weight:800;
+  letter-spacing:.08em;
+  padding:4px 12px;
+  border-radius:99px;
+  font-size:11px;
+  text-transform:uppercase;
+  box-shadow:var(--glow-gold);
+  margin:6px auto;
+}
+.bio-quote{
+  font-size:12px;font-style:italic;
+  opacity:.85;text-align:center;
+  margin:6px 0;padding:0 12px;
+  max-width:340px;line-height:1.4;
+}
+.theme-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));
+  gap:8px;margin:8px 0;
+}
+.theme-tile{
+  background:rgba(255,255,255,.06);
+  border:2px solid rgba(255,255,255,.14);
+  border-radius:var(--r-md);
+  padding:10px 6px;text-align:center;
+  cursor:pointer;
+  transition:all .15s;
+}
+.theme-tile:active{transform:scale(.94)}
+.theme-tile.sel{border-color:#FBBF24;background:rgba(245,158,11,.15)}
+.theme-tile .em{font-size:24px;display:block;margin-bottom:4px}
+.theme-tile .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;opacity:.85}
+
+.title-picker{
+  max-height:160px;overflow-y:auto;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r-md);
+  padding:8px;
+}
+.title-pick{
+  display:inline-block;margin:3px;
+  padding:4px 10px;border-radius:99px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  font-size:10px;font-weight:700;letter-spacing:.05em;
+  cursor:pointer;
+  text-transform:uppercase;
+}
+.title-pick.sel{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.title-pick.empty{font-style:italic;opacity:.6}
+
+.bio-input{
+  width:100%;padding:10px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--r-md);
+  color:var(--cream);font-size:13px;
+  font-family:inherit;resize:none;
+  margin-bottom:8px;
+}
+
+@keyframes avBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes avFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
+@keyframes avSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes avPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes avBreathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.95);opacity:.85}}
+@keyframes avWobble{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes avRise{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-10px);filter:brightness(1.2) drop-shadow(0 0 16px gold)}}
+
 /* DNA Radar */
 .dna-radar{
   width:240px;height:240px;
@@ -1014,7 +1108,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.6.0 · craft from day 1 · custom avatars · 🙏</div>
+  <div class="splash-foot">v0.7.0 · CRAFT SUPREMACY · themes · titles · scenes · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1155,7 +1249,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 
 // ----- STATE -----
 const State = {
@@ -1185,6 +1279,15 @@ const DEFAULT_SAVE = {
   avatarSize:'M', // S/M/L
   loadouts:[], // [{name,avatar,hue,size}]
   customEmojis:{character:[],hat:[],face:[],outfit:[],pet:[],aura:[]}, // user-saved custom per slot
+  // v0.7 CRAFT SUPREMACY
+  title:'', // shows below name
+  bio:'', // 140-char tagline
+  scene:'none', // background scene
+  frame:'none', // border frame
+  anim:'none', // animation preset
+  saturation:100, // 0-200
+  brightness:100, // 50-150
+  glow:0, // 0-100
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -1270,10 +1373,77 @@ const EMOJI_LIB = {
 };
 
 function _allCustom(){ return Object.values(EMOJI_LIB).flat(); }
-function renderAvatarStack(av,hueOverride,sizeOverride){
+
+// ===== v0.7 CRAFT SUPREMACY DATA =====
+const THEME_PRESETS = [
+  {id:'default',  em:'🙏', name:'Default',   avatar:{character:'monk',  hat:'none',     face:'none',     outfit:'plain', pet:'none',  aura:'none'   }},
+  {id:'pentecost',em:'🔥', name:'Pentecost', avatar:{character:'saint', hat:'starcrown',face:'fire',     outfit:'royal', pet:'dove',  aura:'fire'   }},
+  {id:'royal',    em:'👑', name:'Royal',     avatar:{character:'king',  hat:'crown',    face:'sunglasses',outfit:'royal',pet:'lion',  aura:'star'   }},
+  {id:'wizard',   em:'🧙', name:'Wizard',    avatar:{character:'sage',  hat:'tophat',   face:'glasses',  outfit:'royal', pet:'owl',   aura:'glow'   }},
+  {id:'athlete',  em:'🏆', name:'Athlete',   avatar:{character:'warrior',hat:'cap',     face:'fire',     outfit:'athletic',pet:'eagle',aura:'lightning'}},
+  {id:'pirate',   em:'🏴‍☠️',name:'Pirate',  avatar:{character:'warrior',hat:'tophat',  face:'sunglasses',outfit:'vest', pet:'eagle', aura:'spark'  }},
+  {id:'astronaut',em:'🚀', name:'Astronaut', avatar:{character:'angel', hat:'helmet',   face:'starry',   outfit:'lab',   pet:'fish',  aura:'star'   }},
+  {id:'forest',   em:'🌲', name:'Forest',    avatar:{character:'lamb',  hat:'starcrown',face:'love',     outfit:'plain', pet:'owl',   aura:'rainbow'}},
+  {id:'beach',    em:'🌴', name:'Beach',     avatar:{character:'queen', hat:'cap',      face:'sunglasses',outfit:'athletic',pet:'fish',aura:'sun'   }},
+  {id:'scifi',    em:'🤖', name:'Sci-Fi',    avatar:{character:'warrior',hat:'helmet',  face:'starry',   outfit:'lab',   pet:'cat',   aura:'lightning'}},
+  {id:'holy',     em:'😇', name:'Holy',      avatar:{character:'angel', hat:'starcrown',face:'love',     outfit:'royal', pet:'dove',  aura:'glow'   }},
+  {id:'ninja',    em:'🥷', name:'Ninja',     avatar:{character:'warrior',hat:'cap',     face:'sunglasses',outfit:'fancy',pet:'cat',   aura:'none'   }},
+];
+
+const TITLES = [
+  '','THE SAINT','BRAIN APOSTLE','PURE FORM','THE LEGEND','HOLY FLAME','THE ASCENDED','APOSTLE MIND','PENTECOST BRAIN',
+  'WORD SCRIBE','MEMORY MASTER','MIND SAGE','MATH MONK','SCRIPTURE SCHOLAR','LOGIC LORD','SPEED SAINT',
+  'CHOSEN','ANOINTED','REDEEMED','BLESSED','REFINED','DAUGHTER OF ZION','SON OF THUNDER','LION OF JUDAH',
+  'CALLED','BELOVED','FAITHFUL','GENEROUS','HUMBLE','BOLD','WISE','GENTLE',
+  'GAME WHISPERER','PUZZLE PROPHET','BRAIN TRAINER','THE STUDENT','DISCIPLE','FOLLOWER','WALKER',
+  'KING','QUEEN','PRINCE','PRINCESS','KNIGHT','SCHOLAR','SHEPHERD','DREAMER','BUILDER','MAKER','SEEKER',
+  'NEW SAINT','RISING STAR','CHAMPION','FRESH SOUL','GOAT','OG','LEGEND','PHENOM','UNICORN',
+];
+
+const SCENES = [
+  {id:'none',     em:'🚫', name:'None',       css:'background:transparent'},
+  {id:'cathedral',em:'⛪', name:'Cathedral',  css:'background:radial-gradient(circle at 50% 80%,#fbbf24 0%,#7c3aed 30%,#1e3a8a 100%)'},
+  {id:'throne',   em:'👑', name:'Throne',     css:'background:linear-gradient(135deg,#7c2d12,#b45309 50%,#fbbf24)'},
+  {id:'galaxy',   em:'🌌', name:'Galaxy',     css:'background:radial-gradient(ellipse at 30% 30%,#7c3aed,#1e1b4b 60%,#000)'},
+  {id:'sunrise',  em:'🌅', name:'Sunrise',    css:'background:linear-gradient(180deg,#fbbf24,#dc2626 50%,#7c3aed)'},
+  {id:'forest',   em:'🌲', name:'Forest',     css:'background:linear-gradient(180deg,#10b981,#064e3b)'},
+  {id:'ocean',    em:'🌊', name:'Ocean',      css:'background:linear-gradient(180deg,#22d3ee,#1e3a8a)'},
+  {id:'flame',    em:'🔥', name:'Flame',      css:'background:radial-gradient(circle,#fbbf24 0%,#dc2626 40%,#7c2d12 100%)'},
+  {id:'cloud',    em:'☁️', name:'Cloud',      css:'background:linear-gradient(180deg,#dbeafe,#93c5fd)'},
+  {id:'cherry',   em:'🌸', name:'Cherry',     css:'background:linear-gradient(135deg,#fda4af,#f9a8d4 50%,#fbbf24)'},
+  {id:'circuit',  em:'💻', name:'Circuit',    css:'background:linear-gradient(135deg,#0a1633,#22d3ee 50%,#0a1633)'},
+  {id:'stained',  em:'✝️', name:'StainedGlass',css:'background:conic-gradient(from 45deg,#7c3aed,#fbbf24 25%,#dc2626 50%,#10b981 75%,#7c3aed)'},
+];
+
+const FRAMES = [
+  {id:'none',     em:'🚫', name:'None',  css:''},
+  {id:'gold',     em:'🥇', name:'Gold',  css:'border:4px solid #fbbf24;box-shadow:0 0 20px rgba(245,158,11,.6)'},
+  {id:'silver',   em:'🥈', name:'Silver',css:'border:4px solid #e5e7eb;box-shadow:0 0 16px rgba(229,231,235,.5)'},
+  {id:'holy',     em:'😇', name:'Holy',  css:'border:4px solid #fff;box-shadow:0 0 36px rgba(255,255,255,.9),inset 0 0 16px rgba(255,255,255,.4)'},
+  {id:'fire',     em:'🔥', name:'Fire',  css:'border:4px solid #f59e0b;box-shadow:0 0 24px #dc2626,inset 0 0 12px rgba(245,158,11,.5)'},
+  {id:'neon',     em:'💡', name:'Neon',  css:'border:3px solid #22d3ee;box-shadow:0 0 24px #22d3ee,0 0 48px rgba(34,211,238,.5)'},
+  {id:'rainbow',  em:'🌈', name:'Rainbow',css:'border:4px solid transparent;background:linear-gradient(white,white) padding-box,linear-gradient(135deg,#dc2626,#f59e0b,#10b981,#22d3ee,#7c3aed) border-box'},
+  {id:'stained',  em:'✝️', name:'Glass', css:'border:5px solid #7c3aed;box-shadow:0 0 22px #fbbf24,inset 0 0 18px rgba(124,58,237,.5)'},
+];
+
+const ANIMS = [
+  {id:'none',  em:'🚫', name:'None',     css:''},
+  {id:'bounce',em:'🦘', name:'Bounce',   css:'animation:avBounce 1.6s ease-in-out infinite'},
+  {id:'float', em:'🎈', name:'Float',    css:'animation:avFloat 3s ease-in-out infinite'},
+  {id:'spin',  em:'🌀', name:'Spin',     css:'animation:avSpin 6s linear infinite'},
+  {id:'pulse', em:'💓', name:'Pulse',    css:'animation:avPulse 1.4s ease-in-out infinite'},
+  {id:'breathe',em:'🫁',name:'Breathe',  css:'animation:avBreathe 4s ease-in-out infinite'},
+  {id:'wobble',em:'🍮', name:'Wobble',   css:'animation:avWobble 2.4s ease-in-out infinite'},
+  {id:'rise',  em:'✝️', name:'Holy Rise',css:'animation:avRise 3.5s ease-in-out infinite'},
+];
+function renderAvatarStack(av,hueOverride,sizeOverride,opts){
   if(!av) av = State.data?.avatar || DEFAULT_SAVE.avatar;
   const hue = (hueOverride!==undefined?hueOverride:(State.data?.avatarHue||0));
   const size = sizeOverride||State.data?.avatarSize||'M';
+  const sat = opts?.saturation ?? (State.data?.saturation??100);
+  const bri = opts?.brightness ?? (State.data?.brightness??100);
+  const glow = opts?.glow ?? (State.data?.glow??0);
+  const animId = opts?.anim ?? (State.data?.anim||'none');
   const sizeClass = size==='S'?'av-size-s':size==='L'?'av-size-l':'';
   const aura = getAvatarEm('aura', av.aura);
   const hat = getAvatarEm('hat', av.hat);
@@ -1281,14 +1451,37 @@ function renderAvatarStack(av,hueOverride,sizeOverride){
   const ch = getAvatarEm('character', av.character) || '🧘';
   const outfit = getAvatarEm('outfit', av.outfit);
   const pet = getAvatarEm('pet', av.pet);
-  const filter = hue ? `filter:hue-rotate(${hue}deg)` : '';
-  return `<span class="avatar-stack ${sizeClass}" style="${filter}">
+  const filterParts = [];
+  if(hue) filterParts.push(`hue-rotate(${hue}deg)`);
+  if(sat!==100) filterParts.push(`saturate(${sat}%)`);
+  if(bri!==100) filterParts.push(`brightness(${bri}%)`);
+  if(glow>0) filterParts.push(`drop-shadow(0 0 ${Math.round(glow*.3)}px rgba(255,215,100,.85))`);
+  const filter = filterParts.length ? `filter:${filterParts.join(' ')}` : '';
+  const animDef = ANIMS.find(a=>a.id===animId);
+  const animCss = animDef ? animDef.css : '';
+  const styles = [filter, animCss].filter(Boolean).join(';');
+  return `<span class="avatar-stack ${sizeClass}" style="${styles}">
     ${aura?`<span class="av-aura">${aura}</span>`:''}
     ${hat?`<span class="av-hat">${hat}</span>`:''}
     <span class="av-main">${ch}${face?`<span class="av-face">${face}</span>`:''}</span>
     ${outfit?`<span class="av-outfit">${outfit}</span>`:''}
     ${pet?`<span class="av-pet">${pet}</span>`:''}
   </span>`;
+}
+
+function renderAvatarBig(av, opts){
+  // Big wrapper with scene + frame around the stack
+  if(!av) av = State.data?.avatar || DEFAULT_SAVE.avatar;
+  const sceneId = opts?.scene ?? (State.data?.scene||'none');
+  const frameId = opts?.frame ?? (State.data?.frame||'none');
+  const sceneDef = SCENES.find(s=>s.id===sceneId) || SCENES[0];
+  const frameDef = FRAMES.find(f=>f.id===frameId) || FRAMES[0];
+  const stack = renderAvatarStack(av, opts?.hue, opts?.size, opts);
+  return `<div class="av-frame-wrap" style="${frameDef.css||''}">
+    <div class="av-scene-wrap"><div class="av-scene-bg" style="${sceneDef.css||''}"></div>
+    <span style="position:relative;z-index:1;font-size:96px">${stack}</span>
+    </div>
+  </div>`;
 }
 
 // ----- VERSES -----
@@ -1384,6 +1577,12 @@ const ACHIEVEMENTS = [
   {id:'custom_avatar',em:'✨',t:'Original Saint',d:'Equip a custom emoji avatar'},
   {id:'fashion_3',em:'💾',t:'Wardrobe',d:'Save 3 avatar loadouts'},
   {id:'avatar_chaos',em:'🎲',t:'Chaos Saint',d:'Use the randomizer 5 times'},
+  // v0.7
+  {id:'theme_apply',em:'🎭',t:'Cosplay Saint',d:'Apply a theme preset'},
+  {id:'titled',em:'📛',t:'Titled',d:'Pick an avatar title'},
+  {id:'biographer',em:'📝',t:'Biographer',d:'Write your bio tagline'},
+  {id:'scene_frame',em:'🎨',t:'Visual Saint',d:'Equip a scene + frame combo'},
+  {id:'anim_saint',em:'🎬',t:'Animated Saint',d:'Equip an animation preset'},
 ];
 
 // ====================================================================
@@ -1544,6 +1743,10 @@ const Ach = {
     if((d.bp?.claimed?.length||0)>=10) Ach.unlock('bp_tier10');
     if((d.loadouts?.length||0)>=3) Ach.unlock('fashion_3');
     if((d._randomizeCount||0)>=5) Ach.unlock('avatar_chaos');
+    if(d.title) Ach.unlock('titled');
+    if(d.bio) Ach.unlock('biographer');
+    if(d.scene && d.scene!=='none' && d.frame && d.frame!=='none') Ach.unlock('scene_frame');
+    if(d.anim && d.anim!=='none') Ach.unlock('anim_saint');
     // try-everything: played all 16 non-daily games
     const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
@@ -1787,15 +1990,48 @@ const App = {
   },
   obRenderStep2(){
     const av = App._obData.avatar;
-    const hue = App._obData.hue;
-    const size = App._obData.size;
+    const hue = App._obData.hue||0;
+    const size = App._obData.size||'M';
+    const scene = App._obData.scene||'none';
+    const frame = App._obData.frame||'none';
+    const anim = App._obData.anim||'none';
+    const title = App._obData.title||'';
     const preview = document.getElementById('ob-preview');
-    if(preview) preview.innerHTML = renderAvatarStack(av, hue, size);
+    if(preview) preview.innerHTML = renderAvatarBig(av, {hue,size,scene,frame,anim});
     const slots = ['character','hat','face','outfit','pet','aura'];
     const slotEmoji = {character:'🧑',hat:'🎩',face:'👀',outfit:'👕',pet:'🐾',aura:'✨'};
     const cont = document.getElementById('ob-slots');
     if(!cont) return;
     let html = '';
+    // Title chip preview
+    if(title) html += `<div style="text-align:center;margin-bottom:6px"><span class="title-chip">${title}</span></div>`;
+    // THEMES one-tap
+    html += `<h3 style="margin:8px 0 6px;color:var(--gold-bright);font-size:12px;text-align:center">🎭 ONE-TAP THEMES</h3>
+      <div class="theme-grid">
+        ${THEME_PRESETS.map(t=>`<div class="theme-tile" onclick="App.obApplyTheme('${t.id}')"><span class="em">${t.em}</span><span class="lbl">${t.name}</span></div>`).join('')}
+      </div>`;
+    // Quick SCENE picker
+    html += `<h3 style="margin:12px 0 6px;color:var(--gold-bright);font-size:12px;text-align:center">🌅 SCENE</h3>
+      <div class="theme-grid">
+        ${SCENES.map(s=>`<div class="theme-tile ${scene===s.id?'sel':''}" onclick="App.obSetSceneFrameAnim('scene','${s.id}')"><span class="em">${s.em}</span><span class="lbl">${s.name}</span></div>`).join('')}
+      </div>`;
+    // FRAME picker
+    html += `<h3 style="margin:12px 0 6px;color:var(--gold-bright);font-size:12px;text-align:center">💎 FRAME</h3>
+      <div class="theme-grid">
+        ${FRAMES.map(f=>`<div class="theme-tile ${frame===f.id?'sel':''}" onclick="App.obSetSceneFrameAnim('frame','${f.id}')"><span class="em">${f.em}</span><span class="lbl">${f.name}</span></div>`).join('')}
+      </div>`;
+    // ANIM
+    html += `<h3 style="margin:12px 0 6px;color:var(--gold-bright);font-size:12px;text-align:center">🎬 ANIMATION</h3>
+      <div class="theme-grid">
+        ${ANIMS.map(a=>`<div class="theme-tile ${anim===a.id?'sel':''}" onclick="App.obSetSceneFrameAnim('anim','${a.id}')"><span class="em">${a.em}</span><span class="lbl">${a.name}</span></div>`).join('')}
+      </div>`;
+    // TITLE
+    html += `<h3 style="margin:12px 0 6px;color:var(--gold-bright);font-size:12px;text-align:center">📛 TITLE</h3>
+      <div class="title-picker">
+        ${TITLES.map(t=>`<span class="title-pick ${title===t?'sel':''} ${!t?'empty':''}" onclick="App.obSetTitle('${t.replace(/'/g,'\\\'')}')">${t||'(none)'}</span>`).join('')}
+      </div>`;
+    // Slots
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:12px;text-align:center">👕 SLOTS · tap or ✏️</h3>`;
     slots.forEach(slot=>{
       html += `<div class="av-slot-row"><div class="av-slot-label">${slotEmoji[slot]} ${slot}</div><div class="av-options">`;
       AVATAR_ITEMS[slot].forEach(opt=>{
@@ -1821,6 +2057,22 @@ const App = {
         App.obRenderStep2();
       };
     });
+  },
+  obApplyTheme(id){
+    const theme = THEME_PRESETS.find(t=>t.id===id); if(!theme) return;
+    App._obData.avatar = {...theme.avatar};
+    haptic(15); SFX.chime();
+    App.obRenderStep2();
+  },
+  obSetSceneFrameAnim(kind, id){
+    App._obData[kind] = id;
+    haptic(6); SFX.tap();
+    App.obRenderStep2();
+  },
+  obSetTitle(t){
+    App._obData.title = t;
+    haptic(6); SFX.tap();
+    App.obRenderStep2();
   },
   obSetHue(v){
     App._obData.hue = parseInt(v);
@@ -1919,6 +2171,10 @@ const App = {
       State.data.avatar = {...App._obData.avatar};
       State.data.avatarHue = App._obData.hue||0;
       State.data.avatarSize = App._obData.size||'M';
+      State.data.scene = App._obData.scene||'none';
+      State.data.frame = App._obData.frame||'none';
+      State.data.anim = App._obData.anim||'none';
+      State.data.title = App._obData.title||'';
       State.data.emoji = getAvatarEm('character', App._obData.avatar.character) || '🧘';
       State.data.preset = 'custom';
       State.data.mood = App._obData.mood;
@@ -2147,12 +2403,22 @@ const App = {
     if(!State.data.loadouts) State.data.loadouts = [];
     const hue = State.data.avatarHue||0;
     const size = State.data.avatarSize||'M';
+    const sat = State.data.saturation??100;
+    const bri = State.data.brightness??100;
+    const glow = State.data.glow??0;
+    const title = State.data.title||'';
+    const bio = State.data.bio||'';
+    const scene = State.data.scene||'none';
+    const frame = State.data.frame||'none';
+    const anim = State.data.anim||'none';
     document.getElementById('aux-title').innerHTML = '👤 Avatar Designer';
     const slots = ['character','hat','face','outfit','pet','aura'];
     const slotEmoji = {character:'🧑',hat:'🎩',face:'👀',outfit:'👕',pet:'🐾',aura:'✨'};
     let html = `<div class="av-designer">
-      <div class="avatar-big">${renderAvatarStack(av,hue,size)}</div>
-      <p class="dim text-center">tap any item · or ✏️ CUSTOM to type ANY emoji</p>
+      <div style="text-align:center">${renderAvatarBig(av,{hue,size,scene,frame,anim,saturation:sat,brightness:bri,glow})}</div>
+      ${title?`<div class="text-center"><span class="title-chip">${title}</span></div>`:''}
+      ${bio?`<div class="bio-quote">"${bio}"</div>`:''}
+      <p class="dim text-center" style="margin:6px 0 12px">build your saint · 12 themes · 250+ emojis · scenes · frames · animations</p>
       <div class="av-tools">
         <button class="av-tool-btn" onclick="App.randomizeAvatar()">🎲 RANDOMIZE</button>
         <button class="av-tool-btn" onclick="App.saveLoadout()">💾 SAVE LOOK</button>
@@ -2160,11 +2426,50 @@ const App = {
         <button class="av-tool-btn ${size==='M'?'active':''}" onclick="App.setAvatarSize('M')">📏 M</button>
         <button class="av-tool-btn ${size==='L'?'active':''}" onclick="App.setAvatarSize('L')">📏 L</button>
       </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎭 ONE-TAP THEMES</h3>
+      <div class="theme-grid">
+        ${THEME_PRESETS.map(t=>`<div class="theme-tile" onclick="App.applyTheme('${t.id}')"><span class="em">${t.em}</span><span class="lbl">${t.name}</span></div>`).join('')}
+      </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🌅 SCENE</h3>
+      <div class="theme-grid">
+        ${SCENES.map(s=>`<div class="theme-tile ${scene===s.id?'sel':''}" onclick="App.setSceneFrameAnim('scene','${s.id}')"><span class="em">${s.em}</span><span class="lbl">${s.name}</span></div>`).join('')}
+      </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">💎 FRAME</h3>
+      <div class="theme-grid">
+        ${FRAMES.map(f=>`<div class="theme-tile ${frame===f.id?'sel':''}" onclick="App.setSceneFrameAnim('frame','${f.id}')"><span class="em">${f.em}</span><span class="lbl">${f.name}</span></div>`).join('')}
+      </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎬 ANIMATION</h3>
+      <div class="theme-grid">
+        ${ANIMS.map(a=>`<div class="theme-tile ${anim===a.id?'sel':''}" onclick="App.setSceneFrameAnim('anim','${a.id}')"><span class="em">${a.em}</span><span class="lbl">${a.name}</span></div>`).join('')}
+      </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📛 TITLE</h3>
+      <div class="title-picker">
+        ${TITLES.map(t=>`<span class="title-pick ${title===t?'sel':''} ${!t?'empty':''}" onclick="App.setTitle('${t.replace(/'/g,'\\\'')}')">${t||'(none)'}</span>`).join('')}
+      </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📝 BIO / TAGLINE</h3>
+      <textarea class="bio-input" maxlength="140" rows="2" placeholder="your motto · max 140 chars" oninput="App.setBio(this.value)">${bio.replace(/</g,'&lt;')}</textarea>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎨 COLOR + GLOW</h3>
       <div class="av-hue-row">
-        <span style="font-size:11px;font-weight:700;opacity:.85">🎨 hue</span>
+        <span style="font-size:11px;font-weight:700;opacity:.85;width:60px">🎨 hue</span>
         <input type="range" class="av-hue-slider" min="0" max="360" value="${hue}" oninput="App.setHue(this.value)">
         <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${hue}°</span>
-      </div>`;
+      </div>
+      <div class="av-hue-row">
+        <span style="font-size:11px;font-weight:700;opacity:.85;width:60px">💧 sat</span>
+        <input type="range" min="0" max="200" value="${sat}" class="av-hue-slider" style="background:linear-gradient(90deg,#444,#fff)" oninput="App.setColorAdj('saturation',this.value)">
+        <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${sat}%</span>
+      </div>
+      <div class="av-hue-row">
+        <span style="font-size:11px;font-weight:700;opacity:.85;width:60px">☀️ light</span>
+        <input type="range" min="50" max="150" value="${bri}" class="av-hue-slider" style="background:linear-gradient(90deg,#000,#fff)" oninput="App.setColorAdj('brightness',this.value)">
+        <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${bri}%</span>
+      </div>
+      <div class="av-hue-row">
+        <span style="font-size:11px;font-weight:700;opacity:.85;width:60px">💫 glow</span>
+        <input type="range" min="0" max="100" value="${glow}" class="av-hue-slider" style="background:linear-gradient(90deg,#000,#fbbf24)" oninput="App.setColorAdj('glow',this.value)">
+        <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${glow}%</span>
+      </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">👕 SLOTS</h3>`;
 
     slots.forEach(slot=>{
       const customs = (State.data.customEmojis[slot]||[]);
@@ -2244,15 +2549,50 @@ const App = {
   setHue(v){
     State.data.avatarHue = parseInt(v);
     Save.write();
-    // update preview only, no full re-render
-    const big = document.querySelector('.avatar-big');
-    if(big){
-      const av = State.data.avatar;
-      big.innerHTML = renderAvatarStack(av, State.data.avatarHue, State.data.avatarSize);
-    }
-    const hueLabel = document.querySelector('.av-hue-row span:last-child');
-    if(hueLabel) hueLabel.textContent = v+'°';
+    App._refreshAvatarPreview();
     UI.updateWallet();
+  },
+  setColorAdj(k,v){
+    State.data[k] = parseInt(v);
+    Save.write();
+    App._refreshAvatarPreview();
+    UI.updateWallet();
+  },
+  _refreshAvatarPreview(){
+    const wraps = document.querySelectorAll('.av-frame-wrap');
+    wraps.forEach(w=>{
+      const av = State.data.avatar;
+      w.outerHTML = renderAvatarBig(av);
+    });
+  },
+  applyTheme(id){
+    const theme = THEME_PRESETS.find(t=>t.id===id); if(!theme) return;
+    State.data.avatar = {...theme.avatar};
+    Save.write();
+    haptic(15); SFX.chime();
+    Toast.show(`🎭 applied "${theme.name}" theme`);
+    Ach.unlock('theme_apply');
+    App.openAvatar();
+    UI.updateWallet();
+  },
+  setSceneFrameAnim(kind, id){
+    State.data[kind] = id;
+    Save.write();
+    haptic(8); SFX.tap();
+    App.openAvatar();
+    UI.updateWallet();
+  },
+  setTitle(t){
+    State.data.title = t;
+    Save.write();
+    haptic(8); SFX.tap();
+    Toast.show(t?`📛 title: ${t}`:'title cleared');
+    App.openAvatar();
+    UI.updateWallet();
+  },
+  setBio(v){
+    State.data.bio = (v||'').slice(0,140);
+    Save.write();
   },
   saveLoadout(){
     if(!State.data.loadouts) State.data.loadouts = [];
