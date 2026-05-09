@@ -1052,30 +1052,61 @@ button{
 @keyframes avWobble{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 @keyframes avRise{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-10px);filter:brightness(1.2) drop-shadow(0 0 16px gold)}}
 
-/* ==================== v0.7.1 STICKY PREVIEW ==================== */
+/* ==================== v0.8 SIDE-SAINT (NO-OVERLAP RULE) ==================== */
+/* Avatar preview floats to the SIDE — NEVER covers scrolling content */
 .av-sticky-preview{
   position:sticky;
-  top:0;
-  z-index:60;
-  background:linear-gradient(180deg, rgba(30,58,138,.97) 0%, rgba(30,58,138,.92) 70%, rgba(30,58,138,0) 100%);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  padding:8px 0 18px;
-  margin:-12px -8px 8px;
-  border-bottom:1px solid rgba(255,255,255,.08);
+  top:12px;
+  float:right;
+  width:170px;
+  margin:0 0 12px 12px;
+  background:rgba(10,22,51,.92);
+  border:1.5px solid rgba(245,158,11,.4);
+  border-radius:18px;
+  padding:10px 8px;
+  z-index:50;
   text-align:center;
+  box-shadow:0 6px 20px rgba(0,0,0,.4),0 0 24px rgba(245,158,11,.15);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
 }
 .av-sticky-preview .av-frame-wrap,
 .av-sticky-preview .av-scene-wrap{
   margin:4px auto 0;
 }
-/* shrink the big preview a touch when sticky for the onboarding card */
-#ob-step2 .av-sticky-preview .av-scene-wrap{
-  width:140px;height:140px;
+.av-sticky-preview .av-scene-wrap{
+  width:130px;height:130px;
 }
-#ob-step2 .av-sticky-preview .av-scene-wrap span{font-size:64px !important}
-/* smooth scroll for the screens */
+.av-sticky-preview .av-scene-wrap span{font-size:60px !important}
+.av-sticky-preview .av-tools{flex-wrap:wrap;gap:4px;margin-top:6px}
+.av-sticky-preview .av-tool-btn{padding:4px 8px;font-size:10px}
+.av-sticky-preview .title-chip{font-size:9px;padding:2px 8px;margin:4px auto}
+.av-sticky-preview .bio-quote{font-size:10px;margin:4px 0;padding:0 4px}
+/* Mobile: floating chip in corner — even smaller */
+@media (max-width:540px){
+  .av-sticky-preview{
+    position:fixed;
+    right:8px;
+    top:auto;
+    bottom:14px;
+    width:118px;
+    margin:0;
+    z-index:80;
+    padding:6px;
+    background:rgba(10,22,51,.96);
+  }
+  .av-sticky-preview .av-scene-wrap{width:90px;height:90px}
+  .av-sticky-preview .av-scene-wrap span{font-size:42px !important}
+  .av-sticky-preview .av-tools{display:none}
+  .av-sticky-preview .title-chip{display:none}
+  .av-sticky-preview .bio-quote{display:none}
+  /* extra bottom padding so list content isn't covered by floating chip */
+  .av-designer{padding-bottom:130px}
+  #ob-step2{padding-bottom:130px}
+}
 #aux,#onboard{scroll-behavior:smooth}
+/* clearfix so list content can flow past the float */
+.av-designer::after,#ob-step2::after{content:'';display:block;clear:both}
 
 /* DNA Radar */
 .dna-radar{
@@ -1133,7 +1164,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.7.1 · always-seen saint · sticky preview · 🙏</div>
+  <div class="splash-foot">v0.8.0 · SIDE-SAINT · 18 themes · power-ups · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1225,8 +1256,8 @@ button{
     <div class="lobby-foot">
       <button class="foot-btn" onclick="App.openStats()"><span class="em">🏆</span>STATS</button>
       <button class="foot-btn" onclick="App.openAch()"><span class="em">🎖️</span>ACH</button>
+      <button class="foot-btn" onclick="App.openShop()"><span class="em">🛒</span>SHOP</button>
       <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
-      <button class="foot-btn" onclick="App.openAbout()"><span class="em">ℹ️</span>ABOUT</button>
     </div>
   </div>
 </section>
@@ -1276,7 +1307,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.7.1';
+const VERSION = '0.8.0';
 
 // ----- STATE -----
 const State = {
@@ -1315,6 +1346,8 @@ const DEFAULT_SAVE = {
   saturation:100, // 0-200
   brightness:100, // 50-150
   glow:0, // 0-100
+  // v0.8 power-ups inventory
+  powerups:{hint:0,skip:0,double:0,freeze:0,undo:0,fire:0},
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -1415,6 +1448,12 @@ const THEME_PRESETS = [
   {id:'scifi',    em:'🤖', name:'Sci-Fi',    avatar:{character:'warrior',hat:'helmet',  face:'starry',   outfit:'lab',   pet:'cat',   aura:'lightning'}},
   {id:'holy',     em:'😇', name:'Holy',      avatar:{character:'angel', hat:'starcrown',face:'love',     outfit:'royal', pet:'dove',  aura:'glow'   }},
   {id:'ninja',    em:'🥷', name:'Ninja',     avatar:{character:'warrior',hat:'cap',     face:'sunglasses',outfit:'fancy',pet:'cat',   aura:'none'   }},
+  {id:'pilgrim',  em:'🥾', name:'Pilgrim',   avatar:{character:'monk',  hat:'tophat',   face:'glasses',  outfit:'plain', pet:'dove',  aura:'spark'  }},
+  {id:'knight',   em:'⚔️', name:'Knight',    avatar:{character:'warrior',hat:'helmet',  face:'fire',     outfit:'royal', pet:'lion',  aura:'fire'   }},
+  {id:'mystic',   em:'🔮', name:'Mystic',    avatar:{character:'sage',  hat:'starcrown',face:'starry',   outfit:'royal', pet:'owl',   aura:'rainbow'}},
+  {id:'sailor',   em:'⚓',  name:'Sailor',    avatar:{character:'warrior',hat:'cap',     face:'sunglasses',outfit:'vest', pet:'fish',  aura:'spark'  }},
+  {id:'punk',     em:'🤘', name:'Punk',      avatar:{character:'warrior',hat:'tophat',  face:'sunglasses',outfit:'fancy',pet:'cat',   aura:'lightning'}},
+  {id:'disco',    em:'🪩', name:'Disco',     avatar:{character:'queen', hat:'starcrown',face:'starry',   outfit:'royal', pet:'cat',   aura:'rainbow'}},
 ];
 
 const TITLES = [
@@ -1462,6 +1501,16 @@ const ANIMS = [
   {id:'breathe',em:'🫁',name:'Breathe',  css:'animation:avBreathe 4s ease-in-out infinite'},
   {id:'wobble',em:'🍮', name:'Wobble',   css:'animation:avWobble 2.4s ease-in-out infinite'},
   {id:'rise',  em:'✝️', name:'Holy Rise',css:'animation:avRise 3.5s ease-in-out infinite'},
+];
+
+// ===== v0.8 POWER-UPS =====
+const POWERUP_DEFS = [
+  {id:'hint',   em:'💡', name:'Hint',       desc:'reveal a clue · 1 use',          cost:{coin:200}},
+  {id:'skip',   em:'⏭️', name:'Skip',       desc:'skip 1 round · keeps streak',     cost:{coin:300}},
+  {id:'double', em:'⚡', name:'2x Rewards', desc:'next win = 2x coins',             cost:{coin:500}},
+  {id:'freeze', em:'❄️', name:'Time Freeze',desc:'+10 sec on the clock',           cost:{coin:400}},
+  {id:'undo',   em:'↩️', name:'Undo',       desc:'undo last wrong move',           cost:{coin:350}},
+  {id:'fire',   em:'🔥', name:'Holy Fire',  desc:'boost win score by +5',          cost:{gem:1}},
 ];
 function renderAvatarStack(av,hueOverride,sizeOverride,opts){
   if(!av) av = State.data?.avatar || DEFAULT_SAVE.avatar;
@@ -2383,6 +2432,48 @@ const App = {
     html += '</div>';
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
+  },
+  openShop(){
+    if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0};
+    document.getElementById('aux-title').innerHTML = '🛒 Power-up Shop';
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center">
+        <b style="color:var(--gold-bright)">stockpile power-ups</b><br>
+        <span class="dim">use during games to break tough rounds</span>
+      </div>`;
+    POWERUP_DEFS.forEach(p=>{
+      const owned = State.data.powerups[p.id]||0;
+      const cost = p.cost;
+      const costStr = Object.entries(cost).map(([k,v])=>`${v} ${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'})[k]||k}`).join(' · ');
+      const wallet = State.data.wallet||{};
+      const canAfford = Object.entries(cost).every(([k,v])=>(wallet[k]||0)>=v);
+      html += `<div class="setting-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:30px">${p.em}</span>
+          <div>
+            <b style="display:block">${p.name} <span style="opacity:.6;font-size:11px;font-weight:600">x${owned}</span></b>
+            <span style="font-size:11px;opacity:.85">${p.desc}</span>
+          </div>
+        </div>
+        <button class="btn-primary" style="padding:8px 12px;font-size:12px;width:auto;${canAfford?'':'opacity:.4'}" onclick="App.buyPowerup('${p.id}')">${costStr}</button>
+      </div>`;
+    });
+    html += `<p class="dim text-center" style="margin-top:14px;font-size:11px">power-up usage during games arrives v0.9 · stockpile for now</p>
+    <button class="btn-secondary" onclick="App.openAbout()" style="margin-top:8px">ℹ️ about brainboard</button>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  buyPowerup(id){
+    const p = POWERUP_DEFS.find(x=>x.id===id); if(!p) return;
+    if(!Wallet.spend(p.cost)){ Toast.show('not enough — earn more!'); SFX.wrong(); haptic(20); return; }
+    State.data.powerups[id] = (State.data.powerups[id]||0)+1;
+    Save.write();
+    SFX.correct(); haptic(15);
+    Toast.show(`✨ +1 ${p.name} stocked!`);
+    Activity.log('ach',p.em,`bought ${p.name}`);
+    App.openShop();
+    UI.updateWallet();
   },
   openBP(){
     document.getElementById('aux-title').innerHTML = '🎫 Battle Pass · S1';
