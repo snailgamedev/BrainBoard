@@ -123,17 +123,19 @@ button{
 /* ==================== ONBOARDING ==================== */
 #onboard{
   background:linear-gradient(180deg,var(--cobalt) 0%,var(--purple-deep) 100%);
-  align-items:center;justify-content:center;
-  padding:24px;
+  align-items:center;
+  padding:24px 16px;
+  overflow-y:auto;
 }
 .onboard-card{
-  width:100%;max-width:420px;
+  width:100%;max-width:440px;
   background:rgba(255,255,255,.06);
   border:1px solid rgba(255,255,255,.12);
   border-radius:var(--r-xl);
-  padding:28px 22px;
+  padding:24px 18px;
   backdrop-filter:blur(12px);
   text-align:center;
+  margin:auto;
 }
 .onboard-card h2{
   font-size:22px;color:var(--gold-bright);margin-bottom:8px;
@@ -1012,7 +1014,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.5.0 · custom avatars · 17 games · 8 rooms · 🙏</div>
+  <div class="splash-foot">v0.6.0 · craft from day 1 · custom avatars · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1027,12 +1029,11 @@ button{
       <button class="mood-btn" data-mood="prayerful"><span class="em">🙏</span>prayerful</button>
     </div>
     <div id="ob-step2" style="display:none">
-      <div class="preset-grid">
-        <button class="preset-btn" data-preset="saint"><span class="em">🙏</span>Saint</button>
-        <button class="preset-btn" data-preset="scholar"><span class="em">📚</span>Scholar</button>
-        <button class="preset-btn" data-preset="sage"><span class="em">🦉</span>Sage</button>
-        <button class="preset-btn" data-preset="lamb"><span class="em">🐑</span>Lamb</button>
+      <div class="avatar-big" id="ob-preview" style="margin:8px auto 12px"></div>
+      <div class="av-tools" style="margin-bottom:8px">
+        <button class="av-tool-btn" type="button" onclick="App.obRandom()">🎲 SURPRISE</button>
       </div>
+      <div id="ob-slots"></div>
       <input id="ob-name" class="name-input" placeholder="your name" maxlength="20">
     </div>
     <button id="ob-next" class="btn-primary" disabled onclick="App.obNext()">CONTINUE</button>
@@ -1154,7 +1155,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 
 // ----- STATE -----
 const State = {
@@ -1764,8 +1765,9 @@ const App = {
   },
 
   // ----- ONBOARDING -----
-  _obData:{step:1,mood:null,preset:null,name:''},
+  _obData:{step:1,mood:null,name:'',avatar:null,hue:0,size:'M'},
   obStart(){
+    // mood
     document.querySelectorAll('.mood-btn').forEach(b=>b.onclick=()=>{
       document.querySelectorAll('.mood-btn').forEach(x=>x.classList.remove('sel'));
       b.classList.add('sel');
@@ -1773,20 +1775,133 @@ const App = {
       document.getElementById('ob-next').disabled = false;
       haptic(8);
     });
-    document.querySelectorAll('.preset-btn').forEach(b=>b.onclick=()=>{
-      document.querySelectorAll('.preset-btn').forEach(x=>x.classList.remove('sel'));
-      b.classList.add('sel');
-      App._obData.preset = b.dataset.preset;
-      App._validateStep2();
-      haptic(8);
-    });
+    // initialize fresh avatar
+    App._obData.avatar = {...DEFAULT_SAVE.avatar};
+    App._obData.hue = 0;
+    App._obData.size = 'M';
+    // name input
     document.getElementById('ob-name').oninput=(e)=>{
       App._obData.name = e.target.value.trim();
       App._validateStep2();
     };
   },
+  obRenderStep2(){
+    const av = App._obData.avatar;
+    const hue = App._obData.hue;
+    const size = App._obData.size;
+    const preview = document.getElementById('ob-preview');
+    if(preview) preview.innerHTML = renderAvatarStack(av, hue, size);
+    const slots = ['character','hat','face','outfit','pet','aura'];
+    const slotEmoji = {character:'🧑',hat:'🎩',face:'👀',outfit:'👕',pet:'🐾',aura:'✨'};
+    const cont = document.getElementById('ob-slots');
+    if(!cont) return;
+    let html = '';
+    slots.forEach(slot=>{
+      html += `<div class="av-slot-row"><div class="av-slot-label">${slotEmoji[slot]} ${slot}</div><div class="av-options">`;
+      AVATAR_ITEMS[slot].forEach(opt=>{
+        const isSel = av[slot]===opt.id;
+        html += `<div class="av-opt ${isSel?'sel':''} ${!opt.em?'empty':''}" data-slot="${slot}" data-id="${opt.id}">${opt.em||'∅'}</div>`;
+      });
+      html += `<div class="av-opt add" onclick="App.obOpenPicker('${slot}')">✏️</div>`;
+      html += `</div></div>`;
+    });
+    // hue slider
+    html += `<div class="av-hue-row">
+      <span style="font-size:11px;font-weight:700;opacity:.85">🎨 hue</span>
+      <input type="range" class="av-hue-slider" min="0" max="360" value="${hue}" oninput="App.obSetHue(this.value)">
+      <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${hue}°</span>
+    </div>`;
+    cont.innerHTML = html;
+    cont.querySelectorAll('.av-opt').forEach(b=>{
+      if(b.classList.contains('add')) return;
+      b.onclick = ()=>{
+        const slot = b.dataset.slot, id = b.dataset.id;
+        App._obData.avatar[slot] = id;
+        haptic(6); SFX.tap();
+        App.obRenderStep2();
+      };
+    });
+  },
+  obSetHue(v){
+    App._obData.hue = parseInt(v);
+    const preview = document.getElementById('ob-preview');
+    if(preview) preview.innerHTML = renderAvatarStack(App._obData.avatar, App._obData.hue, App._obData.size);
+    const lbl = document.querySelector('#ob-slots .av-hue-row span:last-child');
+    if(lbl) lbl.textContent = v+'°';
+  },
+  obRandom(){
+    const av = {};
+    Object.keys(AVATAR_ITEMS).forEach(slot=>{
+      if(Math.random()<.5){
+        const list = AVATAR_ITEMS[slot];
+        av[slot] = list[Math.floor(Math.random()*list.length)].id;
+      }else{
+        const all = _allCustom();
+        av[slot] = all[Math.floor(Math.random()*all.length)];
+      }
+    });
+    App._obData.avatar = av;
+    App._obData.hue = Math.floor(Math.random()*360);
+    haptic(15); SFX.chime();
+    App.obRenderStep2();
+  },
+  obOpenPicker(slot){
+    const existing = document.querySelector('.emoji-picker');
+    if(existing) existing.remove();
+    const cats = Object.keys(EMOJI_LIB);
+    const picker = document.createElement('div');
+    picker.className = 'emoji-picker open';
+    picker.innerHTML = `
+      <div class="ep-head">
+        <h3>✏️ ${slot} · type or pick any emoji</h3>
+        <button class="icon-btn" onclick="this.closest('.emoji-picker').remove()">✕</button>
+      </div>
+      <input class="ep-input" placeholder="type/paste any emoji" maxlength="8">
+      <div class="ep-cats"></div>
+      <div class="ep-grid"></div>`;
+    document.body.appendChild(picker);
+    const catsDiv = picker.querySelector('.ep-cats');
+    const grid = picker.querySelector('.ep-grid');
+    const renderGrid = (cat)=>{
+      grid.innerHTML = '';
+      EMOJI_LIB[cat].forEach(em=>{
+        const c = document.createElement('div');
+        c.className = 'ep-cell';
+        c.textContent = em;
+        c.onclick = ()=>{
+          App._obData.avatar[slot] = em;
+          haptic(10); SFX.correct();
+          picker.remove();
+          App.obRenderStep2();
+        };
+        grid.appendChild(c);
+      });
+    };
+    cats.forEach(cat=>{
+      const b = document.createElement('button');
+      b.className = 'ep-cat'+(cat===cats[0]?' active':'');
+      b.textContent = cat;
+      b.onclick = ()=>{
+        picker.querySelectorAll('.ep-cat').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderGrid(cat);
+      };
+      catsDiv.appendChild(b);
+    });
+    renderGrid(cats[0]);
+    const inp = picker.querySelector('.ep-input');
+    inp.onkeydown = (e)=>{
+      if(e.key==='Enter' && inp.value){
+        App._obData.avatar[slot] = inp.value.trim();
+        haptic(10); SFX.correct();
+        picker.remove();
+        App.obRenderStep2();
+      }
+    };
+    inp.focus();
+  },
   _validateStep2(){
-    document.getElementById('ob-next').disabled = !(App._obData.preset && App._obData.name);
+    document.getElementById('ob-next').disabled = !App._obData.name;
   },
   obNext(){
     haptic(15);
@@ -1794,27 +1909,34 @@ const App = {
       App._obData.step=2;
       document.getElementById('ob-step1').style.display='none';
       document.getElementById('ob-step2').style.display='block';
-      document.getElementById('ob-title').textContent='who shall you be?';
-      document.getElementById('ob-sub').textContent='pick an avatar + name';
+      document.getElementById('ob-title').textContent='craft yourself';
+      document.getElementById('ob-sub').textContent='design your saint · 250+ emojis · or type ANY emoji';
       document.getElementById('ob-next').textContent='ENTER LOBBY';
       document.getElementById('ob-next').disabled=true;
+      App.obRenderStep2();
     }else{
-      const presets = {saint:'🙏',scholar:'📚',sage:'🦉',lamb:'🐑'};
-      const presetCharacter = {saint:'saint',scholar:'scholar',sage:'sage',lamb:'lamb'};
       State.data.name = App._obData.name;
-      State.data.preset = App._obData.preset;
-      State.data.emoji = presets[App._obData.preset]||'🙏';
-      State.data.avatar.character = presetCharacter[App._obData.preset]||'monk';
+      State.data.avatar = {...App._obData.avatar};
+      State.data.avatarHue = App._obData.hue||0;
+      State.data.avatarSize = App._obData.size||'M';
+      State.data.emoji = getAvatarEm('character', App._obData.avatar.character) || '🧘';
+      State.data.preset = 'custom';
       State.data.mood = App._obData.mood;
       State.data.iq = 1000;
       State.data.onboarded = true;
       Activity.log('first','✨','Joined BrainBoard · welcome, '+State.data.name+'!');
       Ach.unlock('first_step');
+      // detect custom emoji used in onboarding
+      const usedCustom = Object.entries(App._obData.avatar).some(([slot,id])=>{
+        const list = AVATAR_ITEMS[slot]; if(!list) return false;
+        return !list.find(x=>x.id===id);
+      });
+      if(usedCustom) Ach.unlock('custom_avatar');
       Save.write();
       UI.updateWallet();
       UI.show('lobby');
       App.checkDaily();
-      Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · tap your name to design your avatar`);
+      Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · craft more anytime in your profile`);
     }
   },
 
