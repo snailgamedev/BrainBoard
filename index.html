@@ -292,6 +292,7 @@ button{
   background:linear-gradient(135deg,#B45309 0%,#7C2D12 50%,#4C1D95 100%);
   box-shadow:inset 0 0 24px rgba(255,248,231,.15);
 }
+.room-logic{background:linear-gradient(135deg,#0E7490 0%,#581C87 100%)}
 .room-daily{background:linear-gradient(135deg,#10B981 0%,#064E3B 100%)}
 .lobby-foot{
   display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
@@ -759,6 +760,135 @@ button{
   25%{transform:translateX(-6px)}
   75%{transform:translateX(6px)}
 }
+
+/* ==================== v0.3 AVATAR ==================== */
+.avatar-stack{
+  position:relative;display:inline-flex;
+  align-items:center;justify-content:center;
+  width:1.4em;height:1.4em;
+  vertical-align:middle;
+}
+.avatar-stack .av-main{
+  position:relative;font-size:1em;line-height:1;display:inline-block;
+}
+.avatar-stack .av-face{
+  position:absolute;top:-.05em;right:-.4em;
+  font-size:.45em;
+}
+.avatar-stack .av-hat{
+  position:absolute;top:-.55em;left:50%;
+  transform:translateX(-50%);
+  font-size:.55em;z-index:2;
+}
+.avatar-stack .av-aura{
+  position:absolute;inset:-.4em;
+  font-size:1.6em;opacity:.25;
+  z-index:0;pointer-events:none;
+  animation:auraSpin 4s linear infinite;
+}
+@keyframes auraSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.avatar-stack .av-outfit{
+  position:absolute;bottom:-.1em;left:50%;
+  transform:translateX(-50%);
+  font-size:.4em;opacity:.85;
+}
+.avatar-stack .av-pet{
+  position:absolute;bottom:-.1em;right:-.5em;
+  font-size:.45em;
+}
+/* Big avatar for designer */
+.avatar-big{
+  font-size:96px;
+  display:flex;align-items:center;justify-content:center;
+  margin:14px auto;
+}
+.avatar-big .avatar-stack{width:1.6em;height:1.6em}
+.av-designer{
+  display:flex;flex-direction:column;gap:14px;
+  width:100%;max-width:480px;margin:0 auto;
+}
+.av-slot-row{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--r-md);
+  padding:12px;
+}
+.av-slot-label{
+  font-size:11px;text-transform:uppercase;
+  letter-spacing:.1em;opacity:.7;
+  margin-bottom:8px;font-weight:700;
+}
+.av-options{
+  display:flex;gap:6px;overflow-x:auto;
+  padding-bottom:4px;
+  scrollbar-width:thin;
+}
+.av-options::-webkit-scrollbar{height:4px}
+.av-options::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:99px}
+.av-opt{
+  flex-shrink:0;
+  width:54px;height:54px;
+  background:rgba(255,255,255,.08);
+  border:2px solid transparent;
+  border-radius:var(--r-md);
+  display:grid;place-items:center;
+  font-size:28px;cursor:pointer;
+  transition:all .15s;
+}
+.av-opt:active{transform:scale(.92)}
+.av-opt.sel{
+  border-color:var(--gold);
+  background:rgba(245,158,11,.15);
+  box-shadow:0 0 16px rgba(245,158,11,.4);
+}
+.av-opt.empty{font-size:14px;color:rgba(255,255,255,.4)}
+
+/* DNA Radar */
+.dna-radar{
+  width:240px;height:240px;
+  margin:14px auto;
+  position:relative;
+}
+.dna-radar svg{width:100%;height:100%}
+.dna-label{
+  position:absolute;font-size:11px;
+  font-weight:700;color:var(--gold-bright);
+  text-shadow:0 1px 2px rgba(0,0,0,.6);
+}
+
+/* Activity Log */
+.act-row{
+  display:flex;gap:10px;align-items:center;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-sm);
+  padding:8px 12px;
+  font-size:12px;
+}
+.act-row.win{border-left:3px solid var(--good)}
+.act-row.loss{border-left:3px solid var(--bad)}
+.act-row.ach{border-left:3px solid var(--gold)}
+.act-row .em{font-size:18px;flex-shrink:0}
+.act-row .info{flex:1}
+.act-row .when{font-size:10px;opacity:.55}
+
+/* Daily Challenge Widget */
+.daily-widget{
+  background:linear-gradient(135deg,rgba(16,185,129,.25) 0%,rgba(245,158,11,.18) 100%);
+  border:1px solid rgba(16,185,129,.4);
+  border-radius:var(--r-lg);
+  padding:14px;
+  display:flex;align-items:center;gap:12px;
+}
+.daily-widget .em{font-size:36px}
+.daily-widget .info{flex:1}
+.daily-widget .info b{display:block;color:var(--gold-bright);font-size:14px}
+.daily-widget .info span{font-size:11px;opacity:.85}
+.daily-widget button{
+  background:var(--gold);color:var(--ink);
+  padding:8px 14px;border-radius:99px;
+  font-weight:800;font-size:12px;
+}
 </style>
 </head>
 <body>
@@ -769,7 +899,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.2.0 · 11 games · 22 achievements · 🙏</div>
+  <div class="splash-foot">v0.3.0 · 14 games · 7 rooms · avatar designer · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -809,11 +939,11 @@ button{
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
     </div>
     <div class="hud-row">
-      <div class="profile-tag">
+      <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
         <span id="p-em">🙏</span>
         <span id="p-name">Saint</span>
         <span style="opacity:.7">· IQ <span id="p-iq">1000</span></span>
-      </div>
+      </button>
       <div class="dim">🔥 <span id="p-streak">0</span></div>
     </div>
   </div>
@@ -843,6 +973,10 @@ button{
       <button class="room-door room-script" onclick="App.openRoom('script')">
         <div><div class="em">✝️</div><div class="name">Scripture</div></div>
         <div class="sub">verses · books · parables</div>
+      </button>
+      <button class="room-door room-logic" onclick="App.openRoom('logic')">
+        <div><div class="em">🧩</div><div class="name">Logic Lab</div></div>
+        <div class="sub">puzzles · patterns</div>
       </button>
       <button class="room-door room-daily" onclick="App.openRoom('daily')">
         <div><div class="em">🎲</div><div class="name">Daily Court</div></div>
@@ -902,7 +1036,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 // ----- STATE -----
 const State = {
@@ -921,7 +1055,96 @@ const DEFAULT_SAVE = {
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
   settings:{sfx:true,haptic:true,kidSafe:false,tts:false},
+  // v0.3 additions
+  avatar:{character:'monk',hat:'none',face:'none',aura:'none',pet:'none',outfit:'plain'},
+  activityLog:[], // recent events {ts, type, msg}
+  brainDNA:{memory:0,speed:0,pattern:0,logic:0,word:0,faith:0}, // accumulating per-room scores
 };
+
+// ===== v0.3 AVATAR DESIGNER ITEMS =====
+const AVATAR_ITEMS = {
+  character: [
+    {id:'monk',em:'🧘',name:'Monk'},
+    {id:'saint',em:'🙏',name:'Saint'},
+    {id:'scholar',em:'📚',name:'Scholar'},
+    {id:'sage',em:'🦉',name:'Sage'},
+    {id:'lamb',em:'🐑',name:'Lamb'},
+    {id:'angel',em:'😇',name:'Angel'},
+    {id:'king',em:'🤴',name:'King'},
+    {id:'queen',em:'👸',name:'Queen'},
+    {id:'warrior',em:'🛡️',name:'Warrior'},
+  ],
+  hat:[
+    {id:'none',em:'',name:'None'},
+    {id:'crown',em:'👑',name:'Crown'},
+    {id:'tophat',em:'🎩',name:'Top Hat'},
+    {id:'cap',em:'🧢',name:'Cap'},
+    {id:'helmet',em:'⛑️',name:'Helmet'},
+    {id:'gradcap',em:'🎓',name:'Grad Cap'},
+    {id:'starcrown',em:'🌟',name:'Star Halo'},
+  ],
+  face:[
+    {id:'none',em:'',name:'None'},
+    {id:'glasses',em:'🤓',name:'Glasses'},
+    {id:'sunglasses',em:'😎',name:'Cool Shades'},
+    {id:'starry',em:'🤩',name:'Starstruck'},
+    {id:'fire',em:'🔥',name:'On Fire'},
+    {id:'love',em:'😍',name:'In Love'},
+  ],
+  outfit:[
+    {id:'plain',em:'👕',name:'Plain Tee'},
+    {id:'royal',em:'👘',name:'Royal Robe'},
+    {id:'fancy',em:'🥋',name:'Martial Arts'},
+    {id:'lab',em:'🥼',name:'Lab Coat'},
+    {id:'vest',em:'🦺',name:'Vest'},
+    {id:'athletic',em:'🎽',name:'Athletic'},
+    {id:'collar',em:'👔',name:'Collared'},
+  ],
+  pet:[
+    {id:'none',em:'',name:'None'},
+    {id:'dove',em:'🕊️',name:'Dove'},
+    {id:'lamb',em:'🐑',name:'Lamb'},
+    {id:'lion',em:'🦁',name:'Lion'},
+    {id:'eagle',em:'🦅',name:'Eagle'},
+    {id:'owl',em:'🦉',name:'Owl'},
+    {id:'cat',em:'🐱',name:'Cat'},
+    {id:'dog',em:'🐶',name:'Dog'},
+    {id:'fish',em:'🐟',name:'Fish'},
+  ],
+  aura:[
+    {id:'none',em:'',name:'None'},
+    {id:'spark',em:'✨',name:'Sparkle'},
+    {id:'fire',em:'🔥',name:'Fire'},
+    {id:'star',em:'⭐',name:'Star'},
+    {id:'rainbow',em:'🌈',name:'Rainbow'},
+    {id:'lightning',em:'⚡',name:'Lightning'},
+    {id:'glow',em:'💫',name:'Glow'},
+    {id:'sun',em:'🌞',name:'Sun'},
+  ],
+};
+
+function getAvatarEm(slot,id){
+  const list = AVATAR_ITEMS[slot]; if(!list) return '';
+  const it = list.find(x=>x.id===id);
+  return it ? it.em : '';
+}
+function renderAvatarStack(av){
+  if(!av) av = State.data?.avatar || DEFAULT_SAVE.avatar;
+  const aura = getAvatarEm('aura', av.aura);
+  const hat = getAvatarEm('hat', av.hat);
+  const face = getAvatarEm('face', av.face);
+  const ch = getAvatarEm('character', av.character) || '🧘';
+  const outfit = getAvatarEm('outfit', av.outfit);
+  const pet = getAvatarEm('pet', av.pet);
+  // Layered display: aura (background glow) + hat + char + outfit + pet
+  return `<span class="avatar-stack">
+    ${aura?`<span class="av-aura">${aura}</span>`:''}
+    ${hat?`<span class="av-hat">${hat}</span>`:''}
+    <span class="av-main">${ch}${face?`<span class="av-face">${face}</span>`:''}</span>
+    ${outfit?`<span class="av-outfit">${outfit}</span>`:''}
+    ${pet?`<span class="av-pet">${pet}</span>`:''}
+  </span>`;
+}
 
 // ----- VERSES -----
 const VERSES = [
@@ -1000,6 +1223,12 @@ const ACHIEVEMENTS = [
   {id:'wins_100',em:'👑',t:'Centurion',d:'Total 100 wins'},
   {id:'streak_30',em:'🔥',t:'Pentecost Flame',d:'30-day streak'},
   {id:'all_games',em:'🎮',t:'Try-Everything',d:'Play every game at least once'},
+  // v0.3 additions
+  {id:'logic_5',em:'🧩',t:'Logician I',d:'Win 5 logic games'},
+  {id:'logic_25',em:'🧩',t:'Logician II',d:'Win 25 logic games'},
+  {id:'lights_perfect',em:'💡',t:'Pure Light',d:'Clear Lights Out in ≤6 moves'},
+  {id:'avatar_designer',em:'👤',t:'Style Saint',d:'Customize your avatar'},
+  {id:'dna_balanced',em:'🧬',t:'Balanced Mind',d:'5+ wins in every Brain DNA axis'},
 ];
 
 // ====================================================================
@@ -1037,6 +1266,86 @@ const Wallet = {
 };
 
 // ====================================================================
+// 📜 ACTIVITY LOG (v0.3)
+// ====================================================================
+const Activity = {
+  log(type,em,msg){
+    if(!State.data.activityLog) State.data.activityLog = [];
+    State.data.activityLog.unshift({ts:Date.now(),type,em,msg});
+    if(State.data.activityLog.length>30) State.data.activityLog.length = 30;
+    Save.write();
+  },
+  recent(){ return State.data.activityLog||[]; }
+};
+
+// ====================================================================
+// 🧬 BRAIN DNA (v0.3)
+// ====================================================================
+const DNA = {
+  bumpFromRoom(room){
+    const d = State.data;
+    if(!d.brainDNA) d.brainDNA = {memory:0,speed:0,pattern:0,logic:0,word:0,faith:0};
+    const map = {word:'word', brain:'memory', mind:'pattern', num:'logic', script:'faith', logic:'logic', daily:'speed'};
+    const axis = map[room]; if(axis) d.brainDNA[axis]++;
+  },
+  axes(){
+    const d = State.data.brainDNA||{};
+    return [
+      {k:'memory',label:'Memory',v:d.memory||0},
+      {k:'speed',label:'Speed',v:d.speed||0},
+      {k:'pattern',label:'Pattern',v:d.pattern||0},
+      {k:'logic',label:'Logic',v:d.logic||0},
+      {k:'word',label:'Word',v:d.word||0},
+      {k:'faith',label:'Faith',v:d.faith||0},
+    ];
+  },
+  renderRadar(size=240){
+    const axes = DNA.axes();
+    const max = Math.max(5, ...axes.map(a=>a.v));
+    const cx=size/2, cy=size/2, r=size/2-30;
+    const n=axes.length;
+    const angle=i=>(-Math.PI/2)+(i*2*Math.PI/n);
+    const point=(i,val)=>({x:cx+Math.cos(angle(i))*r*(val/max), y:cy+Math.sin(angle(i))*r*(val/max)});
+    let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
+    // grid rings
+    for(let g=1;g<=4;g++){
+      const ringR = r*(g/4);
+      let pts='';
+      for(let i=0;i<n;i++){
+        const x = cx+Math.cos(angle(i))*ringR;
+        const y = cy+Math.sin(angle(i))*ringR;
+        pts += `${x},${y} `;
+      }
+      svg += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`;
+    }
+    // axis lines
+    for(let i=0;i<n;i++){
+      const e = point(i,max);
+      svg += `<line x1="${cx}" y1="${cy}" x2="${e.x}" y2="${e.y}" stroke="rgba(255,255,255,.08)"/>`;
+    }
+    // data polygon
+    let dataPts='';
+    axes.forEach((a,i)=>{
+      const p = point(i,a.v);
+      dataPts += `${p.x},${p.y} `;
+    });
+    svg += `<polygon points="${dataPts}" fill="rgba(245,158,11,.3)" stroke="#FBBF24" stroke-width="2"/>`;
+    // dots
+    axes.forEach((a,i)=>{
+      const p = point(i,a.v);
+      svg += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#FBBF24"/>`;
+    });
+    svg += `</svg>`;
+    let labels='';
+    axes.forEach((a,i)=>{
+      const lab = point(i,max*1.18);
+      labels += `<div class="dna-label" style="left:${lab.x-22}px;top:${lab.y-8}px;width:44px;text-align:center">${a.label}<br><span style="opacity:.7;font-weight:600">${a.v}</span></div>`;
+    });
+    return `<div class="dna-radar">${svg}${labels}</div>`;
+  }
+};
+
+// ====================================================================
 // 🏆 ACHIEVEMENTS
 // ====================================================================
 const Ach = {
@@ -1070,9 +1379,14 @@ const Ach = {
     if(d.streak>=30) Ach.unlock('streak_30');
     if(d.iq>=1200) Ach.unlock('iq_1200');
     if(d.iq>=1500) Ach.unlock('iq_1500');
-    // try-everything: played all 11 games
-    const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books'];
+    if(sum('logic')>=5) Ach.unlock('logic_5');
+    if(sum('logic')>=25) Ach.unlock('logic_25');
+    // try-everything: played all 13 non-daily games
+    const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
+    // dna_balanced: 5+ in every axis
+    const dna = State.data.brainDNA||{};
+    if(['memory','speed','pattern','logic','word','faith'].every(k=>(dna[k]||0)>=5)) Ach.unlock('dna_balanced');
     // perfect day check
     const today = new Date().toDateString();
     const rooms = ['word','brain','mind','num','script','daily'];
@@ -1196,7 +1510,9 @@ const UI = {
       streakEl.textContent = streak;
       streakEl.parentElement.className = streak>=3 ? 'flame-streak dim' : 'dim';
     }
-    setText('p-em', State.data?.emoji||'🙏');
+    // v0.3 — render avatar stack instead of single emoji
+    const pem = document.getElementById('p-em');
+    if(pem) pem.innerHTML = renderAvatarStack();
     setText('p-name', State.data?.name||'Saint');
   }
 };
@@ -1241,6 +1557,11 @@ const ROOMS = {
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
     {id:'books',em:'📖',name:'Books Race',sub:'OT or NT? · 45 sec · 66 books',launch:()=>BooksGame.start()},
+  ]},
+  logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
+    {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
+    {id:'spot',em:'🔍',name:'Spot Different',sub:'find the odd one out · 45 sec',launch:()=>SpotGame.start()},
+    {id:'hunt',em:'🔢',name:'Number Hunt',sub:'find the duplicate pair · 45 sec',launch:()=>HuntGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -1312,18 +1633,21 @@ const App = {
       document.getElementById('ob-next').disabled=true;
     }else{
       const presets = {saint:'🙏',scholar:'📚',sage:'🦉',lamb:'🐑'};
+      const presetCharacter = {saint:'saint',scholar:'scholar',sage:'sage',lamb:'lamb'};
       State.data.name = App._obData.name;
       State.data.preset = App._obData.preset;
       State.data.emoji = presets[App._obData.preset]||'🙏';
+      State.data.avatar.character = presetCharacter[App._obData.preset]||'monk';
       State.data.mood = App._obData.mood;
       State.data.iq = 1000;
       State.data.onboarded = true;
+      Activity.log('first','✨','Joined BrainBoard · welcome, '+State.data.name+'!');
       Ach.unlock('first_step');
       Save.write();
       UI.updateWallet();
       UI.show('lobby');
       App.checkDaily();
-      Toast.show(`welcome, <b>${State.data.name}</b>! 🙏`);
+      Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · tap your name to design your avatar`);
     }
   },
 
@@ -1439,7 +1763,11 @@ const App = {
         <div class="stat-card"><div class="lbl">🪙 coins</div><div class="val">${fmt(d.wallet.coin)}</div></div>
         <div class="stat-card"><div class="lbl">✝️ stars</div><div class="val">${fmt(d.wallet.faith)}</div></div>
       </div>`;
-    let perGame = '<h3 style="margin:12px 0 8px;color:var(--gold-bright);font-size:15px">per-game</h3>';
+    let dnaSection = `
+      <h3 style="margin:14px 0 4px;color:var(--gold-bright);font-size:15px;text-align:center">🧬 Brain DNA</h3>
+      <p class="dim text-center" style="font-size:11px;margin-bottom:6px">your skill profile · grows as you win</p>
+      ${DNA.renderRadar(220)}`;
+    let perGame = '<h3 style="margin:14px 0 8px;color:var(--gold-bright);font-size:15px">per-game</h3>';
     const games = Object.entries(d.perGame);
     if(games.length){
       perGame += '<div class="settings-list">';
@@ -1453,7 +1781,20 @@ const App = {
     }else{
       perGame += '<p class="dim text-center" style="margin-top:12px">play a game to see stats!</p>';
     }
-    document.getElementById('aux-body').innerHTML = top + perGame;
+    let activity = '<h3 style="margin:14px 0 8px;color:var(--gold-bright);font-size:15px">📜 recent activity</h3>';
+    const recent = Activity.recent().slice(0,15);
+    if(recent.length){
+      activity += '<div class="settings-list">';
+      recent.forEach(a=>{
+        const ago = Math.round((Date.now()-a.ts)/60000);
+        const when = ago<1?'just now':ago<60?ago+'m ago':Math.floor(ago/60)+'h ago';
+        activity += `<div class="act-row ${a.type}"><div class="em">${a.em}</div><div class="info">${a.msg}<div class="when">${when}</div></div></div>`;
+      });
+      activity += '</div>';
+    }else{
+      activity += '<p class="dim text-center">no activity yet</p>';
+    }
+    document.getElementById('aux-body').innerHTML = top + dnaSection + perGame + activity;
     UI.show('aux');
   },
   openAch(){
@@ -1471,6 +1812,48 @@ const App = {
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
   },
+  openAvatar(){
+    Ach.unlock('avatar_designer');
+    const av = State.data.avatar || {...DEFAULT_SAVE.avatar};
+    document.getElementById('aux-title').innerHTML = '👤 Avatar Designer';
+    const slots = ['character','hat','face','outfit','pet','aura'];
+    const slotEmoji = {character:'🧑',hat:'🎩',face:'👀',outfit:'👕',pet:'🐾',aura:'✨'};
+    let html = `<div class="av-designer">
+      <div class="avatar-big">${renderAvatarStack(av)}</div>
+      <p class="dim text-center">tap any item to equip · live preview</p>`;
+    slots.forEach(slot=>{
+      html += `<div class="av-slot-row">
+        <div class="av-slot-label">${slotEmoji[slot]} ${slot}</div>
+        <div class="av-options">`;
+      AVATAR_ITEMS[slot].forEach(opt=>{
+        const isSel = av[slot]===opt.id;
+        html += `<div class="av-opt ${isSel?'sel':''} ${!opt.em?'empty':''}" data-slot="${slot}" data-id="${opt.id}" title="${opt.name}">${opt.em||'∅'}</div>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `<button class="btn-primary" onclick="App.toLobby()">✅ DONE</button>
+    <button class="btn-secondary" onclick="App.resetAvatar()">↩️ reset to default</button>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+    document.querySelectorAll('.av-opt').forEach(b=>{
+      b.onclick = ()=>{
+        const slot = b.dataset.slot, id = b.dataset.id;
+        State.data.avatar[slot] = id;
+        Save.write();
+        haptic(8); SFX.tap();
+        App.openAvatar(); // re-render
+      };
+    });
+  },
+  resetAvatar(){
+    State.data.avatar = {...DEFAULT_SAVE.avatar};
+    Save.write();
+    UI.updateWallet();
+    App.openAvatar();
+    Toast.show('avatar reset to default');
+  },
+  _avatarOpenedOnce: false,
   openAbout(){
     document.getElementById('aux-title').innerHTML = 'ℹ️ About';
     document.getElementById('aux-body').innerHTML = `
@@ -1495,6 +1878,8 @@ function recordResult(roomId, gameId, won, rewards={}){
   if(!d.perGame[key]) d.perGame[key] = {wins:0,plays:0,best:0,lastWin:0};
   d.perGame[key].plays++;
   d.totals.games++;
+  const gameDef = ROOMS[roomId]?.games.find(g=>g.id===gameId);
+  const gName = gameDef ? gameDef.name : gameId;
   if(won){
     if(State._dailyMultiplier){
       Object.keys(rewards).forEach(k=>rewards[k]=Math.round(rewards[k]*State._dailyMultiplier));
@@ -1505,9 +1890,12 @@ function recordResult(roomId, gameId, won, rewards={}){
     d.totals.wins++;
     d.iq = Math.min(2400, d.iq + 8);
     Wallet.add(rewards);
+    DNA.bumpFromRoom(roomId);
+    Activity.log('win','🏆',`won ${gName}`);
   }else{
     d.totals.losses++;
     d.iq = Math.max(800, d.iq - 4);
+    Activity.log('loss','💪',`played ${gName}`);
   }
   Save.write();
   Ach.check();
@@ -2287,15 +2675,229 @@ const BooksGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 12 · DAILY (rotating mini)
+// 🎮 GAME 12 · LIGHTS OUT (Logic Lab)
+// ====================================================================
+const LightsGame = {
+  start(){
+    State.gameInst=this;
+    this.grid = Array(9).fill(false);
+    const taps = 3 + Math.floor(Math.random()*3);
+    const used = new Set();
+    while(used.size<taps){
+      const i = Math.floor(Math.random()*9);
+      if(used.has(i)) continue;
+      used.add(i);
+      this._toggle(i);
+    }
+    this.moves = 0; this.done = false;
+    this.startTime = Date.now();
+    this.render();
+    UI.show('game');
+  },
+  _toggle(i){
+    const flip=(idx)=>{ if(idx>=0&&idx<9) this.grid[idx]=!this.grid[idx]; };
+    flip(i);
+    const r=Math.floor(i/3), c=i%3;
+    if(c>0) flip(i-1);
+    if(c<2) flip(i+1);
+    if(r>0) flip(i-3);
+    if(r<2) flip(i+3);
+  },
+  tap(i){
+    if(this.done) return;
+    SFX.tap(); haptic(8);
+    this._toggle(i);
+    this.moves++;
+    if(this.grid.every(x=>!x)){
+      this.done=true;
+      this.render();
+      const won = this.moves<=10;
+      const rewards = won ? {coin:50+(11-this.moves)*6, brain:3} : {coin:30, brain:1};
+      recordResult('logic','lights',true,rewards);
+      setTimeout(()=>Modal.win({rewards, title:`Cleared in ${this.moves} moves!`, emoji:'💡',
+        retry:()=>LightsGame.start(), lobby:()=>App.toLobby()}),400);
+      return;
+    }
+    this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>🧩 Lights Out</b> · moves: <b>${this.moves}</b> · turn ALL off!`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap a cell · it + neighbors flip'));
+    const grid = el('div','');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,76px);gap:10px;margin:14px 0';
+    for(let i=0;i<9;i++){
+      const on = this.grid[i];
+      const c = el('div','');
+      c.style.cssText = `aspect-ratio:1;border-radius:14px;display:grid;place-items:center;font-size:34px;cursor:pointer;background:${on?'linear-gradient(135deg,#FBBF24,#F59E0B)':'rgba(255,255,255,.08)'};border:2px solid ${on?'#FBBF24':'rgba(255,255,255,.2)'};box-shadow:${on?'0 0 22px rgba(245,158,11,.7)':'none'};transition:all .15s`;
+      c.textContent = on?'💡':'';
+      c.onclick=()=>this.tap(i);
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 13 · SPOT THE DIFFERENT (Logic Lab)
+// ====================================================================
+const SPOT_PATTERNS = [
+  ['😀','😁'],['⭐','✨'],['🔵','🟦'],['🐱','🐶'],['🍎','🍏'],
+  ['🌹','🌷'],['🟢','🟩'],['📕','📗'],['🔴','🟥'],['🌟','⭐'],
+  ['😊','🙂'],['🌙','🌑'],['☀️','🌞'],['🦊','🦝'],['🐰','🐹'],
+];
+const SpotGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45;
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    UI.show('game');
+  },
+  next(){
+    const p = SPOT_PATTERNS[Math.floor(Math.random()*SPOT_PATTERNS.length)];
+    this.cells = [p[0],p[0],p[0],p[0]];
+    this.oddIdx = Math.floor(Math.random()*4);
+    this.cells[this.oddIdx] = p[1];
+    this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>🧩 Spot Different</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','find the one that\'s different'));
+    const grid = el('div','');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:280px;margin:14px 0';
+    this.cells.forEach((cell,i)=>{
+      const c = el('div','');
+      c.style.cssText='aspect-ratio:1;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;font-size:54px;cursor:pointer';
+      c.textContent = cell;
+      c.onclick=()=>this.pick(i);
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  pick(i){
+    if(i===this.oddIdx){ this.score++; SFX.correct(); haptic(8); }
+    else{ SFX.wrong(); haptic(20); this.score=Math.max(0,this.score-1); }
+    this.next();
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=10;
+    const rewards = won ? {coin:30+this.score*4, brain:2} : {coin:Math.max(10,this.score*2)};
+    recordResult('logic','spot',won,rewards);
+    if(won) Modal.win({rewards, title:`Spotted ${this.score}!`, emoji:'🔍',
+      retry:()=>SpotGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`Spotted ${this.score}`,msg:'aim for 10+ correct!',
+      retry:()=>SpotGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 14 · NUMBER HUNT (Logic Lab)
+// ====================================================================
+const HuntGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45;
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    UI.show('game');
+  },
+  next(){
+    const size = 8;
+    const used = new Set();
+    const nums = [];
+    while(nums.length<size-1){
+      const n = Math.floor(Math.random()*89)+10;
+      if(!used.has(n)){ used.add(n); nums.push(n); }
+    }
+    // pick one to duplicate
+    const dup = nums[Math.floor(Math.random()*nums.length)];
+    nums.push(dup);
+    this.target = dup;
+    this.nums = nums.sort(()=>Math.random()-.5);
+    this.dupIndices = [];
+    this.nums.forEach((n,i)=>{ if(n===dup) this.dupIndices.push(i); });
+    this.tapped = new Set();
+    this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>🧩 Number Hunt</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap BOTH copies of the duplicated number'));
+    const grid = el('div','');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:340px;margin:14px 0';
+    this.nums.forEach((n,i)=>{
+      const c = el('div','');
+      const isDone = this.tapped.has(i);
+      c.style.cssText = `aspect-ratio:1;border-radius:12px;background:${isDone?'rgba(16,185,129,.4)':'rgba(255,255,255,.08)'};border:2px solid ${isDone?'#10B981':'rgba(255,255,255,.18)'};display:grid;place-items:center;font-size:24px;font-weight:800;cursor:pointer;font-family:'Cinzel',serif`;
+      c.textContent = n;
+      c.onclick=()=>this.tap(i,n);
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  tap(i,n){
+    if(this.tapped.has(i)) return;
+    if(n===this.target){
+      this.tapped.add(i);
+      SFX.correct(); haptic(8);
+      if(this.tapped.size===2){
+        this.score++;
+        setTimeout(()=>this.next(), 350);
+      }else{
+        this.render();
+      }
+    }else{
+      SFX.wrong(); haptic(20);
+      this.score = Math.max(0, this.score-1);
+      // shake
+      this.next();
+    }
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=6;
+    const rewards = won ? {coin:30+this.score*5, brain:3} : {coin:Math.max(10,this.score*3)};
+    recordResult('logic','hunt',won,rewards);
+    if(won) Modal.win({rewards, title:`Hunted ${this.score}!`, emoji:'🔢',
+      retry:()=>HuntGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`Hunted ${this.score}`,msg:'aim for 6+ pairs!',
+      retry:()=>HuntGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 15 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
-    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame];
+    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame];
     const pickIdx = day % games.length;
     const pick = games[pickIdx];
-    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books'];
+    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt'];
     Toast.show(`🎲 today's spotlight: <b>${names[pickIdx]}</b> · 2x rewards!`);
     State._dailyMultiplier = 2;
     setTimeout(()=>pick.start(), 800);
