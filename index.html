@@ -59,12 +59,15 @@ button{
 
 /* ==================== SCREEN SYSTEM ==================== */
 .screen{
-  position:fixed;inset:0;
+  position:fixed;
+  top:0;right:0;bottom:0;left:0;
   display:none;flex-direction:column;
   padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-  animation:screenIn .35s ease;
+  opacity:1;
+  z-index:1;
 }
-.screen.active{display:flex}
+.screen.active{display:flex !important;opacity:1 !important}
+.screen.fade-in{animation:screenIn .35s ease forwards}
 @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ==================== SPLASH ==================== */
@@ -762,7 +765,7 @@ button{
 <body>
 
 <!-- ============ SPLASH ============ -->
-<section id="splash" class="screen active">
+<section id="splash" class="screen active" style="display:flex">
   <div class="splash-emoji">🧠</div>
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
@@ -1263,7 +1266,7 @@ const App = {
       }
     }catch(e){
       console.error('BrainBoard init error:',e);
-      document.body.innerHTML = '<pre style="color:#FFF8E7;background:#1E3A8A;padding:20px;font-family:monospace;white-space:pre-wrap;font-size:14px">⚠️ BrainBoard init error:\n\n'+(e.message||e)+'\n\n'+(e.stack||'')+'\n\nTry: localStorage.clear() then refresh.</pre>';
+      _showFatal(e);
     }
   },
   tapEnter(){
@@ -2304,10 +2307,31 @@ const DailyGame = {
 // BOOT
 // ====================================================================
 window.App = App; // expose for inline handlers
-document.addEventListener('DOMContentLoaded', ()=>App.init());
-if(document.readyState!=='loading') App.init();
-
-// Service worker — skip for v0.1 simplicity
+function _showFatal(e){
+  const msg = (e && (e.message||String(e)))||'unknown error';
+  const stack = (e && e.stack)||'';
+  const html = '<div style="position:fixed;inset:0;background:#1E3A8A;color:#FFF8E7;padding:24px;font-family:monospace;overflow:auto;z-index:9999"><h2 style="color:#FBBF24;font-size:18px;margin-bottom:12px;font-family:serif">⚠️ BrainBoard error</h2><pre style="white-space:pre-wrap;font-size:13px;background:#0a1633;padding:14px;border-radius:8px;border:1px solid #F59E0B">'+msg+'\n\n'+stack+'</pre><div style="margin-top:14px;padding:14px;background:#0a1633;border-radius:8px"><b>Try:</b><br>1. tap below to clear save<br>2. then refresh</div><button onclick="try{localStorage.clear()}catch(e){};location.reload()" style="margin-top:14px;padding:14px 24px;background:#FBBF24;color:#0F172A;border:none;border-radius:99px;font-weight:800;font-size:15px;cursor:pointer">🗑️ CLEAR + RELOAD</button></div>';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div);
+}
+window.addEventListener('error',(ev)=>_showFatal(ev.error||{message:ev.message,stack:''}));
+let _initRan = false;
+function _bootOnce(){
+  if(_initRan) return;
+  _initRan = true;
+  try{ App.init(); }catch(e){
+    console.error('BrainBoard boot fail',e);
+    _showFatal(e);
+  }
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', _bootOnce);
+}else{
+  _bootOnce();
+}
+// safety: also bind to window load as a last-ditch trigger
+window.addEventListener('load', _bootOnce);
 </script>
 </body>
 </html>
