@@ -4,28 +4,31 @@
 
 A Roblox-style hub of brain · word · mind · math · scripture mini-games. Faith-forward. Mobile-first. Single-file HTML + localStorage.
 
-## 🚪 6 Rooms · 6 Launch Games (v0.1.0)
+## 🚪 6 Rooms · 11 Working Games (v0.2.0)
 
-| Room | Game |
+| Room | Games |
 |------|------|
-| 📖 Word Lab | 5-Letter Daily (Wordle clone, KJV-flavored) |
-| 🧠 Brain Gym | Memory Match (4×4 holy emoji cards) |
-| 🎯 Mind Games | Stroop Sprint (30s color/word) |
-| 🔢 Number Crunch | Math Sprint (30s arithmetic) |
-| ✝️ Scripture | Verse Fill-In (12 KJV verses) |
-| 🎲 Daily Court | Game of the Day (rotates · 2x rewards) |
+| 📖 Word Lab | 🔤 5-Letter Daily · 📜 Anagram Storm |
+| 🧠 Brain Gym | 🃏 Memory Match · 🎼 Simon Says |
+| 🎯 Mind Games | 🌈 Stroop Sprint · ⚡ Reaction Tap |
+| 🔢 Number Crunch | ➕ Math Sprint · 🧮 Sequence Solve |
+| ✝️ Scripture | 📜 Verse Fill-In · 📖 Books of the Bible Race |
+| 🎲 Daily Court | ⭐ Game of the Day (rotates · 2x rewards) |
 
 ## ✨ Features
 
 - 6-currency wallet (🪙 💎 🧠 ✝️ 🎫 🗝️)
-- 12 launch achievements
+- **22 launch achievements**
 - IQ Rank (Elo-derived, 800–2400)
-- Daily login streak with scaling rewards
+- Daily login streak with scaling rewards + flame animation at streak ≥ 3
 - 20 victory verses + 12 fill-in verses (KJV)
+- 66 books of the Bible (full OT + NT) for Books Race
 - 4 avatar presets: 🙏 Saint · 📚 Scholar · 🦉 Sage · 🐑 Lamb
 - Mood-based onboarding
 - Procedural WebAudio SFX engine
 - Vibration haptics
+- Confetti burst on every win 🎉
+- 📤 Share-my-score (native Share API + clipboard fallback)
 - Settings: SFX · Haptics · Kid-Safe · TTS
 - Mobile-first CSS · 50px tap targets · safe-area insets · iOS notch aware
 - localStorage save/load with reset button
@@ -36,9 +39,9 @@ Every win drops a Bible verse. Scripture Room is a launch room, not bolt-on. Dai
 
 > "I can do all things through Christ who strengthens me." — Philippians 4:13
 
-## 🚀 Roadmap (v0.2+)
+## 🚀 Roadmap (v0.3+)
 
-- 18 more games (3 per room → 24 total)
+- 13 more games (target: 24 total · 4 per room)
 - Avatar customizer · 250 items · 7 rarities
 - Battle Pass S1 "Pentecost Brain" · 120 tiers · 3 tracks
 - Friend system + MP duels (Firebase)
