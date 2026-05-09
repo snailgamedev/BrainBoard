@@ -1066,7 +1066,7 @@ button{
 .av-designer > .av-sticky-preview,
 #ob-step2 > .av-sticky-preview{
   grid-column:2;
-  grid-row:1 / span 99;
+  grid-row:1;
   position:sticky;
   top:12px;
   width:auto;
@@ -1088,7 +1088,7 @@ button{
 .av-sticky-preview .av-tool-btn{ padding:4px 8px;font-size:10px; }
 .av-sticky-preview .title-chip{ font-size:9px;padding:2px 8px;margin:4px auto; display:inline-block; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .av-sticky-preview .bio-quote{ font-size:10px;margin:4px 0;padding:0 4px; }
-/* Mobile: skinnier column */
+/* Mobile: skinnier column + tighter content */
 @media (max-width:540px){
   .av-designer,
   #ob-step2{ grid-template-columns:1fr 108px; gap:8px; }
@@ -1098,7 +1098,16 @@ button{
   .av-sticky-preview .av-tools{ display:none; }
   .av-sticky-preview .title-chip{ font-size:8px; max-width:96px; }
   .av-sticky-preview .bio-quote{ display:none; }
+  /* shrink theme grid on mobile so 3 fit cleanly */
+  .theme-grid{ grid-template-columns:repeat(auto-fill,minmax(58px,1fr)) !important; gap:5px; }
+  .theme-tile{ padding:6px 2px; }
+  .theme-tile .em{ font-size:18px; }
+  .theme-tile .lbl{ font-size:8px; }
 }
+/* Prevent scroll-past-content overflow on screens */
+#aux,#onboard{ overscroll-behavior:contain; }
+/* Bottom safe-padding so content above the fold is reachable AND no excess */
+.av-designer,#ob-step2{ padding-bottom:24px; }
 /* Onboarding card narrower — even tighter mobile column */
 #ob-step2 .av-sticky-preview{ padding:8px 6px; }
 @media (max-width:380px){
@@ -1165,7 +1174,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.8.1 · TRUE side column · zero overlap · 🙏</div>
+  <div class="splash-foot">v0.8.2 · scroll fixed · mobile-safe · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1308,7 +1317,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.8.1';
+const VERSION = '0.8.2';
 
 // ----- STATE -----
 const State = {
