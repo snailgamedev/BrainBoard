@@ -843,6 +843,118 @@ button{
   box-shadow:0 0 16px rgba(245,158,11,.4);
 }
 .av-opt.empty{font-size:14px;color:rgba(255,255,255,.4)}
+.av-opt.add{font-size:22px;background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(245,158,11,.08));border-color:rgba(245,158,11,.4)}
+.av-opt.custom{position:relative}
+.av-opt.custom::after{content:'✨';position:absolute;top:-2px;right:-2px;font-size:10px}
+.avatar-stack.av-size-s{width:1em;height:1em}
+.avatar-stack.av-size-l{width:1.8em;height:1.8em}
+.av-tools{
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  margin:6px 0 12px;
+}
+.av-tool-btn{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:99px;
+  padding:7px 14px;
+  color:var(--cream);
+  font-size:12px;font-weight:700;
+  cursor:pointer;
+}
+.av-tool-btn.active{
+  background:rgba(245,158,11,.2);
+  border-color:#FBBF24;color:var(--gold-bright);
+}
+.av-hue-row{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r-md);padding:10px 14px;
+  margin-bottom:8px;
+}
+.av-hue-slider{
+  flex:1;-webkit-appearance:none;appearance:none;
+  height:8px;border-radius:99px;
+  background:linear-gradient(90deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000);
+  outline:none;
+}
+.av-hue-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:18px;height:18px;border-radius:50%;
+  background:white;cursor:pointer;
+  border:2px solid var(--ink);
+  box-shadow:0 2px 6px rgba(0,0,0,.4);
+}
+.emoji-picker{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(10,22,51,.98);
+  border-top:2px solid var(--gold);
+  padding:14px 12px env(safe-area-inset-bottom);
+  z-index:200;
+  max-height:65vh;overflow-y:auto;
+  border-radius:22px 22px 0 0;
+  box-shadow:0 -8px 30px rgba(0,0,0,.5);
+}
+.emoji-picker.open{animation:slideUp .35s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ep-head{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;
+}
+.ep-head h3{
+  font-family:'Cinzel',serif;color:var(--gold-bright);font-size:16px;
+}
+.ep-cats{
+  display:flex;gap:6px;overflow-x:auto;
+  padding-bottom:6px;margin-bottom:10px;
+}
+.ep-cat{
+  flex-shrink:0;
+  padding:6px 12px;border-radius:99px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  color:var(--cream);cursor:pointer;
+}
+.ep-cat.active{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.ep-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));
+  gap:4px;
+}
+.ep-cell{
+  aspect-ratio:1;display:grid;place-items:center;
+  font-size:28px;cursor:pointer;
+  background:rgba(255,255,255,.05);
+  border-radius:8px;
+  transition:transform .1s;
+}
+.ep-cell:active{transform:scale(.85);background:rgba(245,158,11,.3)}
+.ep-input{
+  width:100%;padding:12px;
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:var(--r-md);
+  color:var(--cream);font-size:24px;
+  text-align:center;font-family:inherit;
+  margin-bottom:10px;
+}
+.loadout-row{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--r-md);
+  padding:10px 12px;
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;
+}
+.loadout-row .name{flex:1;font-weight:700}
+.loadout-row .preview{font-size:32px}
+.loadout-row button{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  color:var(--cream);
+  padding:6px 12px;border-radius:99px;
+  font-size:11px;font-weight:600;
+}
 
 /* DNA Radar */
 .dna-radar{
@@ -900,7 +1012,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.4.0 · 17 games · 8 rooms · battle pass · 🙏</div>
+  <div class="splash-foot">v0.5.0 · custom avatars · 17 games · 8 rooms · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1042,7 +1154,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.4.0';
+const VERSION = '0.5.0';
 
 // ----- STATE -----
 const State = {
@@ -1067,6 +1179,11 @@ const DEFAULT_SAVE = {
   brainDNA:{memory:0,speed:0,pattern:0,logic:0,word:0,faith:0}, // accumulating per-room scores
   // v0.4 additions
   bp:{xp:0, claimed:[]}, // battle pass state
+  // v0.5 additions — custom avatar
+  avatarHue:0, // 0-360 CSS hue-rotate
+  avatarSize:'M', // S/M/L
+  loadouts:[], // [{name,avatar,hue,size}]
+  customEmojis:{character:[],hat:[],face:[],outfit:[],pet:[],aura:[]}, // user-saved custom per slot
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -1132,20 +1249,39 @@ const AVATAR_ITEMS = {
 };
 
 function getAvatarEm(slot,id){
-  const list = AVATAR_ITEMS[slot]; if(!list) return '';
+  if(!id) return '';
+  const list = AVATAR_ITEMS[slot]; if(!list) return id;
   const it = list.find(x=>x.id===id);
-  return it ? it.em : '';
+  if(it) return it.em;
+  // not a preset: treat the value itself as a direct emoji (custom)
+  return id;
 }
-function renderAvatarStack(av){
+
+// ===== v0.5 EMOJI MEGA LIBRARY (250+ across 7 categories) =====
+const EMOJI_LIB = {
+  faces:['😀','😁','😂','😃','😄','😅','🥰','😊','🙂','😇','🤩','🥳','🤓','😎','🥸','🤡','🤠','😺','🤖','👽','👾','🎃','💀','👻','🦸','🦹','🧙','🧝','🧚','🧜','🧞','🧟','🤴','👸','🥷','🤺','🧘','🙏'],
+  animals:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦋','🐝','🐌','🦄','🐲','🐢','🐍','🦎','🦓','🦒','🐘','🦏','🦛','🐪','🦘','🦘','🐃','🐄','🐎','🐖','🐑','🐐','🦌','🐕','🐈','🐇','🐀','🦔','🦝','🦨','🦡','🦦','🦥','🐿️','🐉','🐳','🐬','🦈','🐙','🦞','🦀','🐡'],
+  nature:['🌸','🌹','🌺','🌻','🌼','🌷','💐','🌳','🌲','🌴','🌵','🌾','🌿','☘️','🍀','🍁','🍂','🍃','🍄','🌰','💧','🌊','🔥','❄️','☃️','⛄','🌩️','⛈️','🌪️','🌈','☀️','🌞','🌝','🌚','🌛','🌜','🌙','⭐','🌟','✨','💫','☄️','🪐','🌍','🌎','🌏'],
+  objects:['👑','🎩','🧢','⛑️','🎓','💼','👜','🎒','📚','📖','✏️','🖊️','🖌️','🎨','🖼️','💻','📱','⌚','💍','💎','🗝️','🔑','🪄','⚔️','🛡️','🏹','🪓','🪃','🪁','🎮','🕹️','🎲','🎯','🎳','🎷','🎸','🎹','🥁','🎺','🎻','🪕','🎼','🎤','🎧','📯','🔮','🪅','🪆','🎊','🎉','🎁','🎀'],
+  faith:['✝️','☦️','✡️','☪️','🕉️','☸️','☯️','🙏','🕊️','🐑','📜','📖','⛪','🕌','🛕','🕍','🕯️','💒','📿','🌟','✨','👼','😇','🌻','🍞','🍷'],
+  symbols:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💖','💗','💓','💞','💕','💘','💝','💟','♥️','💯','💥','💫','💢','💨','💦','💤','🆙','✅','💎','🌟','⚡','🔱','💪','🫶','✊','🤝'],
+  food:['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🍠','🥔','🍞','🥨','🧀','🍳','🥞','🧇','🥩','🍗','🍕','🍔','🌭','🥪','🌮','🌯','🥗','🍝','🍜','🍣','🍙','🍰','🧁','🍪','🍩','🍫','🍿','🍯'],
+};
+
+function _allCustom(){ return Object.values(EMOJI_LIB).flat(); }
+function renderAvatarStack(av,hueOverride,sizeOverride){
   if(!av) av = State.data?.avatar || DEFAULT_SAVE.avatar;
+  const hue = (hueOverride!==undefined?hueOverride:(State.data?.avatarHue||0));
+  const size = sizeOverride||State.data?.avatarSize||'M';
+  const sizeClass = size==='S'?'av-size-s':size==='L'?'av-size-l':'';
   const aura = getAvatarEm('aura', av.aura);
   const hat = getAvatarEm('hat', av.hat);
   const face = getAvatarEm('face', av.face);
   const ch = getAvatarEm('character', av.character) || '🧘';
   const outfit = getAvatarEm('outfit', av.outfit);
   const pet = getAvatarEm('pet', av.pet);
-  // Layered display: aura (background glow) + hat + char + outfit + pet
-  return `<span class="avatar-stack">
+  const filter = hue ? `filter:hue-rotate(${hue}deg)` : '';
+  return `<span class="avatar-stack ${sizeClass}" style="${filter}">
     ${aura?`<span class="av-aura">${aura}</span>`:''}
     ${hat?`<span class="av-hat">${hat}</span>`:''}
     <span class="av-main">${ch}${face?`<span class="av-face">${face}</span>`:''}</span>
@@ -1243,6 +1379,10 @@ const ACHIEVEMENTS = [
   {id:'bp_tier3',em:'🎫',t:'Pass Starter',d:'Claim Battle Pass tier 3'},
   {id:'bp_tier10',em:'👑',t:'Pentecost Brain',d:'Claim final Battle Pass tier'},
   {id:'iq_2000',em:'🌟',t:'Apostle Sage',d:'Reach IQ 2000'},
+  // v0.5
+  {id:'custom_avatar',em:'✨',t:'Original Saint',d:'Equip a custom emoji avatar'},
+  {id:'fashion_3',em:'💾',t:'Wardrobe',d:'Save 3 avatar loadouts'},
+  {id:'avatar_chaos',em:'🎲',t:'Chaos Saint',d:'Use the randomizer 5 times'},
 ];
 
 // ====================================================================
@@ -1401,6 +1541,8 @@ const Ach = {
     // BP-based
     if((d.bp?.claimed?.length||0)>=3) Ach.unlock('bp_tier3');
     if((d.bp?.claimed?.length||0)>=10) Ach.unlock('bp_tier10');
+    if((d.loadouts?.length||0)>=3) Ach.unlock('fashion_3');
+    if((d._randomizeCount||0)>=5) Ach.unlock('avatar_chaos');
     // try-everything: played all 16 non-daily games
     const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
@@ -1879,13 +2021,31 @@ const App = {
   openAvatar(){
     Ach.unlock('avatar_designer');
     const av = State.data.avatar || {...DEFAULT_SAVE.avatar};
+    if(!State.data.customEmojis) State.data.customEmojis = {character:[],hat:[],face:[],outfit:[],pet:[],aura:[]};
+    if(!State.data.loadouts) State.data.loadouts = [];
+    const hue = State.data.avatarHue||0;
+    const size = State.data.avatarSize||'M';
     document.getElementById('aux-title').innerHTML = '👤 Avatar Designer';
     const slots = ['character','hat','face','outfit','pet','aura'];
     const slotEmoji = {character:'🧑',hat:'🎩',face:'👀',outfit:'👕',pet:'🐾',aura:'✨'};
     let html = `<div class="av-designer">
-      <div class="avatar-big">${renderAvatarStack(av)}</div>
-      <p class="dim text-center">tap any item to equip · live preview</p>`;
+      <div class="avatar-big">${renderAvatarStack(av,hue,size)}</div>
+      <p class="dim text-center">tap any item · or ✏️ CUSTOM to type ANY emoji</p>
+      <div class="av-tools">
+        <button class="av-tool-btn" onclick="App.randomizeAvatar()">🎲 RANDOMIZE</button>
+        <button class="av-tool-btn" onclick="App.saveLoadout()">💾 SAVE LOOK</button>
+        <button class="av-tool-btn ${size==='S'?'active':''}" onclick="App.setAvatarSize('S')">📏 S</button>
+        <button class="av-tool-btn ${size==='M'?'active':''}" onclick="App.setAvatarSize('M')">📏 M</button>
+        <button class="av-tool-btn ${size==='L'?'active':''}" onclick="App.setAvatarSize('L')">📏 L</button>
+      </div>
+      <div class="av-hue-row">
+        <span style="font-size:11px;font-weight:700;opacity:.85">🎨 hue</span>
+        <input type="range" class="av-hue-slider" min="0" max="360" value="${hue}" oninput="App.setHue(this.value)">
+        <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${hue}°</span>
+      </div>`;
+
     slots.forEach(slot=>{
+      const customs = (State.data.customEmojis[slot]||[]);
       html += `<div class="av-slot-row">
         <div class="av-slot-label">${slotEmoji[slot]} ${slot}</div>
         <div class="av-options">`;
@@ -1893,22 +2053,195 @@ const App = {
         const isSel = av[slot]===opt.id;
         html += `<div class="av-opt ${isSel?'sel':''} ${!opt.em?'empty':''}" data-slot="${slot}" data-id="${opt.id}" title="${opt.name}">${opt.em||'∅'}</div>`;
       });
+      // custom items
+      customs.forEach(em=>{
+        const isSel = av[slot]===em;
+        html += `<div class="av-opt custom ${isSel?'sel':''}" data-slot="${slot}" data-id="${em}" title="custom">${em}</div>`;
+      });
+      // add custom button
+      html += `<div class="av-opt add" onclick="App.openEmojiPicker('${slot}')" title="add custom emoji">✏️</div>`;
       html += `</div></div>`;
     });
+
+    // Loadouts
+    if((State.data.loadouts||[]).length){
+      html += `<h3 style="margin:14px 0 8px;color:var(--gold-bright);font-size:14px">💾 saved looks</h3>`;
+      State.data.loadouts.forEach((lo,i)=>{
+        html += `<div class="loadout-row">
+          <span class="preview">${renderAvatarStack(lo.avatar,lo.hue,'S')}</span>
+          <span class="name">${lo.name}</span>
+          <button onclick="App.applyLoadout(${i})">APPLY</button>
+          <button onclick="App.deleteLoadout(${i})" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)">🗑️</button>
+        </div>`;
+      });
+    }
+
     html += `<button class="btn-primary" onclick="App.toLobby()">✅ DONE</button>
-    <button class="btn-secondary" onclick="App.resetAvatar()">↩️ reset to default</button>
+    <button class="btn-secondary" onclick="App.resetAvatar()">↩️ reset all</button>
     </div>`;
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
     document.querySelectorAll('.av-opt').forEach(b=>{
+      if(b.classList.contains('add')) return; // already has onclick
       b.onclick = ()=>{
         const slot = b.dataset.slot, id = b.dataset.id;
         State.data.avatar[slot] = id;
         Save.write();
         haptic(8); SFX.tap();
-        App.openAvatar(); // re-render
+        App.openAvatar();
       };
     });
+  },
+  randomizeAvatar(){
+    State.data._randomizeCount = (State.data._randomizeCount||0)+1;
+    const av = {};
+    Object.keys(AVATAR_ITEMS).forEach(slot=>{
+      // 50/50 preset vs full-emoji
+      if(Math.random()<.5){
+        const list = AVATAR_ITEMS[slot];
+        av[slot] = list[Math.floor(Math.random()*list.length)].id;
+      }else{
+        const all = _allCustom();
+        av[slot] = all[Math.floor(Math.random()*all.length)];
+      }
+    });
+    State.data.avatar = av;
+    State.data.avatarHue = Math.floor(Math.random()*360);
+    Save.write();
+    haptic(20); SFX.chime();
+    Toast.show('🎲 random avatar generated!');
+    App.openAvatar();
+  },
+  setAvatarSize(s){
+    State.data.avatarSize = s;
+    Save.write();
+    haptic(8); SFX.tap();
+    App.openAvatar();
+    UI.updateWallet();
+  },
+  setHue(v){
+    State.data.avatarHue = parseInt(v);
+    Save.write();
+    // update preview only, no full re-render
+    const big = document.querySelector('.avatar-big');
+    if(big){
+      const av = State.data.avatar;
+      big.innerHTML = renderAvatarStack(av, State.data.avatarHue, State.data.avatarSize);
+    }
+    const hueLabel = document.querySelector('.av-hue-row span:last-child');
+    if(hueLabel) hueLabel.textContent = v+'°';
+    UI.updateWallet();
+  },
+  saveLoadout(){
+    if(!State.data.loadouts) State.data.loadouts = [];
+    if(State.data.loadouts.length>=5){
+      Toast.show('max 5 saved looks · delete one first');
+      return;
+    }
+    const name = prompt('name this look:','Look '+(State.data.loadouts.length+1));
+    if(!name) return;
+    State.data.loadouts.push({
+      name,
+      avatar:{...State.data.avatar},
+      hue:State.data.avatarHue||0,
+      size:State.data.avatarSize||'M',
+    });
+    Save.write();
+    Toast.show(`💾 saved as "${name}"`);
+    Activity.log('ach','💾','saved avatar loadout: '+name);
+    App.openAvatar();
+  },
+  applyLoadout(i){
+    const lo = State.data.loadouts[i]; if(!lo) return;
+    State.data.avatar = {...lo.avatar};
+    State.data.avatarHue = lo.hue||0;
+    State.data.avatarSize = lo.size||'M';
+    Save.write();
+    haptic(15); SFX.chime();
+    Toast.show(`👤 applied "${lo.name}"`);
+    UI.updateWallet();
+    App.openAvatar();
+  },
+  deleteLoadout(i){
+    State.data.loadouts.splice(i,1);
+    Save.write();
+    App.openAvatar();
+  },
+  openEmojiPicker(slot){
+    const existing = document.querySelector('.emoji-picker');
+    if(existing) existing.remove();
+    const cats = Object.keys(EMOJI_LIB);
+    const picker = document.createElement('div');
+    picker.className = 'emoji-picker open';
+    picker.dataset.slot = slot;
+    picker.dataset.cat = cats[0];
+    picker.innerHTML = `
+      <div class="ep-head">
+        <h3>✏️ custom emoji · ${slot}</h3>
+        <button class="icon-btn" onclick="this.closest('.emoji-picker').remove()">✕</button>
+      </div>
+      <input class="ep-input" placeholder="paste/type ANY emoji here" maxlength="8">
+      <div class="ep-cats"></div>
+      <div class="ep-grid"></div>`;
+    document.body.appendChild(picker);
+    const catsDiv = picker.querySelector('.ep-cats');
+    const grid = picker.querySelector('.ep-grid');
+    const renderGrid = (cat)=>{
+      grid.innerHTML = '';
+      EMOJI_LIB[cat].forEach(em=>{
+        const c = document.createElement('div');
+        c.className = 'ep-cell';
+        c.textContent = em;
+        c.onclick = ()=>App.applyCustomEmoji(slot, em);
+        grid.appendChild(c);
+      });
+    };
+    cats.forEach(cat=>{
+      const b = document.createElement('button');
+      b.className = 'ep-cat'+(cat===cats[0]?' active':'');
+      b.textContent = cat;
+      b.onclick = ()=>{
+        picker.querySelectorAll('.ep-cat').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderGrid(cat);
+      };
+      catsDiv.appendChild(b);
+    });
+    renderGrid(cats[0]);
+    const inp = picker.querySelector('.ep-input');
+    inp.oninput = (e)=>{
+      const v = e.target.value;
+      if(v.length>0 && /\p{Emoji}/u.test(v)){
+        // user typed/pasted an emoji — apply on enter or auto if single
+      }
+    };
+    inp.onkeydown = (e)=>{
+      if(e.key==='Enter' && inp.value){
+        App.applyCustomEmoji(slot, inp.value);
+      }
+    };
+    inp.focus();
+  },
+  applyCustomEmoji(slot, em){
+    if(!em) return;
+    em = em.trim();
+    if(!em) return;
+    // store in customEmojis library
+    if(!State.data.customEmojis) State.data.customEmojis = {character:[],hat:[],face:[],outfit:[],pet:[],aura:[]};
+    if(!State.data.customEmojis[slot]) State.data.customEmojis[slot] = [];
+    if(!State.data.customEmojis[slot].includes(em)){
+      State.data.customEmojis[slot].unshift(em);
+      if(State.data.customEmojis[slot].length>12) State.data.customEmojis[slot].length = 12;
+    }
+    State.data.avatar[slot] = em;
+    Save.write();
+    haptic(15); SFX.correct();
+    const picker = document.querySelector('.emoji-picker');
+    if(picker) picker.remove();
+    Toast.show(`✨ ${slot} set to ${em}`);
+    Ach.unlock('custom_avatar');
+    App.openAvatar();
+    UI.updateWallet();
   },
   resetAvatar(){
     State.data.avatar = {...DEFAULT_SAVE.avatar};
