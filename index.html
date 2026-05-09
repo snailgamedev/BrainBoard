@@ -1052,14 +1052,24 @@ button{
 @keyframes avWobble{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 @keyframes avRise{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-10px);filter:brightness(1.2) drop-shadow(0 0 16px gold)}}
 
-/* ==================== v0.8 SIDE-SAINT (NO-OVERLAP RULE) ==================== */
-/* Avatar preview floats to the SIDE — NEVER covers scrolling content */
-.av-sticky-preview{
+/* ==================== v0.8.1 TRUE 2-COL GRID (NO-OVERLAP) ==================== */
+/* Avatar gets its OWN column — content cannot physically overlap */
+.av-designer,
+#ob-step2{
+  display:grid;
+  grid-template-columns:1fr 160px;
+  gap:14px;
+  align-items:start;
+}
+.av-designer > *:not(.av-sticky-preview),
+#ob-step2 > *:not(.av-sticky-preview){ grid-column:1; min-width:0; }
+.av-designer > .av-sticky-preview,
+#ob-step2 > .av-sticky-preview{
+  grid-column:2;
+  grid-row:1 / span 99;
   position:sticky;
   top:12px;
-  float:right;
-  width:170px;
-  margin:0 0 12px 12px;
+  width:auto;
   background:rgba(10,22,51,.92);
   border:1.5px solid rgba(245,158,11,.4);
   border-radius:18px;
@@ -1071,42 +1081,33 @@ button{
   -webkit-backdrop-filter:blur(10px);
 }
 .av-sticky-preview .av-frame-wrap,
-.av-sticky-preview .av-scene-wrap{
-  margin:4px auto 0;
-}
-.av-sticky-preview .av-scene-wrap{
-  width:130px;height:130px;
-}
-.av-sticky-preview .av-scene-wrap span{font-size:60px !important}
-.av-sticky-preview .av-tools{flex-wrap:wrap;gap:4px;margin-top:6px}
-.av-sticky-preview .av-tool-btn{padding:4px 8px;font-size:10px}
-.av-sticky-preview .title-chip{font-size:9px;padding:2px 8px;margin:4px auto}
-.av-sticky-preview .bio-quote{font-size:10px;margin:4px 0;padding:0 4px}
-/* Mobile: floating chip in corner — even smaller */
+.av-sticky-preview .av-scene-wrap{ margin:4px auto 0; }
+.av-sticky-preview .av-scene-wrap{ width:130px;height:130px; }
+.av-sticky-preview .av-scene-wrap span{ font-size:60px !important; }
+.av-sticky-preview .av-tools{ flex-wrap:wrap;gap:4px;margin-top:6px; justify-content:center; }
+.av-sticky-preview .av-tool-btn{ padding:4px 8px;font-size:10px; }
+.av-sticky-preview .title-chip{ font-size:9px;padding:2px 8px;margin:4px auto; display:inline-block; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.av-sticky-preview .bio-quote{ font-size:10px;margin:4px 0;padding:0 4px; }
+/* Mobile: skinnier column */
 @media (max-width:540px){
-  .av-sticky-preview{
-    position:fixed;
-    right:8px;
-    top:auto;
-    bottom:14px;
-    width:118px;
-    margin:0;
-    z-index:80;
-    padding:6px;
-    background:rgba(10,22,51,.96);
-  }
-  .av-sticky-preview .av-scene-wrap{width:90px;height:90px}
-  .av-sticky-preview .av-scene-wrap span{font-size:42px !important}
-  .av-sticky-preview .av-tools{display:none}
-  .av-sticky-preview .title-chip{display:none}
-  .av-sticky-preview .bio-quote{display:none}
-  /* extra bottom padding so list content isn't covered by floating chip */
-  .av-designer{padding-bottom:130px}
-  #ob-step2{padding-bottom:130px}
+  .av-designer,
+  #ob-step2{ grid-template-columns:1fr 108px; gap:8px; }
+  .av-sticky-preview{ padding:6px; }
+  .av-sticky-preview .av-scene-wrap{ width:92px;height:92px; }
+  .av-sticky-preview .av-scene-wrap span{ font-size:42px !important; }
+  .av-sticky-preview .av-tools{ display:none; }
+  .av-sticky-preview .title-chip{ font-size:8px; max-width:96px; }
+  .av-sticky-preview .bio-quote{ display:none; }
 }
-#aux,#onboard{scroll-behavior:smooth}
-/* clearfix so list content can flow past the float */
-.av-designer::after,#ob-step2::after{content:'';display:block;clear:both}
+/* Onboarding card narrower — even tighter mobile column */
+#ob-step2 .av-sticky-preview{ padding:8px 6px; }
+@media (max-width:380px){
+  .av-designer,
+  #ob-step2{ grid-template-columns:1fr 90px; gap:6px; }
+  .av-sticky-preview .av-scene-wrap{ width:78px;height:78px; }
+  .av-sticky-preview .av-scene-wrap span{ font-size:36px !important; }
+}
+#aux,#onboard{ scroll-behavior:smooth; }
 
 /* DNA Radar */
 .dna-radar{
@@ -1164,7 +1165,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.8.0 · SIDE-SAINT · 18 themes · power-ups · 🙏</div>
+  <div class="splash-foot">v0.8.1 · TRUE side column · zero overlap · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1307,7 +1308,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.8.0';
+const VERSION = '0.8.1';
 
 // ----- STATE -----
 const State = {
@@ -2236,7 +2237,7 @@ const App = {
     if(App._obData.step===1){
       App._obData.step=2;
       document.getElementById('ob-step1').style.display='none';
-      document.getElementById('ob-step2').style.display='block';
+      document.getElementById('ob-step2').style.display='grid';
       document.getElementById('ob-title').textContent='craft yourself';
       document.getElementById('ob-sub').textContent='design your saint · 250+ emojis · or type ANY emoji';
       document.getElementById('ob-next').textContent='ENTER LOBBY';
