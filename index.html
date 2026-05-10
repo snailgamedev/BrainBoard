@@ -327,9 +327,24 @@ button{
   background:rgba(10,22,51,.9);
   backdrop-filter:blur(12px);
   border-bottom:1px solid rgba(255,255,255,.08);
-  padding:12px 14px;
-  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;
 }
+.mini-wallet{
+  display:flex;gap:4px;flex-wrap:wrap;
+  font-size:10px;font-weight:700;
+}
+.mini-chip{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  padding:3px 7px;border-radius:99px;
+  display:inline-flex;align-items:center;gap:3px;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.mini-chip.gold{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:var(--gold-bright)}
+.mini-chip.faith{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)}
 .back-btn{
   width:36px;height:36px;
   background:rgba(255,255,255,.08);
@@ -1181,7 +1196,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.15.0 · 24 games · PWA · Hall of Fame · accurate clocks · 🙏</div>
+  <div class="splash-foot">v0.16.0 · OMNIPRESENT · wallet everywhere · 1k+ vocab · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1290,6 +1305,7 @@ button{
       <h2 id="rm-name">Room</h2>
       <div class="sub" id="rm-sub">pick a game</div>
     </div>
+    <div class="mini-wallet" id="rm-wallet"></div>
   </div>
   <div class="room-body" id="rm-body"></div>
 </section>
@@ -1299,6 +1315,7 @@ button{
   <div class="game-header">
     <button class="back-btn" onclick="App.exitGame()">←</button>
     <div class="game-stats" id="g-stats">—</div>
+    <div class="mini-wallet" id="g-wallet"></div>
   </div>
   <div class="game-area" id="g-area"></div>
 </section>
@@ -1327,7 +1344,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.15.0';
+const VERSION = '0.16.0';
 
 // ----- STATE -----
 const State = {
@@ -2321,6 +2338,11 @@ const UI = {
     setText('w-gem', fmt(w.gem||0));
     setText('w-brain', fmt(w.brain||0));
     setText('w-faith', fmt(w.faith||0));
+    // v0.16 mini wallet on room + game headers
+    const rw = document.getElementById('rm-wallet');
+    if(rw) rw.innerHTML = renderMiniWallet();
+    const gw = document.getElementById('g-wallet');
+    if(gw) gw.innerHTML = renderMiniWallet();
     setText('p-iq', fmt(State.data?.iq||1000));
     const streakEl = document.getElementById('p-streak');
     const streak = State.data?.streak||0;
@@ -2335,6 +2357,13 @@ const UI = {
   }
 };
 function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function renderMiniWallet(){
+  const w = State.data?.wallet||{};
+  return `<span class="mini-chip gold">🪙 ${fmt(w.coin||0)}</span>
+    <span class="mini-chip">💎 ${fmt(w.gem||0)}</span>
+    <span class="mini-chip">🧠 ${fmt(w.brain||0)}</span>
+    <span class="mini-chip faith">✝️ ${fmt(w.faith||0)}</span>`;
+}
 function fmt(n){ if(n<1000) return n; if(n<1e6) return (n/1000).toFixed(1)+'k'; return (n/1e6).toFixed(1)+'M'; }
 function el(t,c,h){ const e=document.createElement(t); if(c)e.className=c; if(h!==undefined)e.innerHTML=h; return e; }
 function confetti(){
@@ -5001,6 +5030,80 @@ const BIBLE_TRIVIA = [
   {q:'Books in the Bible (KJV)?',o:['39','66','77','100'],a:'66'},
   {q:'Where did Moses receive the 10 Commandments?',o:['Mt Sinai','Mt Olives','Mt Zion','Mt Ararat'],a:'Mt Sinai'},
   {q:'Tribes of Israel?',o:['7','10','12','24'],a:'12'},
+  // expansion to 100+
+  {q:'Who interpreted dreams in Egypt?',o:['Joseph','Moses','Daniel','Aaron'],a:'Joseph'},
+  {q:'What city fell with trumpet blasts?',o:['Jericho','Jerusalem','Babylon','Ninevah'],a:'Jericho'},
+  {q:'Who lost his strength to a haircut?',o:['Samson','David','Saul','Goliath'],a:'Samson'},
+  {q:'Mary and Joseph fled to which country?',o:['Egypt','Greece','Persia','Syria'],a:'Egypt'},
+  {q:'What did Jesus multiply to feed 5,000?',o:['Loaves & fish','Bread & wine','Manna','Grapes & figs'],a:'Loaves & fish'},
+  {q:'Who was the wisest king?',o:['Solomon','David','Saul','Hezekiah'],a:'Solomon'},
+  {q:'What appeared to Moses in the desert?',o:['Burning bush','Pillar of cloud','Ark','Manna'],a:'Burning bush'},
+  {q:'Who wrote Psalms (most)?',o:['David','Solomon','Asaph','Moses'],a:'David'},
+  {q:'Who was thrown in a furnace?',o:['Daniel','Shadrach','Esther','Joseph'],a:'Shadrach'},
+  {q:'What did Eve eat from?',o:['Tree of Knowledge','Tree of Life','Fig tree','Olive tree'],a:'Tree of Knowledge'},
+  {q:'Where did God speak to Moses?',o:['Mt Sinai','Mt Zion','Mt Olives','Mt Ararat'],a:'Mt Sinai'},
+  {q:'Who was Jesus baptized by?',o:['John the Baptist','Peter','Paul','James'],a:'John the Baptist'},
+  {q:'What is the shortest verse in the Bible?',o:['Jesus wept','God is love','Pray always','Be still'],a:'Jesus wept'},
+  {q:'Who was born of a virgin?',o:['Jesus','Moses','Samuel','John'],a:'Jesus'},
+  {q:'What did the wise men bring?',o:['Gold, frankincense, myrrh','Bread, wine, oil','Silver, gems, silk','Linen, spices, honey'],a:'Gold, frankincense, myrrh'},
+  {q:'How many days did Jesus rise after death?',o:['3','7','40','12'],a:'3'},
+  {q:'Who married Ruth?',o:['Boaz','Naboth','Abram','Saul'],a:'Boaz'},
+  {q:'What animal saved Jonah?',o:['Great fish','Whale','Shark','Dolphin'],a:'Great fish'},
+  {q:"Sarah's husband?",o:['Abraham','Isaac','Jacob','Moses'],a:'Abraham'},
+  {q:'Who wrote Revelation?',o:['John','Peter','Paul','Mark'],a:'John'},
+  {q:"Esther's relative who raised her?",o:['Mordecai','Daniel','Joseph','Eli'],a:'Mordecai'},
+  {q:'How long did Methuselah live?',o:['969 years','500 years','120 years','800 years'],a:'969 years'},
+  {q:'Who succeeded Moses?',o:['Joshua','Aaron','Caleb','Samuel'],a:'Joshua'},
+  {q:'What sign did God give Noah?',o:['Rainbow','Dove','Star','Cloud'],a:'Rainbow'},
+  {q:'Whose wife turned to salt?',o:["Lot's","Abraham's","Isaac's","Jacob's"],a:"Lot's"},
+  {q:'How many years did Israel wander?',o:['40','7','10','100'],a:'40'},
+  {q:'What is Bethlehem the city of?',o:['David','Solomon','Saul','Aaron'],a:'David'},
+  {q:'Who climbed a tree to see Jesus?',o:['Zacchaeus','Bartimaeus','Nicodemus','Lazarus'],a:'Zacchaeus'},
+  {q:'Whom did Jesus raise from the dead?',o:['Lazarus','John','Stephen','Andrew'],a:'Lazarus'},
+  {q:'How many Beatitudes are there?',o:['8','10','12','7'],a:'8'},
+  {q:"Where Jesus' Sermon on the Mount?",o:['Mountain','Temple','Boat','Tomb'],a:'Mountain'},
+  {q:'Where did Jesus die?',o:['Calvary','Bethlehem','Galilee','Egypt'],a:'Calvary'},
+  {q:'Who saw a vision on the Damascus road?',o:['Paul','Peter','John','Stephen'],a:'Paul'},
+  {q:'How many books of the Pentateuch?',o:['5','7','12','10'],a:'5'},
+  {q:'What is the first commandment?',o:['Have no other gods','Honor parents','Do not steal','Do not kill'],a:'Have no other gods'},
+  {q:"Adam's wife?",o:['Eve','Sarah','Rebekah','Rachel'],a:'Eve'},
+  {q:'How many sons did Jacob have?',o:['12','7','6','10'],a:'12'},
+  {q:'Whose mother was Rebekah?',o:['Jacob','Joseph','Moses','David'],a:'Jacob'},
+  {q:"What's the longest book?",o:['Psalms','Genesis','Isaiah','Jeremiah'],a:'Psalms'},
+  {q:'Who was the first martyr?',o:['Stephen','Paul','Peter','James'],a:'Stephen'},
+  {q:'Who wrote Romans?',o:['Paul','Peter','James','John'],a:'Paul'},
+  {q:'Where was Daniel exiled?',o:['Babylon','Egypt','Persia','Assyria'],a:'Babylon'},
+  {q:"Solomon's mother?",o:['Bathsheba','Rachel','Esther','Ruth'],a:'Bathsheba'},
+  {q:'How many plagues struck Egypt?',o:['10','7','12','40'],a:'10'},
+  {q:"Adam's son who killed Abel?",o:['Cain','Seth','Enoch','Noah'],a:'Cain'},
+  {q:'Who is the bread of life?',o:['Jesus','David','Moses','John'],a:'Jesus'},
+  {q:'How many fruits of the Spirit?',o:['9','7','12','5'],a:'9'},
+  {q:"Body of Christ' is the...",o:['Church','Temple','Synagogue','Tabernacle'],a:'Church'},
+  {q:'Who was Jacob renamed?',o:['Israel','Joshua','Joseph','Solomon'],a:'Israel'},
+  {q:'Who does the gospel of Luke address?',o:['Theophilus','Diognetus','Timothy','Philemon'],a:'Theophilus'},
+  {q:'How many years did Solomon reign?',o:['40','50','30','20'],a:'40'},
+  {q:'Who was father of Joseph (Jesus father)?',o:['Jacob','David','Joseph','Heli'],a:'Jacob'},
+  {q:'Who said "Let there be light"?',o:['God','Moses','Jesus','Elijah'],a:'God'},
+  {q:'Who survived the lions den unharmed?',o:['Daniel','Joseph','Jonah','Saul'],a:'Daniel'},
+  {q:'Whose tomb was empty?',o:["Jesus'","David's","Moses'","Abraham's"],a:"Jesus'"},
+  {q:'Who is "I AM that I AM"?',o:['God','Jesus','Moses','Elijah'],a:'God'},
+  {q:'How tall was Goliath?',o:['Over 9 feet','5 feet','7 feet','10 feet'],a:'Over 9 feet'},
+  {q:'What animal carried Jesus into Jerusalem?',o:['Donkey','Horse','Camel','Ox'],a:'Donkey'},
+  {q:'Who was the first high priest?',o:['Aaron','Moses','Eli','Samuel'],a:'Aaron'},
+  {q:'How many disciples saw the resurrected Jesus first?',o:['Mary Magdalene','Peter','John','Thomas'],a:'Mary Magdalene'},
+  {q:'Who saw a fiery chariot?',o:['Elijah','Elisha','Daniel','Ezekiel'],a:'Elijah'},
+  {q:"Adam's third son?",o:['Seth','Cain','Abel','Noah'],a:'Seth'},
+  {q:'How many wisemen are named in scripture?',o:['Unnamed','3','12','7'],a:'Unnamed'},
+  {q:'Who said "Get thee behind me, Satan"?',o:['Jesus','Peter','Paul','Moses'],a:'Jesus'},
+  {q:'Where was the upper room?',o:['Jerusalem','Bethany','Galilee','Capernaum'],a:'Jerusalem'},
+  {q:'Who was struck blind on the road?',o:['Saul/Paul','Peter','James','John'],a:'Saul/Paul'},
+  {q:'How many books did Moses write?',o:['5','3','7','10'],a:'5'},
+  {q:'Whose hair was promised to never be cut?',o:['Samson','Samuel','Saul','David'],a:'Samson'},
+  {q:'Where was Paul shipwrecked?',o:['Malta','Cyprus','Rhodes','Crete'],a:'Malta'},
+  {q:'How many years did Noah build the ark?',o:['About 100','7','10','40'],a:'About 100'},
+  {q:'Who was sold for 30 silver?',o:['Jesus','Joseph','David','Daniel'],a:'Jesus'},
+  {q:'How many gates does New Jerusalem have?',o:['12','7','24','144'],a:'12'},
+  {q:'Where did Cain go after killing Abel?',o:['Land of Nod','Egypt','Babylon','Eden'],a:'Land of Nod'},
 ];
 const TriviaGame = {
   start(){
@@ -5090,6 +5193,80 @@ const DEFINITIONS = [
   {def:'tool to write with',a:'PEN',o:['PEN','BRUSH','BOOK','RULER']},
   {def:'noble courage',a:'BRAVE',o:['BRAVE','SCARED','SILLY','TIRED']},
   {def:'10 sacred rules from God',a:'COMMANDMENTS',o:['LAWS','RULES','COMMANDMENTS','TABLES']},
+  // expansion to 100+
+  {def:'large frozen continent',a:'ARCTIC',o:['ARCTIC','TUNDRA','DESERT','VALLEY']},
+  {def:'liquid dropping from clouds',a:'RAIN',o:['RAIN','MIST','SNOW','HAIL']},
+  {def:'opposite of light',a:'DARK',o:['DARK','GRAY','BLACK','SHADE']},
+  {def:'small flying insect with wings',a:'BEE',o:['BEE','ANT','WASP','FLY']},
+  {def:'frozen water in flakes',a:'SNOW',o:['SNOW','ICE','HAIL','FROST']},
+  {def:'a baby sheep',a:'LAMB',o:['LAMB','CALF','FOAL','KID']},
+  {def:'desert animal with humps',a:'CAMEL',o:['CAMEL','HORSE','OX','GIRAFFE']},
+  {def:'large reptile in water',a:'CROCODILE',o:['CROCODILE','SNAKE','LIZARD','TURTLE']},
+  {def:'mountain that erupts',a:'VOLCANO',o:['VOLCANO','HILL','PEAK','RIDGE']},
+  {def:'vehicle that flies',a:'PLANE',o:['PLANE','CAR','BOAT','TRAIN']},
+  {def:'place where books are kept',a:'LIBRARY',o:['LIBRARY','SCHOOL','OFFICE','MARKET']},
+  {def:'season of falling leaves',a:'AUTUMN',o:['AUTUMN','WINTER','SPRING','SUMMER']},
+  {def:'a string of musical notes',a:'MELODY',o:['MELODY','RHYTHM','BEAT','TUNE']},
+  {def:'belief in something unseen',a:'FAITH',o:['FAITH','HOPE','LOVE','TRUST']},
+  {def:'a sign of God after the flood',a:'RAINBOW',o:['RAINBOW','STAR','DOVE','CLOUD']},
+  {def:'food eaten in the wilderness',a:'MANNA',o:['MANNA','BREAD','GRAIN','HONEY']},
+  {def:'a Hebrew prophet',a:'ISAIAH',o:['ISAIAH','MOSES','AARON','SAMUEL']},
+  {def:'son of Abraham',a:'ISAAC',o:['ISAAC','JACOB','JOSEPH','MOSES']},
+  {def:'biblical city of David',a:'BETHLEHEM',o:['BETHLEHEM','JERUSALEM','NAZARETH','GALILEE']},
+  {def:'one who teaches scripture',a:'PASTOR',o:['PASTOR','PRIEST','MONK','SAINT']},
+  {def:'tool used to measure time',a:'CLOCK',o:['CLOCK','RULER','SCALE','METER']},
+  {def:'currency made of metal',a:'COIN',o:['COIN','BILL','GEM','TICKET']},
+  {def:'lights up the night sky',a:'MOON',o:['MOON','SUN','STAR','LAMP']},
+  {def:'place to take a bath',a:'TUB',o:['TUB','SINK','POND','POOL']},
+  {def:'metal of high value',a:'GOLD',o:['GOLD','IRON','COPPER','TIN']},
+  {def:'morning meal eaten early',a:'BREAKFAST',o:['BREAKFAST','LUNCH','DINNER','SNACK']},
+  {def:'clothes for swimming',a:'TRUNKS',o:['TRUNKS','SUIT','COAT','GOWN']},
+  {def:'female mate of king',a:'QUEEN',o:['QUEEN','LADY','PRINCESS','MAID']},
+  {def:'cool seasonal fruit · red',a:'CHERRY',o:['CHERRY','APPLE','GRAPE','PLUM']},
+  {def:'small mammal that flies at night',a:'BAT',o:['BAT','OWL','MOTH','MOUSE']},
+  {def:'farm bird that lays eggs',a:'HEN',o:['HEN','DUCK','GOOSE','SWAN']},
+  {def:'hot drink with caffeine',a:'COFFEE',o:['COFFEE','TEA','MILK','JUICE']},
+  {def:'instrument with strings',a:'GUITAR',o:['GUITAR','DRUM','FLUTE','HORN']},
+  {def:'sweet baked dessert',a:'CAKE',o:['CAKE','PIE','BREAD','SOUP']},
+  {def:'Rocky Mountain country',a:'CANADA',o:['CANADA','MEXICO','BRAZIL','SPAIN']},
+  {def:'large savanna cat',a:'LION',o:['LION','TIGER','LEOPARD','LYNX']},
+  {def:'flying insect with colored wings',a:'BUTTERFLY',o:['BUTTERFLY','BEE','MOTH','WASP']},
+  {def:'ocean predator with fins',a:'SHARK',o:['SHARK','DOLPHIN','WHALE','SEAL']},
+  {def:'sphere of land and seas',a:'EARTH',o:['EARTH','MOON','MARS','VENUS']},
+  {def:'place where students learn',a:'SCHOOL',o:['SCHOOL','MARKET','GYM','PARK']},
+  {def:'bright color of fire',a:'ORANGE',o:['ORANGE','BLUE','GREEN','PURPLE']},
+  {def:'sour citrus fruit',a:'LEMON',o:['LEMON','ORANGE','LIME','APPLE']},
+  {def:'cold dessert in cone',a:'ICECREAM',o:['ICECREAM','CAKE','PIE','SHERBET']},
+  {def:'tool to measure inches',a:'RULER',o:['RULER','CLOCK','MAP','SCALE']},
+  {def:'smaller than a lake',a:'POND',o:['POND','OCEAN','SEA','GULF']},
+  {def:"spice that's bright red",a:'PAPRIKA',o:['PAPRIKA','SUGAR','SALT','PEPPER']},
+  {def:"glass orb that's clear",a:'CRYSTAL',o:['CRYSTAL','MARBLE','PEARL','BEAD']},
+  {def:'dawn of day',a:'SUNRISE',o:['SUNRISE','SUNSET','NOON','DUSK']},
+  {def:'woven fabric for warmth',a:'BLANKET',o:['BLANKET','TOWEL','SHEET','PILLOW']},
+  {def:'someone who travels far',a:'PILGRIM',o:['PILGRIM','TOURIST','LOCAL','GUEST']},
+  {def:'praising God through song',a:'PSALM',o:['PSALM','POEM','TUNE','BALLAD']},
+  {def:'bread + wine for communion',a:'EUCHARIST',o:['EUCHARIST','OFFERING','SACRIFICE','BAPTISM']},
+  {def:'sacred holy day of rest',a:'SABBATH',o:['SABBATH','HOLIDAY','EVENING','DAWN']},
+  {def:'opposite of war',a:'PEACE',o:['PEACE','BATTLE','FIGHT','STRIFE']},
+  {def:'powerful gust over the sea',a:'STORM',o:['STORM','BREEZE','MIST','DROP']},
+  {def:'water that grew from rain',a:'PUDDLE',o:['PUDDLE','LAKE','POND','OCEAN']},
+  {def:"Jesus's mother",a:'MARY',o:['MARY','MARTHA','RUTH','REBEKAH']},
+  {def:'angel who told Mary',a:'GABRIEL',o:['GABRIEL','MICHAEL','URIEL','RAPHAEL']},
+  {def:'opposite of sad',a:'HAPPY',o:['HAPPY','GLOOMY','GRUMPY','TIRED']},
+  {def:'large group of stars',a:'GALAXY',o:['GALAXY','PLANET','MOON','COMET']},
+  {def:'pet that purrs and meows',a:'CAT',o:['CAT','DOG','BIRD','FISH']},
+  {def:'house in the trees',a:'TREEHOUSE',o:['TREEHOUSE','CABIN','TENT','HUT']},
+  {def:'wood used to build a fire',a:'KINDLING',o:['KINDLING','LOGS','PAPER','LEAVES']},
+  {def:'sleeping place at night',a:'BED',o:['BED','COUCH','CHAIR','RUG']},
+  {def:'place to swim with friends',a:'POOL',o:['POOL','PARK','GYM','LAWN']},
+  {def:'Bible chapter of love',a:'CORINTHIANS',o:['CORINTHIANS','GENESIS','PSALMS','MATTHEW']},
+  {def:'grain used for breadmaking',a:'WHEAT',o:['WHEAT','RICE','OAT','BARLEY']},
+  {def:'soft seat for sitting',a:'COUCH',o:['COUCH','CHAIR','BENCH','STOOL']},
+  {def:'flightless big bird in Africa',a:'OSTRICH',o:['OSTRICH','EAGLE','HAWK','OWL']},
+  {def:'tropical fruit with rough skin',a:'PINEAPPLE',o:['PINEAPPLE','BANANA','MANGO','PAPAYA']},
+  {def:'biblical place of paradise',a:'EDEN',o:['EDEN','EGYPT','SINAI','HEAVEN']},
+  {def:'where Bible says to "love your..."',a:'NEIGHBOR',o:['NEIGHBOR','ENEMY','BOSS','TEACHER']},
+  {def:'biblical river crossed by Jesus',a:'JORDAN',o:['JORDAN','NILE','TIGRIS','EUPHRATES']},
 ];
 const DefineGame = {
   start(){
@@ -5208,7 +5385,7 @@ const NumberTapGame = {
 // ====================================================================
 // 🎮 GAME 21 · HANGMAN (Word Lab)
 // ====================================================================
-const HANG_WORDS = ['FAITH','GRACE','LIGHT','EARTH','HEART','POWER','TRUST','WATER','FLAME','BRAVE','SAINT','SMILE','OCEAN','NOBLE','EAGLE','CROWN','GLORY','SHEEP','BREAD','PSALM','ANGEL','RIVER','STONE','SHARP','SHINE','DREAM','PRIDE','MERCY','WORDS','CHRIST','SAVIOR','PRAYER','SPIRIT','WONDER','BELIEVE','REJOICE','TRIUMPH','VICTORY'];
+const HANG_WORDS = ("FAITH GRACE LIGHT EARTH HEART POWER TRUST WATER FLAME BRAVE SAINT SMILE OCEAN NOBLE EAGLE CROWN GLORY SHEEP BREAD PSALM ANGEL RIVER STONE SHARP SHINE DREAM PRIDE MERCY WORDS CHRIST SAVIOR PRAYER SPIRIT WONDER BELIEVE REJOICE TRIUMPH VICTORY ABIDE ALIVE ALMIGHTY ALPHA AMEN ANCIENT ANOINT APOSTLE ARMOR ATONE AWAKE BAPTISM BEACON BEHOLD BLESSED BOLD BORN BREATH BRIDE BUILD CALLING CARPENTER CEDAR CHILD CHOSEN CITY CLAY CLEANSE CLOAK COMFORT COMMAND COMPASS CONFESS CORONATION COURAGE COVENANT CREATE CRUCIFY DANIEL DAWN DELIVER DESCEND DESTINY DILIGENT DISCIPLE DIVINE DOMINION DOVE EARNEST ELDER ELIJAH EMMANUEL ENDURE ENEMY ETERNAL EVIDENCE EXALT EXODUS FAITHFUL FATHER FAVOR FELLOWSHIP FERVENT FIRSTBORN FORGIVE FOUNDATION GARDEN GATHER GENEROUS GENESIS GENTILE GENTLE GIDEON GIFT GIVE GLORIFY GOSHEN GOSPEL GRATEFUL GUARD HARVEST HAZE HEAL HEAVEN HEBREW HOLY HONEST HONOR HOPE HUMBLE HYMN ICON IDOLIZE INCENSE INHERIT INNER ISRAEL JACOB JEHOVAH JEREMIAH JERUSALEM JESUS JOSEPH JOSHUA JOURNEY JUDAH JUSTICE KINGDOM KNEEL LABOR LAMB LEPROSY LIBERTY LION LISTEN LIVING LOAVES LORD LOVELY LOYAL MAGI MAJESTY MANNA MARTYR MEEK MELODY MIGHTY MINISTRY MIRACLE MIRTH MISSION MORNING MOSES MOUNTAIN MUSTARD NATURE NAZARETH NEHEMIAH NEW NOAH OBEDIENCE OBEY OFFERING OLIVE PALM PARABLE PARDON PASSAGE PASTURE PEACE PERFECT PERSIST PILGRIM PILLAR PLANT PRAISE PRAYERFUL PREACH PRECEPT PRESENCE PRESERVE PRIEST PROCLAIM PROMISE PROPHECY PROVISION PURIFY PURPOSE RAIN RANSOM REBIRTH REDEEM REFUGE REIGN REJOICING RENEW REPENT RESCUE RESTORE RESURRECT REVELATION REVERE RICHES RIGHTEOUS ROCK ROSE SABBATH SACRIFICE SALVATION SANCTUARY SCRIPTURE SEAL SEEKING SERMON SERVANT SHEPHERD SHIELD SIMEON SOLOMON SONG SOWER SPRING STAR STEADFAST STEWARD SUNRISE SUPREME SURRENDER SWEET TABERNACLE TEMPLE TESTIFY THANKFUL THORN THUNDER TONGUE TRINITY TRUMPET UNITY UPLIFT VALIANT VESSEL VINE VINEYARD VISION VOICE WALK WARRIOR WASH WATCHFUL WHEAT WILDERNESS WISE WITNESS WORK WORSHIP WORTHY YEARN ZACCHAEUS ZEAL ZION JOY LOVE PEACE LIGHT TRUTH PATH SHINE LIFT SOAR ARISE ROARS BLOSSOM SPRINGS HALLELUJAH ABUNDANT ANCHOR APPLE ARROW BAKER BANNER BASKET BATTLE BEAM BERRY BIBLE BIRD BLESS BLOOM BOOK BOWL BRAID BRANCH BREEZE BRIDGE CALL CALM CAMEL CANDLE CARESS CAROL CARPET CASTLE CHARM CHEER CHIME CLEAR CLIFF CLOUD COMET CRADLE CREEK CRYSTAL CUP DAFFODIL DAISY DANCE DAWN DEEP DEER DELIGHT DEPTH DESTINY DEW DIAMOND DIVE DOORS DOVE DREAMS DRUM DUST DWELL EAGLE EARNEST ECHO ELM EMERALD EMBRACE ENDLESS ENERGY ENROL EPIC ESCAPE FABLE FACET FAIR FANCIFUL FERN FIELD FIG FINISH FIRE FLAG FLAVOR FLEECE FLOOD FLOOR FOREST FOUNTAIN FOX FRESH FRIEND FROST FRUIT GALAXY GARDEN GAZE GIFT GLEAM GOLDEN GRAIN GRAND GRANITE GROVE HARP HEAL HEAR HEART HERO HILL HOLLOW HOLY HONEY HORSE HOUSE HUMMINGBIRD HURRICANE ICE INVITE IRIS IVORY JADE JAR JEWEL JOURNAL JOYFUL JUBILANT KEEP KEY KIND KISS KITE KNOT LABYRINTH LACE LADDER LAKE LAMP LANE LANTERN LAUGH LAUREL LAVA LEAF LEMONADE LIGHTNING LILY LIME LINEN MAJESTY MAPLE MARSHMALLOW MEADOW MELLOW MERIT METEOR MINT MIST MOMENT MOON MORN MOSS MOTH MUSIC NEST NIGHT NIMBLE NORTH OAK OASIS OPAL ORCHID ORDER OUTBACK OXFORD PALACE PANE PARADISE PARROT PEACH PEAK PEARL PERFECT PETAL PIANO PINE PINK PLAID PLANET PLAY PLUM POND PONY POPPY PORTAL POWERFUL PROUD PUFF PURE PURPLE QUEST QUIVER RADIANT RAIN RAINBOW RAVEN REGAL RIDGE RING RIPEN ROBIN ROSE ROYAL RUBY RUMBLE SACRED SAGE SAIL SAND SAPPHIRE SCATTER SCROLL SEA SEEDS SERENE SHELL SHIMMER SHORE SHOUT SHRINE SILK SILVER SIMPLE SKIES SKILL SKY SLEEK SMOOTH SNOW SOFT SOLID SOUL SPARK SPELLBIND SPHERE SPICE SPLENDID SPRINGS STAGE STAIR STARDUST STILL STORK STORM STREAM SUBLIME SUMMER SUNNY SUNSET SWAN SWAY SYMPHONY TAFFY TAPESTRY TEMPLES TERRACE TIDE TIGER TRAIL TRANQUIL TRAPEZE TRAVEL TREASURE TROUSERS TULIP TURTLE TWINKLE UMBRELLA UNICORN VAGABOND VALLEY VAULT VELVET VENTURE VERDANT VERSE VIBRANT VIOLET VIVID WAVE WHISPER WILLOW WIND WINTER WISDOM WONDERFUL WOVEN ZEN ZEPHYR ZENITH").split(/\s+/).filter(w=>w.length>=4 && w.length<=15);
 const HangmanGame = {
   start(){
     State.gameInst=this;
@@ -5316,6 +5493,42 @@ const RIDDLES = [
   {q:'What can you catch but not throw?',o:['Cold','Ball','Fish','Fly'],a:'Cold'},
   {q:'What runs but never walks, has a bed but never sleeps?',o:['River','Train','Clock','Watch'],a:'River'},
   {q:"What has cities but no houses, mountains but no trees?",o:['Map','Painting','Globe','Book'],a:'Map'},
+  // expansion to 50+
+  {q:'What gets bigger when more is taken away?',o:['Hole','Box','Tree','Pile'],a:'Hole'},
+  {q:"What 4-letter word can be written forward, backward, and upside down, and still be read?",o:['NOON','BOOK','OVER','TENT'],a:'NOON'},
+  {q:'I have lakes with no water, mountains with no stone, and cities with no buildings. What am I?',o:['Map','Globe','Atlas','Painting'],a:'Map'},
+  {q:'The more there is, the less you see.',o:['Darkness','Silence','Smoke','Fog'],a:'Darkness'},
+  {q:'I can be cracked, made, told, and played. What am I?',o:['Joke','Code','Song','Game'],a:'Joke'},
+  {q:'What has many rings but no fingers?',o:['Tree','Phone','Bell','Pool'],a:'Tree'},
+  {q:'What invention lets you look right through a wall?',o:['Window','Mirror','X-Ray','Glass'],a:'Window'},
+  {q:'What has legs but cannot walk?',o:['Table','Cat','Statue','Flag'],a:'Table'},
+  {q:'What word becomes shorter when you add two letters?',o:['Short','Brief','Tiny','Mini'],a:'Short'},
+  {q:'What has a thumb and four fingers but is not alive?',o:['Glove','Sock','Ring','Hat'],a:'Glove'},
+  {q:'What can fill a room but takes up no space?',o:['Light','Air','Sound','Smoke'],a:'Light'},
+  {q:'What goes around and around the wood but never enters it?',o:['Bark','Leaf','Root','Vine'],a:'Bark'},
+  {q:'What can you hold without ever touching it?',o:['Breath','Promise','Rope','Pen'],a:'Breath'},
+  {q:'What can be broken without being touched?',o:['Promise','Glass','Stick','Egg'],a:'Promise'},
+  {q:'What flies without wings?',o:['Time','Bird','Plane','Bee'],a:'Time'},
+  {q:'What has roots no one sees, is taller than trees, up, up it goes, yet never grows?',o:['Mountain','Cloud','River','Star'],a:'Mountain'},
+  {q:'What is full of holes but still holds water?',o:['Sponge','Cup','Plate','Bowl'],a:'Sponge'},
+  {q:'I am light as a feather, yet the strongest cannot hold me long.',o:['Breath','Cloud','Air','Mist'],a:'Breath'},
+  {q:'What has 13 hearts but no other organs?',o:['Deck of cards','Rosebush','Apple tree','Heart book'],a:'Deck of cards'},
+  {q:'I follow you all day but disappear at night.',o:['Shadow','Echo','Wind','Memory'],a:'Shadow'},
+  {q:'What month has 28 days?',o:['All of them','February','April','March'],a:'All of them'},
+  {q:"It belongs to you, but other people use it more than you do. What is it?",o:['Your name','Your phone','Your book','Your hat'],a:'Your name'},
+  {q:'I have branches, but no fruit, trunk, or leaves. What am I?',o:['Bank','Tree','River','Library'],a:'Bank'},
+  {q:'You see me once in June, twice in November, and not at all in May. What am I?',o:['Letter E','Letter A','Letter N','Letter M'],a:'Letter E'},
+  {q:"What gets sharper the more you use it?",o:['Mind','Knife','Tool','Pencil'],a:'Mind'},
+  {q:'I can be cracked, told, made, and played. What am I?',o:['Joke','Egg','Song','Code'],a:'Joke'},
+  {q:'I have a face but no eyes, hands but no arms. What am I?',o:['Clock','Doll','Painting','Statue'],a:'Clock'},
+  {q:"What's so fragile that saying its name breaks it?",o:['Silence','Glass','Ice','Heart'],a:'Silence'},
+  {q:"What can run but never walks, has a mouth but never talks?",o:['River','Train','Clock','Wind'],a:'River'},
+  {q:'I am yours but used more by others. What am I?',o:['Name','Phone','Voice','Diary'],a:'Name'},
+  {q:'What has hands and no body?',o:['Clock','Glove','Statue','Sleeve'],a:'Clock'},
+  {q:'A man left home and made three left turns and returned home to find two masked men. Who?',o:['Catcher and umpire','Spies','Burglars','Detectives'],a:'Catcher and umpire'},
+  {q:'What appears once in every minute, twice in every moment, but never in a thousand years?',o:['Letter M','Letter E','Letter T','Letter N'],a:'Letter M'},
+  {q:'I am taken from a mine and shut up in a wooden case. Used by almost everyone. What am I?',o:['Pencil lead','Coal','Diamond','Iron'],a:'Pencil lead'},
+  {q:'What goes through cities but never moves?',o:['Road','River','Wind','Cloud'],a:'Road'},
 ];
 const RiddleGame = {
   start(){
