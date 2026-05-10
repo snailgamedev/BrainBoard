@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.31.0 · anti-freeze · resume · LB · idle pause · 🙏</div>
+  <div class="splash-foot">v0.32.0 · music unlocked · shop pro · recently-played · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1313,6 +1313,7 @@ button{
     </div>
     <div id="dailyChallenge"></div>
     <div id="dailyQuests"></div>
+    <div id="recentlyPlayed"></div>
     <div class="lobby-title">— THE LOBBY —</div>
     <div class="rooms-grid">
       <button class="room-door room-word" onclick="App.openRoom('word')">
@@ -1407,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.31.0';
+const VERSION = '0.32.0';
 
 // ----- STATE -----
 const State = {
@@ -2589,6 +2590,11 @@ const ACHIEVEMENTS = [
   {id:'idle_returner',em:'🌙',t:'Returned',d:'Come back after idle pause'},
   {id:'streak_fire',em:'🔥',t:'Inferno Streak',d:'Reach 7-day streak with fire HUD'},
   {id:'antifreeze',em:'❄️',t:'Anti-Freeze',d:'Auto-cleanup ran (no perf issues)'},
+  // v0.32
+  {id:'streak_gem',em:'💎',t:'Weekly Gem',d:'Hit a 7-day streak milestone'},
+  {id:'audio_unlocked',em:'🎵',t:'Tuned In',d:'Unlock music with first interaction'},
+  {id:'recent_view',em:'⏱',t:'Time-Aware',d:'View recently-played widget'},
+  {id:'shop_browser',em:'🛒',t:'Connoisseur',d:'Browse the shop'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -2870,6 +2876,8 @@ const Music = (()=>{
       master.gain.value = State.data?.settings?.musicVolume ?? 0.35;
       master.connect(ctx.destination);
     }
+    // v0.32: resume if browser suspended (autoplay block)
+    if(ctx.state==='suspended'){ try{ctx.resume();}catch{} }
     return ctx;
   }
   function midiToFreq(m){ return 440 * Math.pow(2,(m-69)/12); }
@@ -3760,6 +3768,11 @@ const App = {
       const reward = {coin:100, gem:1, faith:1};
       if(d.streak>=7) reward.gem += 1;
       if(d.streak>=30) reward.gem += 3;
+      // v0.32 7-day streak gem rewards
+      if(d.streak%7===0 && d.streak>0){
+        reward.gem = (reward.gem||0)+2;
+        Ach.unlock('streak_gem');
+      }
       Wallet.add(reward);
       Save.write();
       const v = randomVerse();
@@ -3813,6 +3826,21 @@ const App = {
   },
   renderLobbyExtras(){
     Quests.ensureToday();
+    // v0.32 RECENTLY PLAYED widget
+    const recent = (State.data.activityLog||[]).filter(a=>a.type==='win'||a.type==='loss').slice(0,3);
+    const rp = document.getElementById('recentlyPlayed');
+    if(rp){
+      if(recent.length){
+        rp.innerHTML = `<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 14px;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;margin-bottom:6px">⏱ RECENTLY PLAYED</div>
+          ${recent.map(a=>{
+            const ago = Math.round((Date.now()-a.ts)/60000);
+            const when = ago<1?'just now':ago<60?ago+'m ago':Math.floor(ago/60)+'h ago';
+            return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>${a.em} ${a.msg}</span><span class="dim" style="font-size:10px">${when}</span></div>`;
+          }).join('')}
+        </div>`;
+      }else{ rp.innerHTML=''; }
+    }
     // Daily Challenge widget — shows today's spotlight game
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
     const dailyEm = ['📖','🧠','🎯','🔢','✝️','📜','🎼','⚡','🧮','📖','💡','🔍','🔢','🎨','🌟','🔑'][day%16];
@@ -4565,6 +4593,7 @@ const App = {
     UI.show('aux');
   },
   openShop(){
+    Ach.unlock('shop_browser');
     if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0,streakSave:0};
     document.getElementById('aux-title').innerHTML = '🛒 Shop';
     const wallet = State.data.wallet||{};
@@ -5570,6 +5599,7 @@ const VerseGame = {
   },
   render(){
     document.getElementById('g-stats').innerHTML = `<b>✝️ Verse Fill-In</b> · faith stars +1 ✨`;
+    if(this.q) speak(this.q.t.replace('___','blank') + '. From ' + this.q.r);
     const area = document.getElementById('g-area');
     area.innerHTML = '';
     const verseHtml = this.q.t.replace('___',
@@ -6669,6 +6699,7 @@ const TriviaGame = {
   },
   render(){
     document.getElementById('g-stats').innerHTML = `<b>✝️ Bible Trivia</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    if(this.current) speak(this.current.q);
     const area = document.getElementById('g-area');
     area.innerHTML = '';
     const wrap = el('div','stroop-area');
@@ -7701,6 +7732,23 @@ const DailyGame = {
 // ====================================================================
 window.App = App; // expose for inline handlers
 VisibilityGuard.init();
+
+// v0.32 UNLOCK AUDIO on first user interaction (browsers block autoplay)
+let _audioUnlocked = false;
+function _unlockAudio(){
+  if(_audioUnlocked) return;
+  _audioUnlocked = true;
+  // Re-trigger current music
+  const activeScreen = document.querySelector('.screen.active')?.id;
+  if(activeScreen && State.data?.settings?.music!==false){
+    let track = activeScreen;
+    if((activeScreen==='room'||activeScreen==='game') && State.currentRoom) track = State.currentRoom;
+    Music.play(track);
+  }
+}
+['click','touchstart','keydown'].forEach(e=>{
+  document.addEventListener(e, _unlockAudio, {once:false, passive:true});
+});
 
 // v0.31 IDLE PAUSE · stops music after 5 min no input (saves CPU + battery)
 let _idleTimer = null;
