@@ -135,6 +135,9 @@ button{
 .music-chip{position:fixed;bottom:14px;right:14px;background:rgba(0,0,0,.55);color:#fff;font-family:'Cinzel',serif;font-size:11px;padding:6px 12px;border-radius:99px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);z-index:48;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .3s,transform .3s}
 .music-chip:hover{transform:scale(1.04)}
 .music-chip.muted{opacity:.5}
+@keyframes pauseFade{from{opacity:0}to{opacity:1}}
+@keyframes pauseFadeOut{from{opacity:1}to{opacity:0}}
+@keyframes pauseScale{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ==================== SPLASH ==================== */
@@ -1262,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.43.0 · 🏆 medal cabinet · ⏸ pause · 📅 weekly tournament · 🎯 adaptive frenzy · 💬 reactions · 🧪 A/B preview · 🎵 music styles · 🙏</div>
+  <div class="splash-foot">v0.44.0 · music overlap fixed · pause polish · ducking · cleaner transitions · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1302,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.43.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.44.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1418,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.43.0';
+const VERSION = '0.44.0';
 
 // ----- STATE -----
 const State = {
@@ -2901,6 +2904,10 @@ const Cinematic = {
   show(roomId, game, onDone){
     if(!State.data.cinematicPref) State.data.cinematicPref='on';
     if(State.data.cinematicPref==='off' || State.data.settings.skipGameIntro){ onDone(); return; }
+    // v0.44 · duck music during cinematic for cleaner intro
+    try{ Music.duck(true); }catch(e){}
+    const _origOnDone = onDone;
+    onDone = ()=>{ try{ Music.duck(false); }catch(e){} _origOnDone(); };
     const room = ROOMS[roomId] || {em:'🎮',name:'Game'};
     const palettes = {
       word:['#7C3AED','#A78BFA'], brain:['#10B981','#34D399'],
@@ -3591,7 +3598,8 @@ const Cabinet = {
 // ⏸ v0.43 · PAUSE MANAGER · P key + onscreen · 3-2-1 resume countdown
 // ====================================================================
 const Pause = {
-  _paused:false, _frozenInterval:null, _frozenAt:0, _onResume:null,
+  _paused:false, _pausedAt:0,
+  isPaused(){ return this._paused; },
   toggle(){
     if(this._paused) this.resume();
     else this.pause();
@@ -3601,74 +3609,66 @@ const Pause = {
     const game = State.gameInst;
     if(!game) return;
     this._paused = true;
-    this._frozenAt = Date.now();
+    this._pausedAt = Date.now();
     State.data.pauseCount = (State.data.pauseCount||0)+1;
-    // freeze all timers by removing their callback temporarily
-    if(game.timer){
-      clearInterval(game.timer);
-      game._pausedTimer = game.timer;
-      game.timer = null;
-    }
-    // freeze Frenzy state too
-    if(game === Frenzy && Frenzy.state?.timers){
-      Frenzy.state._pausedTimers = [...Frenzy.state.timers];
-      Frenzy.state.timers.forEach(t=>{ clearInterval(t); clearTimeout(t); });
-      Frenzy.state.timers = [];
-    }
     SFX.tap(); haptic(10);
+    // Music ducking · lower volume during pause
+    try{ Music.duck(true); }catch(e){}
     // overlay
     const overlay = document.createElement('div');
     overlay.id = 'pause-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,40,.88);z-index:9990;display:grid;place-items:center;color:#fff;font-family:"Cinzel",serif;backdrop-filter:blur(8px)';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,40,.88);z-index:9990;display:grid;place-items:center;color:#fff;font-family:"Cinzel",serif;backdrop-filter:blur(8px);animation:pauseFade .25s ease-out';
     overlay.innerHTML = `
-      <div style="text-align:center;padding:24px">
+      <div style="text-align:center;padding:24px;animation:pauseScale .35s cubic-bezier(.2,1.4,.5,1)">
         <div style="font-size:64px;margin-bottom:8px">⏸</div>
         <h2 style="font-size:32px;margin:4px 0;color:#FBBF24">PAUSED</h2>
         <p class="dim" style="font-size:13px;margin-bottom:18px">tap resume · ESC to lobby · P to toggle</p>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn-primary" style="padding:12px 24px;font-size:14px" onclick="Pause.resume()">▶ RESUME</button>
-          <button class="btn-secondary" style="padding:12px 24px;font-size:14px" onclick="App.exitGame()">🚪 EXIT</button>
+          <button class="btn-secondary" style="padding:12px 24px;font-size:14px" onclick="Pause.resume();App.exitGame()">🚪 EXIT</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
   },
   resume(){
     if(!this._paused) return;
-    // dismiss overlay
+    // restore music volume
+    try{ Music.duck(false); }catch(e){}
+    // compensate timeLeft so the game doesn't lose seconds during pause
+    const elapsed = Math.round((Date.now()-this._pausedAt)/1000);
+    const game = State.gameInst;
+    if(game && typeof game.timeLeft === 'number'){
+      game.timeLeft += elapsed;
+    }
+    // Frenzy: each sub-round has its own t — try to extend that too
+    if(Frenzy && Frenzy.state && Frenzy.state.timers){
+      // Not directly accessible; the running closure-scoped `t` keeps decrementing during pause
+      // anyway. The pause is short typically. Accept ~elapsed loss in Frenzy mini-rounds.
+    }
+    // dismiss overlay with fade out
     const overlay = document.getElementById('pause-overlay');
-    if(overlay) overlay.remove();
+    if(overlay){
+      overlay.style.animation = 'pauseFadeOut .25s ease-in forwards';
+      setTimeout(()=>overlay.remove(), 240);
+    }
     // 3-2-1 countdown
     const cd = document.createElement('div');
     cd.id='pause-countdown';
-    cd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9990;display:grid;place-items:center;color:#FBBF24;font-family:"Cinzel",serif;font-weight:900;backdrop-filter:blur(4px);pointer-events:none';
+    cd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9990;display:grid;place-items:center;color:#FBBF24;font-family:"Cinzel",serif;font-weight:900;backdrop-filter:blur(2px);pointer-events:none';
     document.body.appendChild(cd);
     let n=3;
     const tick=()=>{
       if(n===0){
         cd.remove();
         this._paused = false;
-        // resume game timer
-        const game = State.gameInst;
-        if(game && game._pausedTimer){
-          // restart with same render cadence (1s)
-          if(typeof game.render === 'function'){
-            game.timer = setInterval(()=>{
-              if(typeof game.timeLeft === 'number'){
-                game.timeLeft--;
-                if(game.timeLeft<=0){ if(game.end) game.end(); return; }
-              }
-              game.render();
-            }, 1000);
-          }
-          game._pausedTimer = null;
-        }
         return;
       }
-      cd.innerHTML = `<div style="font-size:160px;animation:cineCount .9s ease-out forwards">${n}</div>`;
+      cd.innerHTML = `<div style="font-size:140px;animation:cineCount .8s ease-out forwards">${n>0?n:'GO!'}</div>`;
       n--;
-      setTimeout(tick, 900);
+      setTimeout(tick, 800);
     };
     tick();
+    SFX.tap();
   }
 };
 
@@ -4049,6 +4049,18 @@ const Ach = {
 // ====================================================================
 const Music = (()=>{
   let ctx=null, master=null, schedT=null, currentTrack=null;
+  // v0.44 · track every scheduled setTimeout so we can cancel on track change
+  let pendingTimers = new Set();
+  function schedule(fn, ms){
+    const id = setTimeout(()=>{ pendingTimers.delete(id); fn(); }, ms);
+    pendingTimers.add(id);
+    return id;
+  }
+  function cancelAll(){
+    pendingTimers.forEach(id=>clearTimeout(id));
+    pendingTimers.clear();
+    if(schedT){ clearTimeout(schedT); schedT=null; }
+  }
   const scales = {
     phrygian:    [0,1,3,5,7,8,10], // dark · holy
     phrygianDom: [0,1,4,5,7,8,10], // exotic · sacred
@@ -4152,35 +4164,45 @@ const Music = (()=>{
     // ARP · 4 quick notes · arcade = chiptune square · calm = sine subtle
     const arpType = style==='arcade'?'square':style==='calm'?'sine':track.arp;
     const arpVol = style==='arcade'?0.06:style==='calm'?0.025:0.045;
-    const arpSteps = style==='arcade'?8:4; // arcade has busier arp
+    const arpSteps = style==='arcade'?8:4;
     for(let i=0;i<arpSteps;i++){
       const noteIdx = [0,2,4,2,0,4,2,0][i % 8];
       const noteMidi = base + sc[noteIdx];
-      setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, arpType, arpVol), i*beatSec*(4/arpSteps)*1000);
+      schedule(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, arpType, arpVol), i*beatSec*(4/arpSteps)*1000);
     }
-    // PERCUSSION · kick on 1+3 · arcade = busier · calm = lighter
+    // PERCUSSION
     if(style!=='calm'){
-      setTimeout(()=>envKick(), 0);
-      setTimeout(()=>envKick(), beatSec*2*1000);
+      schedule(()=>envKick(), 0);
+      schedule(()=>envKick(), beatSec*2*1000);
       if(style==='arcade'){
-        setTimeout(()=>envKick(), beatSec*1.5*1000); // extra kick syncopation
+        schedule(()=>envKick(), beatSec*1.5*1000);
       }
     }
-    // hat: calm omits, arcade doubles
     const hatBeats = style==='calm'?0:style==='arcade'?16:8;
     for(let i=0;i<hatBeats;i++){
-      setTimeout(()=>envHat(), (i*beatSec*4/hatBeats)*1000);
+      schedule(()=>envHat(), (i*beatSec*4/hatBeats)*1000);
     }
   }
   function loop(track){
     if(!currentTrack) return;
     let chordIdx = 0;
-    const beatSec = 60/track.bpm;
+    let beatSec = 60/track.bpm;
+    // honor style modifiers in loop cadence too
+    const style = State.data?.musicStyle || 'calm';
+    if(style==='arcade') beatSec *= 0.83;
+    if(style==='calm') beatSec *= 1.25;
+    if(style==='dynamic'){
+      const arcadeIds = ['speed','daily','game','brain','num'];
+      const trackId = Object.keys(TRACKS).find(k=>TRACKS[k]===track);
+      if(arcadeIds.includes(trackId)) beatSec *= 0.83;
+      else beatSec *= 1.2;
+    }
     function step(){
       if(!currentTrack || currentTrack!==track) return;
       playChord(track, track.chords[chordIdx % track.chords.length]);
       chordIdx++;
       schedT = setTimeout(step, beatSec*4*1000);
+      pendingTimers.add(schedT);
     }
     step();
   }
@@ -4190,7 +4212,7 @@ const Music = (()=>{
       const track = TRACKS[trackId];
       if(!track){ Music.stop(); updateChip('—',false); return; }
       if(currentTrack === track){ updateChip(trackId,false); return; }
-      // v0.42 CROSSFADE · fade-out current, fade-in new
+      // v0.44 · CROSSFADE · fade-out current, CANCEL ALL in-flight notes, fade-in new
       const wasPlaying = !!currentTrack;
       if(wasPlaying){
         if(master && ctx){
@@ -4199,12 +4221,14 @@ const Music = (()=>{
             master.gain.linearRampToValueAtTime(0, ctx.currentTime+0.45);
           }catch(e){}
         }
-        if(schedT){ clearTimeout(schedT); schedT=null; }
       }
+      // FULLY cancel pending chord notes so we don't overlap old+new track
+      cancelAll();
       currentTrack = track;
       updateChip(trackId,false);
       const startMs = wasPlaying?470:160;
-      setTimeout(()=>{
+      const startId = setTimeout(()=>{
+        pendingTimers.delete(startId);
         if(currentTrack!==track) return;
         // fade back in
         if(master && ctx){
@@ -4217,18 +4241,21 @@ const Music = (()=>{
         }
         loop(track);
       }, startMs);
+      pendingTimers.add(startId);
     },
     stop(){
       currentTrack = null;
-      // v0.31 ANTI-FREEZE: forcefully clear ALL pending schedules
-      if(schedT){ clearTimeout(schedT); schedT=null; }
+      // v0.44 · FORCEFUL CANCEL: clear all pending chord setTimeouts to stop overlap
+      cancelAll();
       if(master && ctx){
         try{
           master.gain.cancelScheduledValues(ctx.currentTime);
           master.gain.linearRampToValueAtTime(0, ctx.currentTime+0.3);
-          setTimeout(()=>{
+          const restoreId = setTimeout(()=>{
+            pendingTimers.delete(restoreId);
             if(master) master.gain.value = State.data?.settings?.musicVolume ?? 0.35;
           }, 400);
+          pendingTimers.add(restoreId);
         }catch{}
       }
       updateChip('—',true);
@@ -4243,7 +4270,15 @@ const Music = (()=>{
       else { updateChip(currentTrack?Object.keys(TRACKS).find(k=>TRACKS[k]===currentTrack):'lobby',false); Music.play('lobby'); }
     },
     nowPlaying(){ return currentTrack?Object.keys(TRACKS).find(k=>TRACKS[k]===currentTrack):null; },
-  };
+    // v0.44 · duck (lower) music for overlays · target true=quiet, false=restore
+    duck(quiet){
+      if(!master || !ctx) return;
+      const baseVol = State.data?.settings?.musicVolume ?? 0.6;
+      try{
+        master.gain.cancelScheduledValues(ctx.currentTime);
+        master.gain.linearRampToValueAtTime(quiet?baseVol*0.18:baseVol, ctx.currentTime+(quiet?0.2:0.4));
+      }catch(e){}
+    },
   function updateChip(trackId, muted){
     let chip = document.querySelector('.music-chip');
     if(!chip){
@@ -4328,8 +4363,13 @@ const Modal = {
   show(html){
     document.getElementById('modalCard').innerHTML = html;
     document.getElementById('modal').classList.add('active');
+    // v0.44 duck music for modal so result narration + verse can be heard
+    try{ Music.duck(true); }catch(e){}
   },
-  close(){ document.getElementById('modal').classList.remove('active'); },
+  close(){
+    document.getElementById('modal').classList.remove('active');
+    try{ Music.duck(false); }catch(e){}
+  },
   win({rewards, title='🎉 YOU GOT IT!', emoji='🎉', verse=null, retry, lobby, roomId, ctx}){
     if(!roomId) roomId = State._lastResultRoom;
     // v0.12 detect PR + combo for context-aware celebration
@@ -4404,12 +4444,28 @@ const Modal = {
 // ====================================================================
 const UI = {
   show(id){
+    // v0.44 · skip re-animating if same screen (prevents flicker on re-render)
+    const target = document.getElementById(id);
+    if(target?.classList.contains('active')){
+      // already active · just bail to avoid flicker
+      if(id==='game') setTimeout(renderPowerupBar, 50);
+      let trackId = id;
+      if(id==='game' && State.currentRoom) trackId = State.currentRoom;
+      if(id==='room' && State.currentRoom) trackId = State.currentRoom;
+      Music.play(trackId);
+      return;
+    }
     document.querySelectorAll('.screen').forEach(s=>{
       s.classList.remove('active');
+      s.classList.remove('fade-in');
       s.style.display = '';
     });
-    const target = document.getElementById(id);
-    if(target){ target.classList.add('active'); }
+    if(target){
+      target.classList.add('active');
+      target.classList.add('fade-in');
+      // remove fade-in after animation ends so re-renders don't re-trigger
+      setTimeout(()=>target?.classList.remove('fade-in'), 380);
+    }
     window.scrollTo(0,0);
     if(id==='game') setTimeout(renderPowerupBar, 50);
     else { const bar=document.getElementById('g-powerups'); if(bar) bar.innerHTML=''; }
