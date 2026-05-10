@@ -1246,7 +1246,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.27.0 · SHOP DELUXE · 36 games · power-ups LIVE · 🙏</div>
+  <div class="splash-foot">v0.28.0 · POWER-UPS LIVE · 2x · Freeze · Holy Fire · Skip · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1369,6 +1369,7 @@ button{
     <div class="game-stats" id="g-stats">—</div>
     <div class="mini-wallet" id="g-wallet"></div>
   </div>
+  <div id="g-powerups"></div>
   <div class="game-area" id="g-area"></div>
 </section>
 
@@ -1396,7 +1397,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.27.0';
+const VERSION = '0.28.0';
 
 // ----- STATE -----
 const State = {
@@ -1880,8 +1881,10 @@ const Account = {
 };
 
 // v0.15 ACCURATE TIMER · drift-corrected via Date.now() · resyncs on visibility
-// v0.27 FREEZE power-up · adds 10 sec to current timer
-function useFreeze(game){
+// v0.27/v0.28 FREEZE power-up · adds 10 sec to current timer
+function useFreeze(){
+  const game = State.gameInst;
+  if(!game) return false;
   if(!State.data.powerups?.freeze || State.data.powerups.freeze<1){
     Toast.show('no Freeze · buy in Shop'); return false;
   }
@@ -1891,14 +1894,62 @@ function useFreeze(game){
   State.data.powerups.freeze--;
   State.data._powerupUses = (State.data._powerupUses||0)+1;
   game.timeLeft += 10;
-  // Shift the start time so timer math stays accurate
   if(game._timerStartMs) game._timerStartMs += 10000;
   Save.write();
   SFX.chime(); haptic(20);
   Toast.show('❄️ +10 sec frozen');
   Ach.unlock('freeze_used');
+  renderPowerupBar();
   if(typeof game.render==='function') game.render();
   return true;
+}
+
+// v0.28 SKIP power-up · skips current round/question
+function useSkip(){
+  const game = State.gameInst;
+  if(!game) return false;
+  if(!State.data.powerups?.skip || State.data.powerups.skip<1){
+    Toast.show('no Skip · buy in Shop'); return false;
+  }
+  // Detect skippable patterns
+  if(typeof game.next === 'function'){
+    State.data.powerups.skip--;
+    State.data._powerupUses = (State.data._powerupUses||0)+1;
+    Save.write();
+    SFX.chime(); haptic(20);
+    Toast.show('⏭️ skipped');
+    Ach.unlock('skip_used');
+    game.next();
+    renderPowerupBar();
+    return true;
+  }
+  Toast.show('not skippable'); return false;
+}
+
+// v0.28 in-game POWER-UP BAR · floats below header · auto-shows usable items
+function renderPowerupBar(){
+  const bar = document.getElementById('g-powerups');
+  if(!bar) return;
+  const game = State.gameInst;
+  if(!game){ bar.innerHTML=''; return; }
+  const pu = State.data.powerups||{};
+  const buttons = [];
+  // Freeze · only on timed games
+  if(typeof game.timeLeft === 'number' && (pu.freeze||0)>0){
+    buttons.push(`<button onclick="useFreeze()" class="reward-chip" style="cursor:pointer;background:rgba(34,211,238,.18);border-color:rgba(34,211,238,.4);font-size:11px;padding:5px 10px">❄️ Freeze (${pu.freeze})</button>`);
+  }
+  // Skip · only when game has next()
+  if(typeof game.next === 'function' && (pu.skip||0)>0){
+    buttons.push(`<button onclick="useSkip()" class="reward-chip" style="cursor:pointer;background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.4);font-size:11px;padding:5px 10px">⏭️ Skip (${pu.skip})</button>`);
+  }
+  // Hint for Wordle (already wired in render)
+  // Equipped indicator
+  if(State._equippedPowerup){
+    const p = POWERUP_DEFS.find(x=>x.id===State._equippedPowerup);
+    if(p) buttons.push(`<span class="reward-chip" style="background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.4);font-size:11px;padding:5px 10px">${p.em} equipped</span>`);
+  }
+  if(buttons.length===0){ bar.innerHTML=''; return; }
+  bar.innerHTML = `<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:6px 12px;background:rgba(10,22,51,.6);border-bottom:1px solid rgba(255,255,255,.08)">${buttons.join('')}</div>`;
 }
 
 function startGameTimer(game, durationSec, onTick, onEnd){
@@ -2478,6 +2529,11 @@ const ACHIEVEMENTS = [
   {id:'bundler',em:'🎁',t:'Bundler',d:'Buy a power-up bundle'},
   {id:'exchanger',em:'💱',t:'Currency Master',d:'Use the exchange'},
   {id:'freeze_used',em:'❄️',t:'Time Bender',d:'Use a Freeze in a game'},
+  // v0.28 power-ups LIVE
+  {id:'skip_used',em:'⏭️',t:'Skipper',d:'Use a Skip in a game'},
+  {id:'double_used',em:'⚡',t:'Doubler',d:'Win with 2x Rewards equipped'},
+  {id:'fire_used',em:'🔥',t:'Fire Brand',d:'Win with Holy Fire equipped'},
+  {id:'equipped_first',em:'🛠️',t:'Equipped',d:'Equip your first power-up'},
   // v0.20
   {id:'difficulty_set',em:'🎮',t:'Calibrated',d:'Pick a difficulty mode'},
   {id:'casual_50',em:'😊',t:'Easygoing',d:'Win 50 games on Casual'},
@@ -2826,14 +2882,16 @@ const Modal = {
 // ====================================================================
 const UI = {
   show(id){
-    // v0.12.1 hard-reset: clear inline display + active class on ALL screens before showing target
     document.querySelectorAll('.screen').forEach(s=>{
       s.classList.remove('active');
-      s.style.display = ''; // clear any leftover inline display
+      s.style.display = '';
     });
     const target = document.getElementById(id);
     if(target){ target.classList.add('active'); }
     window.scrollTo(0,0);
+    // v0.28 refresh power-up bar on game screen show
+    if(id==='game') setTimeout(renderPowerupBar, 50);
+    else { const bar=document.getElementById('g-powerups'); if(bar) bar.innerHTML=''; }
   },
   updateWallet(){
     const w = State.data?.wallet||{};
@@ -3689,15 +3747,12 @@ const App = {
   },
   equipPowerup(id){
     if(!State.data.powerups || !State.data.powerups[id]){ Toast.show('not stocked'); return; }
+    // v0.28: equipping does NOT decrement · only consuming on use does
     State._equippedPowerup = id;
-    State.data.powerups[id]--;
-    State.data._powerupUses = (State.data._powerupUses||0)+1;
-    Save.write();
     const p = POWERUP_DEFS.find(x=>x.id===id);
     Toast.show(`⚡ equipped ${p.em} ${p.name}`);
     SFX.correct();
     haptic(15);
-    // Re-render the intro modal to show equipped state
     if(State._pendingGame){
       const room = Object.entries(ROOMS).find(([rid,r])=>r.games.includes(State._pendingGame));
       if(room){
@@ -4793,6 +4848,25 @@ function recordResult(roomId, gameId, won, rewards={}){
     }
     if(comboMult>1){
       Object.keys(rewards).forEach(k=>rewards[k]=Math.round(rewards[k]*comboMult));
+    }
+    // v0.28 EQUIPPED POWER-UP CONSUMPTION
+    const ep = State._equippedPowerup;
+    if(ep){
+      if(ep==='double' && (State.data.powerups?.double||0)>0){
+        Object.keys(rewards).forEach(k=>rewards[k]=Math.round(rewards[k]*2));
+        State.data.powerups.double--;
+        State.data._powerupUses = (State.data._powerupUses||0)+1;
+        Toast.show('⚡ 2x bonus applied!');
+      }else if(ep==='fire' && (State.data.powerups?.fire||0)>0){
+        rewards.coin = (rewards.coin||0) + 50;
+        rewards.brain = (rewards.brain||0) + 5;
+        State.data.powerups.fire--;
+        State.data._powerupUses = (State.data._powerupUses||0)+1;
+        Toast.show('🔥 Holy Fire boost!');
+      }
+      if(ep==='double') Ach.unlock('double_used');
+      if(ep==='fire') Ach.unlock('fire_used');
+      State._equippedPowerup = null;
     }
     d.perGame[key].wins++;
     d.perGame[key].lastWin = Date.now();
