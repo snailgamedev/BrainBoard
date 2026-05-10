@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.59.0 · LEAN REBUILD · Frenzy fixed · 3 difficulties · cleaner settings · ready for real players · 🙏</div>
+  <div class="splash-foot">v0.60.0 · PLAYABILITY · adaptive skill scaling · anti-freeze timers · newbie→sweat auto-tune · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.59.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.60.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1422,7 +1422,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.59.0';
+const VERSION = '0.60.0';
 
 // ----- STATE -----
 const State = {
@@ -3694,10 +3694,13 @@ const ShopRecommend = {
 // ====================================================================
 const Pace = {
   factor(){
-    const p = State.data?.pace || 'normal';
-    if(p==='slow') return 1.5;
-    if(p==='fast') return 0.7;
-    return 1.0;
+    const p = State.data?.pace || 'slow';
+    let base = 1.0;
+    if(p==='slow') base = 1.5;
+    if(p==='fast') base = 0.7;
+    // v0.60 · stack SkillScale time tuning on top
+    try{ base *= SkillScale.estimate().time; }catch(e){}
+    return base;
   },
   scale(seconds){ return Math.round(seconds * this.factor()); },
   // Wrap an existing setInterval/setTimeout-style game timer source
@@ -7295,6 +7298,70 @@ const ReversiGame = {
 };
 
 // ====================================================================
+// 🎯 v0.60 · SKILL SCALE · auto-tune for newbie or sweat · zero config
+// ====================================================================
+const SkillScale = {
+  // Map a player's overall skill → time multiplier + threshold multiplier
+  // Newbie  (0-5 plays)        : +30% time · -20% threshold (forgiving)
+  // Casual  (5-30 plays)       : +15% time · -10% threshold
+  // Mid     (30-100, any rate) : baseline
+  // Sweat   (100+ at >60% win) : -10% time · +15% threshold
+  // Elite   (200+ at >75% win) : -20% time · +25% threshold
+  estimate(){
+    const d = State.data;
+    const plays = d.totals?.games || 0;
+    const wins = d.totals?.wins || 0;
+    const rate = plays>0 ? wins/plays : 0;
+    if(plays<5) return {tier:'newbie', em:'🌱', time:1.30, thresh:0.80};
+    if(plays<30) return {tier:'casual', em:'😊', time:1.15, thresh:0.90};
+    if(plays<100) return {tier:'mid', em:'⚖️', time:1.00, thresh:1.00};
+    if(plays>=200 && rate>=0.75) return {tier:'elite', em:'🌋', time:0.80, thresh:1.25};
+    if(rate>=0.60) return {tier:'sweat', em:'🔥', time:0.90, thresh:1.15};
+    return {tier:'mid', em:'⚖️', time:1.00, thresh:1.00};
+  },
+  scaleTime(seconds){ return Math.round(seconds * this.estimate().time); },
+  scaleThreshold(target){ return Math.max(1, Math.round(target * this.estimate().thresh)); },
+  badge(){
+    const e = this.estimate();
+    const tag = {newbie:'easy mode',casual:'breaking in',mid:'standard',sweat:'sweat tier',elite:'elite tier'}[e.tier]||'';
+    return `<div style="display:inline-block;padding:3px 8px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);border-radius:99px;font-size:10px"><b style="color:#A78BFA">${e.em} TUNED · ${tag}</b></div>`;
+  }
+};
+
+// ====================================================================
+// ❄️ v0.60 · ANTI-FREEZE · global timer registry tied to gameInst
+// ====================================================================
+const Timers = {
+  _byInst: new WeakMap(),
+  _orphans: new Set(),
+  trackInterval(inst, id){
+    if(!inst){ this._orphans.add(id); return id; }
+    if(!this._byInst.has(inst)) this._byInst.set(inst, []);
+    this._byInst.get(inst).push({id, kind:'i'});
+    return id;
+  },
+  trackTimeout(inst, id){
+    if(!inst){ this._orphans.add(id); return id; }
+    if(!this._byInst.has(inst)) this._byInst.set(inst, []);
+    this._byInst.get(inst).push({id, kind:'t'});
+    return id;
+  },
+  killInst(inst){
+    if(!inst) return;
+    const list = this._byInst.get(inst);
+    if(!list) return;
+    list.forEach(rec=>{ try{ rec.kind==='i'?clearInterval(rec.id):clearTimeout(rec.id); }catch(e){} });
+    this._byInst.delete(inst);
+  },
+  killAll(){
+    // emergency · scrub all known game-instance timers + orphans
+    if(State.gameInst) this.killInst(State.gameInst);
+    this._orphans.forEach(id=>{ try{clearInterval(id);}catch(e){} try{clearTimeout(id);}catch(e){}});
+    this._orphans.clear();
+  }
+};
+
+// ====================================================================
 // 💾 SAVE / LOAD
 // ====================================================================
 const Save = {
@@ -7955,6 +8022,14 @@ const UI = {
       Music.play(trackId);
       return;
     }
+    // v0.60 · ANTI-FREEZE · when leaving game screen · kill any orphan timers
+    if(id !== 'game' && State.gameInst){
+      try{
+        if(typeof State.gameInst.cleanup==='function') State.gameInst.cleanup();
+        Timers.killAll();
+      }catch(e){}
+      State.gameInst = null;
+    }
     document.querySelectorAll('.screen').forEach(s=>{
       s.classList.remove('active');
       s.classList.remove('fade-in');
@@ -8087,6 +8162,7 @@ const GameIntro = {
         <div style="background:rgba(255,255,255,.06);padding:8px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🏆 WINS</div><b>${stat.wins}</b></div>
         <div style="background:rgba(255,255,255,.06);padding:8px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🎮 PLAYS</div><b>${stat.plays}</b></div>
       </div>
+      <div style="text-align:center;margin-bottom:10px">${SkillScale.badge()}</div>
       ${Preview.renderHtml(roomId, game.id)}
       <div style="background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;text-align:center;margin-bottom:6px">📈 LEADERBOARD · DAILY TOP 5</div>
@@ -9442,14 +9518,8 @@ const App = {
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
           <button class="btn-secondary" onclick="App.openCabinet()">🏆 medal cabinet</button>
           <button class="btn-secondary" onclick="App.openWeeklyTourney()">📅 weekly tournament</button>
-          <button class="btn-secondary" onclick="App.openMedalHunt()">🥇 medal hunt</button>
-          <button class="btn-secondary" onclick="App.openCalendar()">📅 30-day calendar</button>
-          <button class="btn-secondary" onclick="App.openBracket()">🏟️ tournament bracket</button>
           <button class="btn-secondary" onclick="App.startTour()">🎯 replay tour</button>
-          <button class="btn-secondary" onclick="App.startCarnival()">🎪 carnival mode</button>
-          <button class="btn-secondary" onclick="App.startWave()">🌊 wave mode (endless)</button>
           <button class="btn-secondary" onclick="App.openCardPack()">🃏 daily card pack</button>
-          <button class="btn-secondary" onclick="App.openTrader()">💸 currency trader</button>
           <button class="btn-secondary" onclick="App.rollMystery()">🎁 roll mystery (free)</button>
           <button class="btn-secondary" style="background:rgba(245,158,11,.2);border-color:#FBBF24" onclick="App.forceUpdate()">🔄 FORCE UPDATE · clear cache + reload</button>
         </div>
