@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.32.0 · music unlocked · shop pro · recently-played · 🙏</div>
+  <div class="splash-foot">v0.33.0 · GAMEPIGEON · 37 games · Drop Four · Knockout · Cup Pong · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.32.0';
+const VERSION = '0.33.0';
 
 // ----- STATE -----
 const State = {
@@ -2595,6 +2595,11 @@ const ACHIEVEMENTS = [
   {id:'audio_unlocked',em:'🎵',t:'Tuned In',d:'Unlock music with first interaction'},
   {id:'recent_view',em:'⏱',t:'Time-Aware',d:'View recently-played widget'},
   {id:'shop_browser',em:'🛒',t:'Connoisseur',d:'Browse the shop'},
+  // v0.33 GamePigeon-style additions
+  {id:'dropfour_5',em:'🟡',t:'Four Master',d:'Win 5 Drop Four games'},
+  {id:'knockout_5',em:'🏀',t:'Sharp Shot',d:'Win 5 Knockout games'},
+  {id:'cuppong_5',em:'🥤',t:'Pong Star',d:'Win 5 Cup Pong games'},
+  {id:'wordbuild_30',em:'🔨',t:'Word Builder',d:'Reach 30 points in Word Build'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -3246,6 +3251,7 @@ const ROOMS = {
     {id:'define',em:'📚',name:'Define It',sub:'definition → pick the word · 10 rounds',launch:()=>DefineGame.start()},
     {id:'hangman',em:'🪢',name:'Hangman',sub:'guess the word · 6 wrong = hung',launch:()=>HangmanGame.start()},
     {id:'synonym',em:'🔁',name:'Synonym Sprint',sub:'pick the synonym · 45 sec · 10 rounds',launch:()=>SynonymGame.start()},
+    {id:'wordbuild',em:'🔨',name:'Word Build',sub:'build words from 7 random letters · 90s',launch:()=>WordBuildGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
@@ -3277,6 +3283,7 @@ const ROOMS = {
     {id:'hunt',em:'🔢',name:'Number Hunt',sub:'find the duplicate pair · 45 sec',launch:()=>HuntGame.start()},
     {id:'sudoku',em:'🧩',name:'Sudoku Mini',sub:'4x4 grid · 3 difficulties',launch:()=>SudokuGame.start()},
     {id:'odd',em:'🔍',name:'Odd One Out',sub:'find the number that breaks the pattern',launch:()=>OddOneGame.start()},
+    {id:'dropfour',em:'🟡',name:'Drop Four',sub:'connect 4 in a row · vs CPU · 7x6 grid',launch:()=>DropFourGame.start()},
   ]},
   speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
@@ -3285,6 +3292,8 @@ const ROOMS = {
     {id:'numbertap',em:'🔢',name:'Number Tap',sub:'tap 1→15 in order · sub-20s wins',launch:()=>NumberTapGame.start()},
     {id:'colorwave',em:'🌊',name:'Color Wave',sub:'visual sequence · 6 colors · level up',launch:()=>ColorWaveGame.start()},
     {id:'tapfrenzy',em:'⚡',name:'Tap Frenzy',sub:'tap as fast as you can · 5 sec',launch:()=>TapFrenzyGame.start()},
+    {id:'knockout',em:'🏀',name:'Knockout',sub:'basketball · tap on sweet spot · 10 shots',launch:()=>KnockoutGame.start()},
+    {id:'cuppong',em:'🥤',name:'Cup Pong',sub:'sink 4+ of 6 cups · 10 shots',launch:()=>CupPongGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -7712,7 +7721,384 @@ const CapitalsGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 34 · DAILY (rotating mini)
+// 🎮 GAME 34 · DROP FOUR (Logic Lab) · Connect-4 style vs CPU
+// ====================================================================
+const DropFourGame = {
+  start(){
+    State.gameInst=this;
+    this.cols=7; this.rows=6;
+    this.grid=Array.from({length:this.rows},()=>Array(this.cols).fill(0)); // 0=empty, 1=you, 2=cpu
+    this.turn=1; this.done=false; this.winner=0;
+    this.render();
+    UI.show('game');
+  },
+  drop(col){
+    if(this.done || this.turn!==1) return;
+    // find lowest empty row
+    let r=-1;
+    for(let i=this.rows-1;i>=0;i--){ if(this.grid[i][col]===0){r=i;break;} }
+    if(r<0) return; // column full
+    this.grid[r][col]=1;
+    SFX.tap(); haptic(8);
+    if(this.check(r,col,1)){ this.done=true; this.winner=1; this.end(); return; }
+    if(this.isFull()){ this.done=true; this.end(); return; }
+    this.turn=2;
+    this.render();
+    setTimeout(()=>this.cpuMove(),700);
+  },
+  cpuMove(){
+    if(this.done) return;
+    // CPU: 60% random, 40% try to win/block
+    let col = -1;
+    if(Math.random()<0.4){
+      // Try to win or block
+      for(let c=0;c<this.cols;c++){
+        const r = this._findRow(c);
+        if(r<0) continue;
+        this.grid[r][c]=2;
+        if(this.check(r,c,2)){ this.grid[r][c]=0; col=c; break; }
+        this.grid[r][c]=0;
+      }
+      if(col<0){
+        for(let c=0;c<this.cols;c++){
+          const r = this._findRow(c);
+          if(r<0) continue;
+          this.grid[r][c]=1;
+          if(this.check(r,c,1)){ this.grid[r][c]=0; col=c; break; }
+          this.grid[r][c]=0;
+        }
+      }
+    }
+    if(col<0){
+      const opts=[];
+      for(let c=0;c<this.cols;c++) if(this._findRow(c)>=0) opts.push(c);
+      col = opts[Math.floor(Math.random()*opts.length)];
+    }
+    const r = this._findRow(col);
+    if(r<0) return;
+    this.grid[r][col]=2;
+    SFX.tap();
+    if(this.check(r,col,2)){ this.done=true; this.winner=2; this.end(); return; }
+    if(this.isFull()){ this.done=true; this.end(); return; }
+    this.turn=1;
+    this.render();
+  },
+  _findRow(col){
+    for(let i=this.rows-1;i>=0;i--){ if(this.grid[i][col]===0) return i; }
+    return -1;
+  },
+  isFull(){return this.grid[0].every(c=>c!==0);},
+  check(row,col,p){
+    const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+    for(const [dr,dc] of dirs){
+      let count=1;
+      for(let s=1;s<4;s++){
+        const r=row+dr*s, c=col+dc*s;
+        if(r<0||r>=this.rows||c<0||c>=this.cols||this.grid[r][c]!==p) break;
+        count++;
+      }
+      for(let s=1;s<4;s++){
+        const r=row-dr*s, c=col-dc*s;
+        if(r<0||r>=this.rows||c<0||c>=this.cols||this.grid[r][c]!==p) break;
+        count++;
+      }
+      if(count>=4) return true;
+    }
+    return false;
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🧩 Drop Four</b> · ${this.turn===1?'your turn':'CPU thinking...'}${this.done?' · done':''}`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','drop 4 in a row · vs CPU'));
+    const grid=el('div','');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(7,42px);gap:3px;background:rgba(245,158,11,.3);padding:6px;border-radius:14px;margin:14px 0';
+    for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++){
+      const cell=el('div','');
+      const v=this.grid[r][c];
+      const color = v===1?'#FBBF24':v===2?'#EF4444':'rgba(10,22,51,.7)';
+      cell.style.cssText=`width:42px;height:42px;border-radius:50%;background:${color};cursor:${r===0&&!this.done?'pointer':'default'};box-shadow:inset 0 -2px 4px rgba(0,0,0,.3)`;
+      if(r===0 && !this.done) cell.onclick=()=>this.drop(c);
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    if(!this.done){
+      const colBtns=el('div',''); colBtns.style.cssText='display:grid;grid-template-columns:repeat(7,42px);gap:3px;padding:0 6px';
+      for(let c=0;c<this.cols;c++){
+        const b=el('button','',this.turn===1?'⬇':' ');
+        b.style.cssText='width:42px;height:24px;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:var(--gold-bright);cursor:pointer;font-size:14px';
+        if(this.turn===1) b.onclick=()=>this.drop(c);
+        colBtns.appendChild(b);
+      }
+      wrap.appendChild(colBtns);
+    }
+    area.appendChild(wrap);
+  },
+  end(){
+    const won = this.winner===1;
+    const r = won?{coin:80,brain:5}:this.winner===0?{coin:30}:{coin:15};
+    recordResult('logic','dropfour',won,r);
+    setTimeout(()=>{
+      if(won) Modal.win({rewards:r,title:'🟡 4 in a row!',emoji:'🏆',retry:()=>DropFourGame.start(),lobby:()=>App.toLobby()});
+      else if(this.winner===2) Modal.lose({title:'CPU got 4',msg:'block earlier next time!',retry:()=>DropFourGame.start(),lobby:()=>App.toLobby()});
+      else Modal.lose({title:'Draw',msg:'no winner this round',retry:()=>DropFourGame.start(),lobby:()=>App.toLobby()});
+    },500);
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 35 · KNOCKOUT (Speed Wing) · basketball timing
+// ====================================================================
+const KnockoutGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.attempts=0; this.maxAttempts=10;
+    this.startSweetSpot();
+    UI.show('game');
+  },
+  startSweetSpot(){
+    if(this.attempts>=this.maxAttempts){ this.end(); return; }
+    this.sweetSpotPos = 20 + Math.random()*40; // 20-60% across bar
+    this.sweetSpotWidth = 12; // 12% wide
+    this.markerPos = 0;
+    this.markerDir = 1;
+    this.markerSpeed = 1.5 + Math.random()*1.5;
+    this.shotResult = null;
+    this.startTime = Date.now();
+    this.animate();
+    this.render();
+  },
+  animate(){
+    if(this.shotResult || this.attempts>=this.maxAttempts) return;
+    this.tickInt = setInterval(()=>{
+      this.markerPos += this.markerDir * this.markerSpeed;
+      if(this.markerPos>=100){ this.markerPos=100; this.markerDir=-1; }
+      if(this.markerPos<=0){ this.markerPos=0; this.markerDir=1; }
+      this.render();
+    },16);
+  },
+  shoot(){
+    if(this.shotResult) return;
+    clearInterval(this.tickInt);
+    const inSpot = this.markerPos>=this.sweetSpotPos && this.markerPos<=this.sweetSpotPos+this.sweetSpotWidth;
+    this.shotResult = inSpot ? 'made' : 'missed';
+    this.attempts++;
+    if(inSpot){ this.score++; SFX.correct(); haptic(15); }
+    else{ SFX.wrong(); haptic(20); }
+    this.render();
+    setTimeout(()=>this.startSweetSpot(),500);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🏀 Knockout</b> · ${this.score}/${this.maxAttempts} made · shot <b>${this.attempts+1}</b>/${this.maxAttempts}`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap when marker hits sweet spot'));
+    const hoop=el('div','',this.shotResult==='made'?'🏀':this.shotResult==='missed'?'❌':'🏀');
+    hoop.style.cssText='font-size:72px;margin:14px 0';
+    wrap.appendChild(hoop);
+    const bar=el('div',''); bar.style.cssText='position:relative;width:300px;height:36px;background:rgba(255,255,255,.1);border-radius:18px;border:2px solid rgba(255,255,255,.2);overflow:hidden;margin-bottom:14px';
+    const sweet=el('div',''); sweet.style.cssText=`position:absolute;top:0;bottom:0;left:${this.sweetSpotPos}%;width:${this.sweetSpotWidth}%;background:linear-gradient(135deg,#FBBF24,#F59E0B)`;
+    bar.appendChild(sweet);
+    const marker=el('div',''); marker.style.cssText=`position:absolute;top:-2px;bottom:-2px;left:${this.markerPos}%;width:4px;background:#fff;box-shadow:0 0 8px #fff;transform:translateX(-2px)`;
+    bar.appendChild(marker);
+    wrap.appendChild(bar);
+    const btn=el('button','btn-primary','🏀 SHOOT');
+    btn.style.cssText='padding:18px 48px;font-size:18px';
+    btn.onclick=()=>this.shoot();
+    wrap.appendChild(btn);
+    area.appendChild(wrap);
+  },
+  end(){
+    const won = this.score>=7;
+    const r = won?{coin:50+this.score*8,brain:3}:{coin:Math.max(15,this.score*5)};
+    recordResult('speed','knockout',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.maxAttempts} 🏀`,emoji:'🏀',retry:()=>KnockoutGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.maxAttempts}`,msg:'aim for 7+ made!',retry:()=>KnockoutGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.tickInt) clearInterval(this.tickInt);}
+};
+
+// ====================================================================
+// 🎮 GAME 36 · CUP PONG (Speed Wing) · 6 cup arrangement
+// ====================================================================
+const CupPongGame = {
+  start(){
+    State.gameInst=this;
+    this.cups=[1,2,3,4,5,6]; // cups present
+    this.shotsLeft=10;
+    this.shotResult=null;
+    this.aiming=true;
+    this.aimPos=0;
+    this.aimDir=1;
+    this.startAim();
+    this.render();
+    UI.show('game');
+  },
+  startAim(){
+    this.aimPos=0; this.aimDir=1;
+    this.aimInt=setInterval(()=>{
+      this.aimPos += this.aimDir * 2.5;
+      if(this.aimPos>=100){this.aimPos=100;this.aimDir=-1;}
+      if(this.aimPos<=0){this.aimPos=0;this.aimDir=1;}
+      this.render();
+    },16);
+  },
+  shoot(){
+    if(!this.aiming || this.cups.length===0 || this.shotsLeft<=0) return;
+    clearInterval(this.aimInt);
+    this.aiming=false;
+    this.shotsLeft--;
+    // Cups are at positions: 1=10%, 2=30%, 3=50%, 4=70%, 5=90% (5 across bottom)
+    // Or pyramid: 1,2,3 bottom · 4,5 middle · 6 top
+    // Map aimPos to cup index
+    const cupPos = {1:10, 2:30, 3:50, 4:70, 5:90, 6:50};
+    let hit=-1;
+    for(const c of this.cups){
+      if(Math.abs(this.aimPos - cupPos[c]) < 9){ hit=c; break; }
+    }
+    if(hit>=0){
+      this.cups = this.cups.filter(c=>c!==hit);
+      this.shotResult = 'hit';
+      SFX.correct(); haptic(15);
+    }else{
+      this.shotResult = 'miss';
+      SFX.wrong(); haptic(20);
+    }
+    this.render();
+    setTimeout(()=>{
+      this.aiming=true;
+      this.shotResult=null;
+      if(this.cups.length===0 || this.shotsLeft<=0){ this.end(); return; }
+      this.startAim();
+    }, 600);
+  },
+  render(){
+    const sunk = 6 - this.cups.length;
+    document.getElementById('g-stats').innerHTML=`<b>🥤 Cup Pong</b> · sunk: <b>${sunk}/6</b> · shots: <b>${this.shotsLeft}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','aim & tap to throw'));
+    // Cup arrangement (pyramid · 3 / 2 / 1)
+    const layout = el('div',''); layout.style.cssText='display:flex;flex-direction:column;align-items:center;gap:8px;margin:10px 0';
+    [{row:[6],   pct:50},{row:[4,5], pcts:[70,90]},{row:[1,2,3], pcts:[10,30,50]}].forEach(()=>{});
+    // Simpler: 6 cups in 1 row
+    const cupRow = el('div',''); cupRow.style.cssText='display:flex;justify-content:space-around;width:100%;max-width:320px';
+    [1,2,3,4,5,6].forEach(c=>{
+      const cup=el('div',''); cup.style.cssText='font-size:32px;opacity:'+(this.cups.includes(c)?'1':'0.2');
+      cup.textContent='🥤'; cupRow.appendChild(cup);
+    });
+    wrap.appendChild(cupRow);
+    // Aim bar
+    const bar=el('div',''); bar.style.cssText='position:relative;width:300px;height:24px;background:rgba(255,255,255,.1);border-radius:12px;border:2px solid rgba(255,255,255,.2);margin:14px 0';
+    const marker=el('div',''); marker.style.cssText=`position:absolute;top:-4px;bottom:-4px;left:${this.aimPos}%;width:5px;background:#FBBF24;box-shadow:0 0 8px #FBBF24;transform:translateX(-2px)`;
+    bar.appendChild(marker);
+    wrap.appendChild(bar);
+    const btn=el('button','btn-primary',this.shotResult==='hit'?'🎯 HIT!':this.shotResult==='miss'?'❌ MISS':'🎯 THROW');
+    btn.style.cssText='padding:18px 48px;font-size:18px';
+    btn.onclick=()=>this.shoot();
+    wrap.appendChild(btn);
+    area.appendChild(wrap);
+  },
+  end(){
+    if(this.aimInt) clearInterval(this.aimInt);
+    const sunk = 6 - this.cups.length;
+    const won = sunk>=4;
+    const r = won?{coin:50+sunk*15,brain:3}:{coin:Math.max(15,sunk*8)};
+    recordResult('speed','cuppong',won,r);
+    if(won) Modal.win({rewards:r,title:`${sunk}/6 cups sunk!`,emoji:'🥤',retry:()=>CupPongGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${sunk}/6 cups`,msg:'aim for 4+!',retry:()=>CupPongGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.aimInt) clearInterval(this.aimInt);}
+};
+
+// ====================================================================
+// 🎮 GAME 37 · WORD BUILD (Word Lab) · build words from given letters
+// ====================================================================
+const WordBuildGame = {
+  start(){
+    State.gameInst=this;
+    this.timeLeft=90; this.score=0; this.wordsBuilt=[]; this.current='';
+    // Pick 7 letters with a good vowel mix
+    const vowels='AEIOU'.split('');
+    const consonants='BCDFGHJKLMNPRSTW'.split('');
+    this.letters=[];
+    for(let i=0;i<3;i++) this.letters.push(vowels[Math.floor(Math.random()*vowels.length)]);
+    for(let i=0;i<4;i++) this.letters.push(consonants[Math.floor(Math.random()*consonants.length)]);
+    this.letters.sort(()=>Math.random()-.5);
+    this.timer=setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    this.render();
+    UI.show('game');
+  },
+  addLetter(i){
+    if(this.current.length>=this.letters.length) return;
+    this.current += this.letters[i];
+    SFX.tap(); haptic(4);
+    this.render();
+  },
+  removeLetter(){
+    this.current = this.current.slice(0,-1);
+    haptic(4); this.render();
+  },
+  async submit(){
+    if(this.current.length<3){ Toast.show('min 3 letters'); return; }
+    if(this.wordsBuilt.includes(this.current)){ Toast.show('already used'); SFX.wrong(); return; }
+    Toast.show('checking…');
+    const valid = await isValidWordAsync(this.current);
+    if(!valid){
+      Toast.show('🚫 not a real word'); SFX.wrong(); haptic(20);
+      this.current=''; this.render();
+      return;
+    }
+    const points = this.current.length===3?1:this.current.length===4?2:this.current.length===5?4:7;
+    this.score += points;
+    this.wordsBuilt.push(this.current);
+    SFX.correct(); haptic(15);
+    Toast.show(`+${points} · ${this.current}`);
+    this.current=''; this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>📖 Word Build</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','build words 3+ letters · '+this.wordsBuilt.length+' built'));
+    const cur=el('div','math-input',this.current||'_'); cur.style.fontSize='28px'; cur.style.letterSpacing='.2em'; wrap.appendChild(cur);
+    const lettersDiv=el('div',''); lettersDiv.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);gap:6px;width:100%;max-width:340px;margin:12px 0';
+    this.letters.forEach((l,i)=>{
+      const b=el('button','',l);
+      b.style.cssText='aspect-ratio:1;background:rgba(245,158,11,.2);border:2px solid rgba(245,158,11,.4);border-radius:10px;color:var(--cream);font-size:20px;font-weight:800;font-family:"Cinzel",serif;cursor:pointer';
+      b.onclick=()=>this.addLetter(i);
+      lettersDiv.appendChild(b);
+    });
+    wrap.appendChild(lettersDiv);
+    const actions=el('div',''); actions.style.cssText='display:flex;gap:8px;margin-top:8px';
+    const del=el('button','btn-secondary','⌫'); del.style.padding='12px 18px'; del.onclick=()=>this.removeLetter(); actions.appendChild(del);
+    const go=el('button','btn-primary','✓ SUBMIT'); go.style.padding='12px 24px'; go.onclick=()=>this.submit(); actions.appendChild(go);
+    wrap.appendChild(actions);
+    if(this.wordsBuilt.length){
+      const list=el('div',''); list.style.cssText='margin-top:14px;font-size:11px;opacity:.7;max-width:340px;text-align:center';
+      list.textContent = 'built: '+this.wordsBuilt.join(' · ');
+      wrap.appendChild(list);
+    }
+    area.appendChild(wrap);
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=12;
+    const r = won?{coin:30+this.score*4,brain:5}:{coin:Math.max(15,this.score*3)};
+    recordResult('word','wordbuild',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score} points!`,emoji:'📖',retry:()=>WordBuildGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} points`,msg:'aim for 12+!',retry:()=>WordBuildGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 38 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
