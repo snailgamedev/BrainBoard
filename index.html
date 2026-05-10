@@ -1204,7 +1204,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.21.0 · PIN-FREE · adaptive difficulty · 🙏</div>
+  <div class="splash-foot">v0.22.0 · humble rank · Coach AI · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1354,7 +1354,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.21.0';
+const VERSION = '0.22.0';
 
 // ----- STATE -----
 const State = {
@@ -1368,7 +1368,7 @@ const DEFAULT_SAVE = {
   v:VERSION, onboarded:false, name:'Saint', preset:'saint', mood:'curious',
   emoji:'🙏', joinedAt:Date.now(), lastDailyClaim:0,
   wallet:{coin:0,gem:0,brain:0,faith:0,ticket:0,key:0},
-  iq:1000, streak:0, lastPlayDate:null,
+  iq:50, streak:0, lastPlayDate:null,  // v0.22 starts humble at Sprout tier
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
@@ -1910,26 +1910,27 @@ const VisibilityGuard = {
   }
 };
 
-// ===== v0.19 BRAIN RANK TIERS =====
-// Renamed from "IQ" — uses Elo-style numbers (1000 = entry, 2400 = max)
-// Internal data field stays State.data.iq for save compat · displayed as "BR"
+// ===== v0.22 BRAIN RANK · HUMBLE SCALE · 0-2000 =====
+// Rescaled so 50 = Sprout (entry · everyone starts here)
+// Numbers feel earned · climbing means something
 const RANK_TIERS = [
-  {min:800, max:899,  em:'🌱', name:'Sprout',    color:'#10B981'},
-  {min:900, max:999,  em:'🐑', name:'Lamb',      color:'#A78BFA'},
-  {min:1000,max:1149, em:'📖', name:'Scholar',   color:'#22D3EE'},  // ← starting tier
-  {min:1150,max:1299, em:'🦉', name:'Sage',      color:'#7C3AED'},
-  {min:1300,max:1499, em:'🌟', name:'Saint',     color:'#F59E0B'},
-  {min:1500,max:1699, em:'✝️', name:'Apostle',   color:'#FBBF24'},
-  {min:1700,max:1899, em:'👑', name:'Sovereign', color:'#EF4444'},
-  {min:1900,max:2099, em:'⚡', name:'Legend',    color:'#A855F7'},
-  {min:2100,max:2400, em:'🔥', name:'Mythic',    color:'#FF0080'},
+  {min:0,    max:99,   em:'🌱', name:'Sprout',    color:'#10B981'},  // ← default 50
+  {min:100,  max:199,  em:'🐑', name:'Lamb',      color:'#A78BFA'},
+  {min:200,  max:349,  em:'📖', name:'Scholar',   color:'#22D3EE'},
+  {min:350,  max:549,  em:'🦉', name:'Sage',      color:'#7C3AED'},
+  {min:550,  max:799,  em:'🌟', name:'Saint',     color:'#F59E0B'},
+  {min:800,  max:1099, em:'✝️', name:'Apostle',   color:'#FBBF24'},
+  {min:1100, max:1499, em:'👑', name:'Sovereign', color:'#EF4444'},
+  {min:1500, max:1999, em:'⚡', name:'Legend',    color:'#A855F7'},
+  {min:2000, max:9999, em:'🔥', name:'Mythic',    color:'#FF0080'},
 ];
+const RANK_MAX = 2400;
 function getRankTier(rank){
-  rank = rank||1000;
+  rank = rank||50;
   return RANK_TIERS.find(t=>rank>=t.min && rank<=t.max) || RANK_TIERS[0];
 }
 function rankProgressToNext(rank){
-  rank = rank||1000;
+  rank = rank||50;
   const tier = getRankTier(rank);
   const idx = RANK_TIERS.indexOf(tier);
   const next = RANK_TIERS[idx+1];
@@ -1939,9 +1940,92 @@ function rankProgressToNext(rank){
   return {pct:Math.round((into/range)*100), next, tier};
 }
 function rankBadge(rank){
-  const t = getRankTier(rank||1000);
+  const t = getRankTier(rank||50);
   return `<span style="color:${t.color};font-weight:700">${t.em} ${t.name}</span>`;
 }
+
+// ===================================================================
+// 🧠 v0.22 COACH AI · super-smart per-player adaptive engine
+// ===================================================================
+// Reads:
+//  - per-game win rate · plays · last 8 results (Adaptive)
+//  - DNA axes (which categories you're strong/weak in)
+//  - time-of-day patterns
+//  - current Brain Rank
+// Outputs:
+//  - per-game win probability prediction (0-1)
+//  - threshold adjustments (smart, not punishing)
+//  - actionable tip for the player
+//  - recommended next game (based on weakest axis)
+const Coach = {
+  brain(){
+    const d = State.data; if(!d) return null;
+    const dna = d.brainDNA||{memory:0,speed:0,pattern:0,logic:0,word:0,faith:0};
+    const dnaTotal = Object.values(dna).reduce((a,b)=>a+b,0)||1;
+    const axisRates = {};
+    Object.entries(dna).forEach(([k,v])=>axisRates[k]=v/dnaTotal);
+    // Find strongest + weakest axis
+    const sorted = Object.entries(dna).sort((a,b)=>b[1]-a[1]);
+    const strongest = sorted[0][0];
+    const weakest = sorted[sorted.length-1][0];
+    // Recent perf
+    const recent = (d._recentResults||[]);
+    const recentWinRate = recent.length ? recent.reduce((a,b)=>a+b,0)/recent.length : 0.5;
+    // Hour of day (perf by hour optional · skip for now)
+    return {dna, axisRates, strongest, weakest, recentWinRate, totalPlays:d.totals.games||0};
+  },
+  predict(roomId, gameId){
+    // Returns predicted win probability (0-1) for THIS player on THIS game
+    const d = State.data; if(!d) return 0.5;
+    const stats = d.perGame[`${roomId}:${gameId}`] || {wins:0, plays:0};
+    const personalRate = stats.plays>=3 ? stats.wins/stats.plays : 0.5;
+    const recent = Adaptive.multiplier(); // 0.85-1.15
+    // Account for category strength
+    const axisMap = {word:'word',brain:'memory',mind:'pattern',num:'logic',script:'faith',logic:'logic',speed:'speed',daily:'speed'};
+    const axis = axisMap[roomId];
+    const brain = Coach.brain();
+    let categoryBoost = 0;
+    if(axis && brain){
+      categoryBoost = brain.axisRates[axis]>0.2 ? 0.1 : (brain.axisRates[axis]<0.05 ? -0.1 : 0);
+    }
+    let prob = personalRate + categoryBoost - (recent-1)*0.5;
+    return Math.max(0.1, Math.min(0.95, prob));
+  },
+  adjustThreshold(roomId, gameId, base){
+    // Smart threshold adjustment: combines Adaptive + personal predict
+    const personal = Coach.predict(roomId, gameId);
+    const adaptive = Adaptive.multiplier();
+    // If predicted >70%: harder (raise threshold ~10%)
+    // If predicted <30%: easier (lower threshold ~10%)
+    let mult = 1.0;
+    if(personal > 0.7) mult = 1.10;
+    else if(personal < 0.3) mult = 0.90;
+    // Layer Adaptive (small additional nudge)
+    mult = mult * (2 - adaptive); // adaptive 0.85→harder lowers it, 1.15→easier raises
+    return Math.max(1, Math.round(base * mult));
+  },
+  tip(){
+    const b = Coach.brain();
+    if(!b) return 'play a few games so I can learn your style';
+    if(b.totalPlays<5) return 'play 5 games · I\'ll start tuning';
+    const labels = {memory:'memory',speed:'speed',pattern:'pattern',logic:'logic',word:'word',faith:'faith'};
+    const tips = [
+      `your ${labels[b.strongest]} brain is strongest 🔥`,
+      `your ${labels[b.weakest]} could grow · try a ${labels[b.weakest]} game`,
+      b.recentWinRate>0.7 ? 'you\'re hot · I\'m raising the bar' : b.recentWinRate<0.3 ? 'I\'m easing thresholds · keep going' : 'balanced groove',
+    ];
+    return tips[Math.floor(Math.random()*tips.length)];
+  },
+  recommendGame(){
+    const b = Coach.brain();
+    if(!b) return {room:'word', game:'wordle'};
+    const axisToRoom = {memory:'brain',speed:'speed',pattern:'mind',logic:'num',word:'word',faith:'script'};
+    const targetRoom = axisToRoom[b.weakest] || 'word';
+    const games = ROOMS[targetRoom]?.games || [];
+    if(!games.length) return {room:'word', game:'wordle'};
+    return {room:targetRoom, game:games[Math.floor(Math.random()*games.length)].id};
+  }
+};
 
 // v0.21 ADAPTIVE GAME DIFFICULTY · rolling 8-game window · gentle auto-tune
 // Reads recent perf · returns multiplier 0.85 (winning streak → harder) to 1.15 (losing streak → easier)
@@ -1973,22 +2057,36 @@ const Adaptive = {
   }
 };
 
-// v0.20 ADAPTIVE BRAIN RANK · feels good at every level
-// Newbies climb fast w/ tiny losses · veterans face real challenge
+// v0.22 ADAPTIVE BRAIN RANK · scaled to 0-2400
+// Newbies climb fast · veterans face real challenge
 function rankDelta(currentRank, won){
   const diff = State.data?.settings?.difficulty || 'normal';
   let gain, loss;
-  if(currentRank < 1100){       gain = 14; loss = -2; }   // 🌱🐑 generous start
-  else if(currentRank < 1300){  gain = 10; loss = -3; }   // 📖 Scholar curve
-  else if(currentRank < 1500){  gain = 8;  loss = -4; }   // 🦉 Sage steady
-  else if(currentRank < 1700){  gain = 6;  loss = -6; }   // 🌟 Saint balanced
-  else if(currentRank < 1900){  gain = 5;  loss = -7; }   // ✝️ Apostle harder
-  else if(currentRank < 2100){  gain = 4;  loss = -8; }   // 👑 Sovereign Elite
-  else                       {  gain = 3;  loss = -10; }  // ⚡🔥 Legend/Mythic
-  // Casual mode = +50% gain, -50% loss · Hardcore = +50% loss, no gain change
+  if(currentRank < 200){       gain = 12; loss = -1; }   // 🌱🐑 huge start boost
+  else if(currentRank < 400){  gain = 10; loss = -2; }   // 📖 Scholar curve
+  else if(currentRank < 600){  gain = 8;  loss = -3; }   // 🦉 Sage steady
+  else if(currentRank < 850){  gain = 6;  loss = -4; }   // 🌟 Saint balanced
+  else if(currentRank < 1150){ gain = 5;  loss = -5; }   // ✝️ Apostle balance point
+  else if(currentRank < 1550){ gain = 4;  loss = -6; }   // 👑 Sovereign harder
+  else if(currentRank < 2000){ gain = 3;  loss = -7; }   // ⚡ Legend
+  else                       { gain = 2;  loss = -8; }   // 🔥 Mythic god-tier
+  // Casual = +50% gain, -50% loss · Hardcore = +50% loss · plus Coach modifies
   if(diff==='casual'){ gain = Math.round(gain*1.5); loss = Math.round(loss*0.5); }
   else if(diff==='hardcore'){ loss = Math.round(loss*1.5); }
   return won ? gain : loss;
+}
+
+// v0.22 ONE-TIME RANK MIGRATION · scale down old 800-2400 range to new 0-2400
+function _migrateRankIfNeeded(){
+  const d = State.data;
+  if(!d) return;
+  if(d._rankMigratedV22) return;
+  if(d.iq>=800){
+    // Old scale was 800-2400 baseline 1000 · scale to new 0-2400 baseline 50
+    d.iq = Math.max(50, Math.round((d.iq - 800) / 4) + 50);
+  }
+  d._rankMigratedV22 = true;
+  Save.write();
 }
 
 // ===== v0.12 QUESTS + COMBOS + PRs =====
@@ -2256,17 +2354,21 @@ const ACHIEVEMENTS = [
   {id:'five_friends',em:'👥',t:'Squad',d:'Add 5 friends'},
   {id:'first_message',em:'💬',t:'Connected',d:'Send your first message'},
   {id:'chatty',em:'💬',t:'Chatty Saint',d:'Send 20 messages'},
+  // v0.22 Coach AI
+  {id:'coach_consulted',em:'🧠',t:'Coachable',d:'View Coach AI tip in Stats'},
+  {id:'rank_humble',em:'🌱',t:'Sprout Saint',d:'Start fresh in Sprout tier'},
+  {id:'climbed_5_tiers',em:'⛰️',t:'Climber',d:'Climb 5 tiers from Sprout'},
   // v0.20
   {id:'difficulty_set',em:'🎮',t:'Calibrated',d:'Pick a difficulty mode'},
   {id:'casual_50',em:'😊',t:'Easygoing',d:'Win 50 games on Casual'},
   {id:'hardcore_25',em:'🔥',t:'Iron Saint',d:'Win 25 games on Hardcore'},
-  // v0.19 rank tier promotions
-  {id:'rank_sage',em:'🦉',t:'Sage Tier',d:'Reach Brain Rank 1150 · Sage'},
-  {id:'rank_saint',em:'🌟',t:'Saint Tier',d:'Reach Brain Rank 1300 · Saint'},
-  {id:'rank_apostle',em:'✝️',t:'Apostle Tier',d:'Reach Brain Rank 1500 · Apostle'},
-  {id:'rank_sovereign',em:'👑',t:'Sovereign Tier',d:'Reach Brain Rank 1700 · Sovereign'},
-  {id:'rank_legend',em:'⚡',t:'Legend Tier',d:'Reach Brain Rank 1900 · Legend'},
-  {id:'rank_mythic',em:'🔥',t:'Mythic Tier',d:'Reach Brain Rank 2100 · Mythic'},
+  // v0.19/v0.22 rank tier promotions (rescaled)
+  {id:'rank_sage',em:'🦉',t:'Sage Tier',d:'Reach 350 · Sage'},
+  {id:'rank_saint',em:'🌟',t:'Saint Tier',d:'Reach 550 · Saint'},
+  {id:'rank_apostle',em:'✝️',t:'Apostle Tier',d:'Reach 800 · Apostle'},
+  {id:'rank_sovereign',em:'👑',t:'Sovereign Tier',d:'Reach 1100 · Sovereign'},
+  {id:'rank_legend',em:'⚡',t:'Legend Tier',d:'Reach 1500 · Legend'},
+  {id:'rank_mythic',em:'🔥',t:'Mythic Tier',d:'Reach 2000 · Mythic'},
 ];
 
 // ====================================================================
@@ -2415,19 +2517,19 @@ const Ach = {
     if(d.streak>=3) Ach.unlock('streak_3');
     if(d.streak>=7) Ach.unlock('streak_7');
     if(d.streak>=30) Ach.unlock('streak_30');
-    if(d.iq>=1200) Ach.unlock('iq_1200');
-    if(d.iq>=1500) Ach.unlock('iq_1500');
+    if(d.iq>=300) Ach.unlock('iq_1200');
+    if(d.iq>=600) Ach.unlock('iq_1500');
     if(sum('logic')>=5) Ach.unlock('logic_5');
     if(sum('logic')>=25) Ach.unlock('logic_25');
     if(sum('speed')>=5) Ach.unlock('speed_5');
     if(sum('speed')>=25) Ach.unlock('speed_25');
-    if(d.iq>=2000) Ach.unlock('iq_2000');
-    if(d.iq>=1150) Ach.unlock('rank_sage');
-    if(d.iq>=1300) Ach.unlock('rank_saint');
-    if(d.iq>=1500) Ach.unlock('rank_apostle');
-    if(d.iq>=1700) Ach.unlock('rank_sovereign');
-    if(d.iq>=1900) Ach.unlock('rank_legend');
-    if(d.iq>=2100) Ach.unlock('rank_mythic');
+    if(d.iq>=900) Ach.unlock('iq_2000');
+    if(d.iq>=350) Ach.unlock('rank_sage');
+    if(d.iq>=550) Ach.unlock('rank_saint');
+    if(d.iq>=800) Ach.unlock('rank_apostle');
+    if(d.iq>=1100) Ach.unlock('rank_sovereign');
+    if(d.iq>=1500) Ach.unlock('rank_legend');
+    if(d.iq>=2000) Ach.unlock('rank_mythic');
     // v0.20 difficulty achievements
     if(d.settings?.difficulty==='casual' && d.totals.wins>=50) Ach.unlock('casual_50');
     if(d.settings?.difficulty==='hardcore' && d.totals.wins>=25) Ach.unlock('hardcore_25');
@@ -2794,6 +2896,8 @@ const App = {
       // v0.20 apply persistent accessibility settings
       document.body.classList.toggle('large-text', !!State.data.settings?.largeText);
       document.body.classList.toggle('color-blind', !!State.data.settings?.colorBlindSafe);
+      // v0.22 ONE-TIME MIGRATION: rescale rank from 1000-baseline to 50-baseline
+      _migrateRankIfNeeded();
       // v0.21 ONE-TIME MIGRATION: prior versions auto-enabled lock-on-open
       // if user hasn't explicitly opt'd in via the new flow, disable it
       if(State.data.account && State.data.account.lockEnabled && !State.data.account.explicitlyEnabledLock){
@@ -3664,6 +3768,7 @@ const App = {
     UI.show('aux');
   },
   openStats(){
+    Ach.unlock('coach_consulted');
     const d = State.data;
     document.getElementById('aux-title').innerHTML = '🏆 Stats';
     const top = `
@@ -3685,7 +3790,20 @@ const App = {
         <div style="background:linear-gradient(90deg,${tier.color},${prog.next.color});height:100%;width:${prog.pct}%"></div>
       </div>`:'<div class="dim" style="font-size:11px">MAX TIER REACHED 🔥</div>'}
     </div>`;
-    let dnaSection = tierBlock + `
+    // v0.22 Coach AI section
+    const brain = Coach.brain();
+    let coachBlock = '';
+    if(brain && brain.totalPlays>=3){
+      const rec = Coach.recommendGame();
+      const recRoom = ROOMS[rec.room];
+      const recGame = recRoom?.games.find(g=>g.id===rec.game);
+      coachBlock = `<div class="lobby-banner" style="background:linear-gradient(135deg,rgba(124,58,237,.25) 0%,rgba(34,211,238,.18) 100%);border-color:rgba(124,58,237,.4);text-align:left;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:#c4b5fd;letter-spacing:.08em">🧠 COACH AI · v1</div>
+        <div style="font-size:13px;margin:4px 0">"${Coach.tip()}"</div>
+        ${recGame?`<div style="font-size:11px;opacity:.85;margin-top:6px">recommended next: <b style="color:var(--gold-bright)">${recGame.em} ${recGame.name}</b></div>`:''}
+      </div>`;
+    }
+    let dnaSection = tierBlock + coachBlock + `
       <h3 style="margin:14px 0 4px;color:var(--gold-bright);font-size:15px;text-align:center">🧬 Brain DNA</h3>
       <p class="dim text-center" style="font-size:11px;margin-bottom:6px">your skill profile · grows as you win</p>
       ${DNA.renderRadar(220)}`;
@@ -4298,7 +4416,7 @@ function recordResult(roomId, gameId, won, rewards={}){
     d.perGame[key].lastWin = Date.now();
     d.totals.wins++;
     const prevTier = getRankTier(d.iq);
-    d.iq = Math.min(2400, d.iq + rankDelta(d.iq, true));
+    d.iq = Math.min(RANK_MAX, d.iq + rankDelta(d.iq, true));
     const newTier = getRankTier(d.iq);
     if(newTier.name !== prevTier.name){
       // TIER PROMOTION cinematic
@@ -4315,7 +4433,7 @@ function recordResult(roomId, gameId, won, rewards={}){
   }else{
     Combo.bump(false);
     d.totals.losses++;
-    d.iq = Math.max(800, d.iq + rankDelta(d.iq, false));
+    d.iq = Math.max(0, d.iq + rankDelta(d.iq, false));
     Activity.log('loss','💪',`played ${gName}`);
     BP.addXp(1);
     State._lastPR = false;
@@ -4596,7 +4714,7 @@ const StroopGame = {
   },
   end(){
     clearInterval(this.timer);
-    const threshold = Adaptive.threshold(10); // adaptive: 8-12 based on recent perf
+    const threshold = Coach.adjustThreshold('mind','stroop',10); // Coach AI adjusts
     const won = this.score>=threshold;
     const rewards = won ? {coin:20+this.score*4, brain:3} : {coin:Math.max(10,this.score*2)};
     recordResult('mind','stroop',won,rewards);
@@ -4687,7 +4805,7 @@ const MathGame = {
   },
   end(){
     clearInterval(this.timer);
-    const threshold = Adaptive.threshold(8);
+    const threshold = Coach.adjustThreshold('num','math',8);
     const won = this.score>=threshold;
     const rewards = won ? {coin:25+this.score*5, brain:3} : {coin:Math.max(10,this.score*3)};
     recordResult('num','math',won,rewards);
