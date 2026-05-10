@@ -1246,7 +1246,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.24.0 · ALL-THE-IDEAS · 4 themes · streak save · weekly · 🙏</div>
+  <div class="splash-foot">v0.25.0 · WELL-DONE · 7 difficulties · 27 games · half-baked killed · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1396,7 +1396,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.24.0';
+const VERSION = '0.25.0';
 
 // ----- STATE -----
 const State = {
@@ -2141,17 +2141,21 @@ function rankDelta(currentRank, won){
     diff = opts[Math.floor(Math.random()*opts.length)];
   }
   let gain, loss;
-  if(currentRank < 200){       gain = 12; loss = -1; }   // 🌱🐑 huge start boost
-  else if(currentRank < 400){  gain = 10; loss = -2; }   // 📖 Scholar curve
-  else if(currentRank < 600){  gain = 8;  loss = -3; }   // 🦉 Sage steady
-  else if(currentRank < 850){  gain = 6;  loss = -4; }   // 🌟 Saint balanced
-  else if(currentRank < 1150){ gain = 5;  loss = -5; }   // ✝️ Apostle balance point
-  else if(currentRank < 1550){ gain = 4;  loss = -6; }   // 👑 Sovereign harder
-  else if(currentRank < 2000){ gain = 3;  loss = -7; }   // ⚡ Legend
-  else                       { gain = 2;  loss = -8; }   // 🔥 Mythic god-tier
-  // Casual = +50% gain, -50% loss · Hardcore = +50% loss · plus Coach modifies
-  if(diff==='casual'){ gain = Math.round(gain*1.5); loss = Math.round(loss*0.5); }
-  else if(diff==='hardcore'){ loss = Math.round(loss*1.5); }
+  if(currentRank < 200){       gain = 12; loss = -1; }
+  else if(currentRank < 400){  gain = 10; loss = -2; }
+  else if(currentRank < 600){  gain = 8;  loss = -3; }
+  else if(currentRank < 850){  gain = 6;  loss = -4; }
+  else if(currentRank < 1150){ gain = 5;  loss = -5; }
+  else if(currentRank < 1550){ gain = 4;  loss = -6; }
+  else if(currentRank < 2000){ gain = 3;  loss = -7; }
+  else                       { gain = 2;  loss = -8; }
+  // 7 difficulty modes (was 4)
+  if(diff==='casual'){      gain = Math.round(gain*1.5); loss = Math.round(loss*0.5); }
+  else if(diff==='hardcore'){loss = Math.round(loss*1.5); }
+  else if(diff==='tutorial'){gain = Math.round(gain*2);   loss = 0; }                  // 🌿 Tutorial · no losses
+  else if(diff==='zen'){     gain = 0;                    loss = 0; }                  // 🧘 Zen · pure play
+  else if(diff==='apostle'){ gain = Math.round(gain*0.5); loss = Math.round(loss*3); } // 🌋 Apostle · brutal
+  else if(diff==='sweat'){   gain = Math.round(gain*0.7); loss = Math.round(loss*1.8);}// 💦 Sweat · grinder
   return won ? gain : loss;
 }
 
@@ -2949,10 +2953,12 @@ const ROOMS = {
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
     {id:'reaction',em:'⚡',name:'Reaction Tap',sub:'wait for green · tap fast · 5 rounds',launch:()=>ReactionGame.start()},
     {id:'riddle',em:'🦉',name:'Riddle Vault',sub:'8 random riddles · 90 sec · 5+ wins',launch:()=>RiddleGame.start()},
+    {id:'tf',em:'✅',name:'True or False',sub:'12 questions · 45 sec · trivia + bible',launch:()=>TFGame.start()},
   ]},
   num:{em:'🔢',name:'Number Crunch',sub:'math · sequence · 24',games:[
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
     {id:'sequence',em:'🧮',name:'Sequence Solve',sub:'find the next number · 60 sec',launch:()=>SequenceGame.start()},
+    {id:'quicksum',em:'➗',name:'Quick Sum',sub:'2 numbers that sum to target · 45 sec',launch:()=>QuickSumGame.start()},
   ]},
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
@@ -2971,6 +2977,7 @@ const ROOMS = {
     {id:'whack',em:'🌟',name:'Whack-a-Star',sub:'tap stars · NOT bombs · 30 sec',launch:()=>WhackGame.start()},
     {id:'code',em:'🔑',name:'Code Sprint',sub:'memorize 4-digit codes · 5 rounds',launch:()=>CodeSprintGame.start()},
     {id:'numbertap',em:'🔢',name:'Number Tap',sub:'tap 1→15 in order · sub-20s wins',launch:()=>NumberTapGame.start()},
+    {id:'colorwave',em:'🌊',name:'Color Wave',sub:'visual sequence · 6 colors · level up',launch:()=>ColorWaveGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -3105,6 +3112,22 @@ const App = {
     }
   },
   splashJump(roomId){
+    // PWA install button on splash if available
+    if(window._deferredPrompt){
+      const splashQuick = document.getElementById('splash-quick');
+      if(splashQuick && !document.getElementById('pwa-install-btn')){
+        const btn = document.createElement('button');
+        btn.id = 'pwa-install-btn';
+        btn.className = 'btn-secondary';
+        btn.style.cssText = 'padding:8px 14px;font-size:11px;margin-top:8px';
+        btn.textContent = '📱 install BrainBoard';
+        btn.onclick = ()=>App.installPWA();
+        splashQuick.appendChild(btn);
+      }
+    }
+    return App._splashJump(roomId);
+  },
+  _splashJump(roomId){
     if(State.data.onboarded){
       App.tapEnter();
       setTimeout(()=>App.openRoom(roomId), 200);
@@ -3360,6 +3383,19 @@ const App = {
     if(today!==last){
       // streak logic
       const yest = new Date(Date.now()-86400000).toDateString();
+      const wouldBreak = last !== yest && d.streak >= 1;
+      // v0.25 STREAK SAVE: if streak would break + user has streakSave, offer to use it
+      if(wouldBreak && (d.powerups?.streakSave||0)>0){
+        Modal.show(`<div class="big">🛡️</div>
+          <h3>save your streak?</h3>
+          <p style="margin:8px 0;font-size:13px">your ${d.streak}-day streak is about to break · use a Streak Save?</p>
+          <p class="dim" style="font-size:11px">you have ${d.powerups.streakSave} streak save${d.powerups.streakSave>1?'s':''}</p>
+          <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:12px">
+            <button class="btn-primary" onclick="App._useStreakSave()">🛡️ USE · keep streak</button>
+            <button class="btn-secondary" onclick="App._loseStreak()">❌ let it go</button>
+          </div>`);
+        return;
+      }
       d.streak = (last===yest) ? (d.streak+1) : 1;
       d.lastDailyClaim = Date.now();
       const reward = {coin:100, gem:1, faith:1};
@@ -3659,6 +3695,41 @@ const App = {
     Ach.unlock('theme_picked');
     App.openSettings();
   },
+  _useStreakSave(){
+    Modal.close();
+    const d = State.data;
+    d.powerups.streakSave--;
+    d.streak++; // continue streak
+    d.lastDailyClaim = Date.now();
+    Save.write();
+    Ach.unlock('streak_saved');
+    Toast.show(`🛡️ streak saved · now ${d.streak} days`);
+    SFX.holy(); haptic(40); confetti();
+    UI.updateWallet();
+  },
+  _loseStreak(){
+    Modal.close();
+    const d = State.data;
+    d.streak = 1;
+    d.lastDailyClaim = Date.now();
+    Save.write();
+    Toast.show('streak reset · let\'s rebuild');
+    UI.updateWallet();
+  },
+  installPWA(){
+    if(window._deferredPrompt){
+      window._deferredPrompt.prompt();
+      window._deferredPrompt.userChoice.then(c=>{
+        if(c.outcome==='accepted'){
+          Toast.show('📱 installed!');
+          Ach.unlock('pwa_install');
+        }
+        window._deferredPrompt = null;
+      });
+    }else{
+      Toast.show('add to home screen via your browser menu');
+    }
+  },
   copyFriendCode(){
     const code = State.data.account?.friendCode;
     if(code && navigator.clipboard){
@@ -3857,13 +3928,17 @@ const App = {
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎮 DIFFICULTY</h3>
         <p class="dim" style="font-size:11px;margin-bottom:6px">tunes Brain Rank gain/loss · doesn't change game mechanics</p>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+          <button class="av-tool-btn ${s.difficulty==='tutorial'?'active':''}" onclick="App.setDifficulty('tutorial')">🌿 TUTORIAL</button>
           <button class="av-tool-btn ${s.difficulty==='casual'?'active':''}" onclick="App.setDifficulty('casual')">😊 CASUAL</button>
           <button class="av-tool-btn ${(s.difficulty==='normal'||!s.difficulty)?'active':''}" onclick="App.setDifficulty('normal')">⚖️ NORMAL</button>
+          <button class="av-tool-btn ${s.difficulty==='zen'?'active':''}" onclick="App.setDifficulty('zen')">🧘 ZEN</button>
           <button class="av-tool-btn ${s.difficulty==='hardcore'?'active':''}" onclick="App.setDifficulty('hardcore')">🔥 HARDCORE</button>
+          <button class="av-tool-btn ${s.difficulty==='sweat'?'active':''}" onclick="App.setDifficulty('sweat')">💦 SWEAT</button>
+          <button class="av-tool-btn ${s.difficulty==='apostle'?'active':''}" onclick="App.setDifficulty('apostle')">🌋 APOSTLE</button>
           <button class="av-tool-btn ${s.difficulty==='random'?'active':''}" onclick="App.setDifficulty('random')">🎲 RANDOM</button>
         </div>
         <p class="dim" style="font-size:10px;margin-top:6px">
-          ${s.difficulty==='casual'?'😊 +50% rank gain · -50% loss · climb easier':s.difficulty==='hardcore'?'🔥 normal gain · +50% loss · steeper falls':s.difficulty==='random'?'🎲 chaos · rolls a fresh difficulty per game · keeps you sharp':'⚖️ adaptive · gain decreases as you climb · loss increases'}
+          ${s.difficulty==='tutorial'?'🌿 Tutorial · 2x gain · NO losses · zero pressure':s.difficulty==='casual'?'😊 Casual · +50% gain · -50% loss · climb easier':s.difficulty==='zen'?'🧘 Zen · NO rank changes · play for fun':s.difficulty==='hardcore'?'🔥 Hardcore · +50% loss · steeper falls':s.difficulty==='sweat'?'💦 Sweat · -30% gain · +80% loss · grinder mode':s.difficulty==='apostle'?'🌋 Apostle · -50% gain · 3x loss · BRUTAL test':s.difficulty==='random'?'🎲 Random · rolls fresh per game · chaos':'⚖️ Normal · adaptive · gain decreases as you climb'}
         </p>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎨 APP THEME</h3>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
@@ -4583,13 +4658,42 @@ const WordleGame = {
     this.keyStates = {};
     this.done = false;
     this.startTime = Date.now();
+    this.hintsUsed = 0;
     this.render();
     UI.show('game');
+  },
+  useHint(){
+    if(this.done) return;
+    if(!State.data.powerups?.hint || State.data.powerups.hint<1){
+      Toast.show('no hint power-ups · buy in Shop');
+      return;
+    }
+    // Reveal one letter as green in the current row that hasn't been revealed
+    const target = this.target.split('');
+    let revealed = -1;
+    // Find an empty cell in current row to reveal
+    for(let i=0;i<5;i++){
+      if(!this.guesses[this.row][i]){
+        this.guesses[this.row][i] = target[i];
+        this.col = Math.max(this.col, i+1);
+        revealed = i;
+        break;
+      }
+    }
+    if(revealed===-1){ Toast.show('row already filled'); return; }
+    State.data.powerups.hint--;
+    State.data._powerupUses = (State.data._powerupUses||0)+1;
+    this.hintsUsed++;
+    Save.write();
+    SFX.chime(); haptic(20);
+    Toast.show(`💡 revealed · ${target[revealed]}`);
+    this.render();
   },
   render(){
     const stats = State.data.perGame['word:wordle']||{wins:0};
     setText('g-stats', `<b>5-Letter</b> · best wins: <b>${stats.wins}</b> · target hidden 👀`.replace(/<b>/g,'<b>'));
-    document.getElementById('g-stats').innerHTML = `<b>📖 5-Letter</b> · row ${this.row+1}/6 · wins: <b>${stats.wins||0}</b>`;
+    const hints = State.data.powerups?.hint||0;
+    document.getElementById('g-stats').innerHTML = `<b>📖 5-Letter</b> · row ${this.row+1}/6 · wins: <b>${stats.wins||0}</b>${hints>0?` <button onclick="WordleGame.useHint()" style="background:rgba(245,158,11,.25);border:1px solid var(--gold);color:var(--gold-bright);padding:2px 8px;border-radius:99px;font-size:10px;cursor:pointer;margin-left:6px">💡 HINT (${hints})</button>`:''}`;
     const area = document.getElementById('g-area');
     area.innerHTML = '';
     const grid = el('div','word-grid');
