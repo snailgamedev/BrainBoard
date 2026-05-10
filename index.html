@@ -78,6 +78,8 @@ button{
     linear-gradient(180deg,var(--cobalt) 0%,#0a1633 100%);
   align-items:center;justify-content:center;
   text-align:center;
+  overflow-y:auto;
+  padding:40px 20px 80px;
 }
 .splash-emoji{
   font-size:96px;
@@ -116,8 +118,8 @@ button{
 }
 @keyframes ctaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .splash-foot{
-  position:absolute;bottom:24px;
   font-size:11px;opacity:.6;letter-spacing:.1em;
+  margin-top:18px;
 }
 
 /* ==================== ONBOARDING ==================== */
@@ -1173,8 +1175,10 @@ button{
   <div class="splash-emoji">🧠</div>
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
+  <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.10.0 · GAME ENTRY · rules · prep · power-ups · 🙏</div>
+  <div id="splash-quick"></div>
+  <div class="splash-foot">v0.11.0 · SPLASH SUPREME · always-on entry · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1317,7 +1321,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.10.0';
+const VERSION = '0.11.0';
 
 // ----- STATE -----
 const State = {
@@ -2177,15 +2181,54 @@ const App = {
       if(saved && saved.v){ State.data = {...DEFAULT_SAVE, ...saved}; }
       else{ State.data = JSON.parse(JSON.stringify(DEFAULT_SAVE)); }
       UI.updateWallet();
-      if(State.data.onboarded){
-        UI.show('lobby');
-        App.checkDaily();
-      }else{
-        UI.show('splash');
-      }
+      // v0.11: ALWAYS show splash on open · TAP TO ENTER decides next route
+      App.renderSplashPersonal();
+      UI.show('splash');
     }catch(e){
       console.error('BrainBoard init error:',e);
       _showFatal(e);
+    }
+  },
+  renderSplashPersonal(){
+    const d = State.data;
+    const onb = d.onboarded;
+    const personal = document.getElementById('splash-personal');
+    const quick = document.getElementById('splash-quick');
+    if(!personal || !quick) return;
+    if(onb){
+      const v = randomVerse();
+      const stats = d.totals||{};
+      const streak = d.streak||0;
+      personal.innerHTML = `
+        <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(245,158,11,.3);border-radius:99px;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--cream)">
+          ${renderAvatarStack(d.avatar,d.avatarHue,'S')}
+          <span>welcome back, <b style="color:var(--gold-bright)">${d.name}</b></span>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px">
+          ${streak>=1?`<span class="reward-chip flame-streak">🔥 ${streak}-day streak</span>`:''}
+          <span class="reward-chip">📊 IQ ${d.iq||1000}</span>
+          <span class="reward-chip">🏆 ${stats.wins||0} wins</span>
+        </div>
+        <div style="max-width:320px;margin:0 auto 18px;padding:10px 14px;background:rgba(245,158,11,.08);border-left:3px solid var(--gold);border-radius:8px;font-size:12px;font-style:italic;line-height:1.5;text-align:center">
+          "${v.t}"<br><span style="color:var(--gold-bright);font-size:11px;font-weight:700">— ${v.r}</span>
+        </div>`;
+      quick.innerHTML = `
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+          <button class="btn-secondary" style="padding:8px 14px;font-size:11px" onclick="App.splashJump('daily')">⭐ daily court</button>
+          <button class="btn-secondary" style="padding:8px 14px;font-size:11px" onclick="App.splashJump('script')">✝️ scripture</button>
+          <button class="btn-secondary" style="padding:8px 14px;font-size:11px" onclick="App.openAvatar()">👤 craft</button>
+        </div>`;
+    }else{
+      personal.innerHTML = '';
+      quick.innerHTML = '';
+    }
+  },
+  splashJump(roomId){
+    if(State.data.onboarded){
+      App.tapEnter();
+      setTimeout(()=>App.openRoom(roomId), 200);
+    }else{
+      App.tapEnter();
     }
   },
   tapEnter(){
