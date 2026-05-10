@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.30.0 · ambient music · TTS · kid-safe · 🙏</div>
+  <div class="splash-foot">v0.31.0 · anti-freeze · resume · LB · idle pause · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1407,7 +1407,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.30.0';
+const VERSION = '0.31.0';
 
 // ----- STATE -----
 const State = {
@@ -2584,6 +2584,11 @@ const ACHIEVEMENTS = [
   {id:'tts_on',em:'🎙️',t:'Echo Saint',d:'Enable TTS voice'},
   {id:'kid_safe',em:'🧒',t:'Kid Mode',d:'Enable Kid-Safe filter'},
   {id:'volume_tuned',em:'🔊',t:'Audio Engineer',d:'Adjust music volume'},
+  // v0.31
+  {id:'saved_resume',em:'📥',t:'Bookmark Saint',d:'Save & resume a game'},
+  {id:'idle_returner',em:'🌙',t:'Returned',d:'Come back after idle pause'},
+  {id:'streak_fire',em:'🔥',t:'Inferno Streak',d:'Reach 7-day streak with fire HUD'},
+  {id:'antifreeze',em:'❄️',t:'Anti-Freeze',d:'Auto-cleanup ran (no perf issues)'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -2920,14 +2925,15 @@ const Music = (()=>{
     },
     stop(){
       currentTrack = null;
+      // v0.31 ANTI-FREEZE: forcefully clear ALL pending schedules
       if(schedT){ clearTimeout(schedT); schedT=null; }
-      if(master){
+      if(master && ctx){
         try{
-          master.gain.cancelScheduledValues(ac().currentTime);
-          master.gain.linearRampToValueAtTime(0, ac().currentTime+0.5);
+          master.gain.cancelScheduledValues(ctx.currentTime);
+          master.gain.linearRampToValueAtTime(0, ctx.currentTime+0.3);
           setTimeout(()=>{
             if(master) master.gain.value = State.data?.settings?.musicVolume ?? 0.35;
-          }, 600);
+          }, 400);
         }catch{}
       }
     },
@@ -3787,10 +3793,13 @@ const App = {
       const stat = State.data.perGame[key] || {wins:0,plays:0,best:0};
       const hasPR = !!State.data.prRecords?.[key];
       const prBadge = hasPR ? '<div class="stat" style="background:rgba(124,58,237,.25);color:#c4b5fd;font-size:9px;margin-bottom:2px">💎 PR</div>' : '';
+      // v0.31 RESUME indicator
+      const hasSaved = State.data._savedGames?.[key];
+      const resumeBadge = hasSaved ? '<div class="stat" style="background:rgba(34,211,238,.25);color:#67e8f9;font-size:9px;margin-bottom:2px">📥 SAVED</div>' : '';
       const card = el('button','game-card',`
         <div class="em">${g.em}</div>
         <div class="info"><h3>${g.name}</h3><div class="sub">${g.sub}</div></div>
-        <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">${prBadge}<div class="stat">${stat.wins}🏆</div></div>`);
+        <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">${resumeBadge}${prBadge}<div class="stat">${stat.wins}🏆</div></div>`);
       card.onclick = ()=>{ haptic(8); GameIntro.show(rid, g); };
       body.appendChild(card);
     });
@@ -3863,6 +3872,13 @@ const App = {
       App._doExit(false);
       return;
     }
+    // v0.31 RESUME · save game snapshot if game supports it
+    const snapshot = (typeof game.snapshot === 'function') ? game.snapshot() : null;
+    if(snapshot){
+      State.data._savedGames = State.data._savedGames || {};
+      State.data._savedGames[snapshot.gameKey] = {ts:Date.now(), snap:snapshot};
+      Save.write();
+    }
     // Pause any timers while dialog is up
     if(game.timer){ clearInterval(game.timer); game._wasTimer = true; }
     if(game.spawnTimer){ clearInterval(game.spawnTimer); game._wasSpawn = true; }
@@ -3876,10 +3892,11 @@ const App = {
       </div>
       <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:14px">
         <button class="btn-primary" onclick="App._exitChoice('resume')">▶ keep playing</button>
+        ${snapshot?'<button class="btn-secondary" onclick="App._exitChoice(\'save\')" style="background:rgba(34,211,238,.18);border-color:rgba(34,211,238,.4)">📥 save & quit · resume later</button>':''}
         <button class="btn-secondary" onclick="App._exitChoice('cashout')">💰 cash out · take rewards</button>
         <button class="btn-secondary" style="background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4)" onclick="App._exitChoice('quit')">❌ quit · no rewards</button>
       </div>`);
-    State._pendingExit = {game, cash};
+    State._pendingExit = {game, cash, snapshot};
   },
   _exitChoice(choice){
     Modal.close();
@@ -3921,8 +3938,18 @@ const App = {
       Toast.show(`💰 cashed out · +${c.coin||0} 🪙`);
       SFX.correct(); haptic(20);
     }
+    if(choice==='save'){
+      if(pe.game.cleanup) pe.game.cleanup();
+      Toast.show('📥 saved · resume from game card');
+      Ach.unlock('saved_resume');
+    }
     if(choice==='quit'){
       if(pe.game.cleanup) pe.game.cleanup();
+      // Clear any saved snapshot
+      if(pe.snapshot && State.data._savedGames){
+        delete State.data._savedGames[pe.snapshot.gameKey];
+        Save.write();
+      }
     }
     State.gameInst = null;
     if(State.currentRoom) App.openRoom(State.currentRoom);
@@ -6664,7 +6691,8 @@ const TriviaGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=7;
+    const threshold = Coach.adjustThreshold('script','trivia',7);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:50+this.score*8, faith:5, brain:2} : {coin:Math.max(20,this.score*5), faith:1};
     recordResult('script','trivia',won,rewards);
     if(won) Modal.win({rewards, title:`${this.score}/10 · Scholar!`, emoji:'🙏',
@@ -6824,7 +6852,8 @@ const DefineGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=7;
+    const threshold = Coach.adjustThreshold('word','define',7);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:40+this.score*7, brain:4} : {coin:Math.max(15,this.score*5)};
     recordResult('word','define',won,rewards);
     if(won) Modal.win({rewards, title:`${this.score}/10 · Lexicon!`, emoji:'📖',
@@ -7672,6 +7701,47 @@ const DailyGame = {
 // ====================================================================
 window.App = App; // expose for inline handlers
 VisibilityGuard.init();
+
+// v0.31 IDLE PAUSE · stops music after 5 min no input (saves CPU + battery)
+let _idleTimer = null;
+let _idleMs = 5*60*1000; // 5 min
+function _resetIdle(){
+  if(_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(()=>{
+    Music.stop();
+    Toast.show('🌙 idle · music paused · tap to resume');
+  }, _idleMs);
+}
+['click','touchstart','keydown','mousemove','scroll'].forEach(e=>{
+  document.addEventListener(e, _resetIdle, {passive:true});
+});
+_resetIdle();
+
+// v0.31 ANTI-FREEZE · global cleanup on screen change
+// Catches any orphan intervals from older game instances
+const _trackedTimers = new Set();
+const _origSetInterval = window.setInterval;
+const _origClearInterval = window.clearInterval;
+window.setInterval = function(fn,ms,...args){
+  const id = _origSetInterval(fn,ms,...args);
+  _trackedTimers.add(id);
+  return id;
+};
+window.clearInterval = function(id){
+  _trackedTimers.delete(id);
+  return _origClearInterval(id);
+};
+function _purgeOrphanTimers(){
+  // Only call when no game is active · clean orphans
+  if(!State.gameInst && _trackedTimers.size>6){
+    _trackedTimers.forEach(id=>{
+      try{_origClearInterval(id);}catch{}
+    });
+    _trackedTimers.clear();
+  }
+}
+// Run purge every 30s when idle
+setInterval(_purgeOrphanTimers, 30000);
 
 // v0.15 PWA service worker registration (only when served via http(s), not file://)
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
