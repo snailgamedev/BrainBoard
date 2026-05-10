@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.55.0 · button merges · streaming · vocab learn · thoughts · challenges · mood drift · proactive DMs · 🙏</div>
+  <div class="splash-foot">v0.56.0 · 🐛 Coach silence killed · ALWAYS responds · bulletproof send · fallback layered · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.55.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.56.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.55.0';
+const VERSION = '0.56.0';
 
 // ----- STATE -----
 const State = {
@@ -5684,53 +5684,58 @@ const CoachAI = {
   },
   async send(userText){
     if(!userText || !userText.trim()) return;
+    // v0.56 BULLETPROOF · Coach must ALWAYS respond · no silent failures
     State.data.coachChat = State.data.coachChat || [];
     State.data.coachChat.push({ts:Date.now(), from:'me', text:userText.trim()});
     try{ CoachMemory.remember(userText); }catch(e){}
-    Save.write();
-    // v0.53 · REAL AI if a key is connected · otherwise local stitcher
-    let reply;
-    if(RealCoach.enabled()){
-      // pending message while we wait
+    try{ Save.write(); }catch(e){}
+    let reply = null;
+    let errMsg = null;
+    // Path 1: try real AI if enabled
+    if(RealCoach && RealCoach.enabled && RealCoach.enabled()){
       const pending = {ts:Date.now()+10, from:'coach', text:'…thinking…', pending:true};
       State.data.coachChat.push(pending);
-      Save.write();
-      try{
-        if(typeof App.openCoachChat==='function') App.openCoachChat();
-      }catch(e){}
+      try{ Save.write(); if(typeof App.openCoachChat==='function') App.openCoachChat(); }catch(e){}
       try{
         reply = await RealCoach.chat(userText);
-        // strip pending placeholder
-        State.data.coachChat = State.data.coachChat.filter(m=>!m.pending);
-        State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply, real:true});
       }catch(e){
-        State.data.coachChat = State.data.coachChat.filter(m=>!m.pending);
-        State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:`(ai error · falling back) ${this.reply(userText)}`});
-        Toast.show(`AI err: ${e.message.slice(0,80)}`, 5000);
-        Save.write();
-        try{ if(typeof App.openCoachChat==='function') App.openCoachChat(); }catch(e2){}
-        return;
+        errMsg = e?.message || 'unknown ai error';
       }
-    } else {
-      // v0.54 · LivingCoach engine when no API key
-      reply = LivingCoach.reply(userText);
-      // v0.55 · learn user's vocabulary · splice it back into replies sometimes
-      try{ CoachVocab.extract(userText); reply = CoachVocab.splice(reply); }catch(e){}
+      State.data.coachChat = State.data.coachChat.filter(m=>!m.pending);
+    }
+    // Path 2: LivingCoach if no real AI reply yet
+    if(!reply){
+      try{
+        reply = LivingCoach.reply(userText);
+      }catch(e){
+        errMsg = (errMsg?errMsg+' · ':'') + 'living: ' + (e?.message||'unknown');
+        // simplest fallback string · zero dependencies
+        reply = this.pick([
+          'yo · still here · what else?',
+          'word · keep talking',
+          'tell me more · I\'m tracking',
+          'no cap · I hear you',
+          'real · what\'s the move?',
+          'mm · go on',
+        ]);
+      }
+    }
+    // vocab splice (safe)
+    try{ CoachVocab.extract(userText); reply = CoachVocab.splice(reply); }catch(e){}
+    // memory callback (safe)
+    try{
       if(Math.random() < 0.2){
         const mem = CoachMemory.recall();
-        if(mem) reply = `${this.pick([
-          'you said earlier',
-          'oh and remember',
-          'wait u told me',
-          'btw u mentioned',
-        ])} · "${mem.snip}" · ${reply}`;
+        if(mem) reply = `${this.pick(['you said earlier','oh and remember','wait u told me','btw u mentioned'])} · "${mem.snip}" · ${reply}`;
       }
-      State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
-    }
+    }catch(e){}
+    // GUARANTEE a reply gets pushed
+    State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply || `(default) here · what\'s up?`});
     State.data.coachLastSeen = Date.now();
     if(State.data.coachChat.length>200) State.data.coachChat = State.data.coachChat.slice(-200);
-    Save.write();
+    try{ Save.write(); }catch(e){}
     try{ CoachVoice.say(reply); }catch(e){}
+    if(errMsg){ try{ Toast.show(`(handled · ${errMsg.slice(0,60)})`, 3500); }catch(e){} }
     try{ if(typeof App.openCoachChat==='function') App.openCoachChat(); }catch(e){}
   },
   renderHub(){
