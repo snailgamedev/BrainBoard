@@ -130,6 +130,11 @@ button{
 .screen.active{display:flex !important;opacity:1 !important;z-index:2}
 .screen.fade-in{animation:screenIn .35s ease forwards}
 @keyframes helpPulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.4);opacity:1}}
+@keyframes tourPop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes tourPulse{0%,100%{box-shadow:0 0 24px rgba(245,158,11,.7)}50%{box-shadow:0 0 40px rgba(245,158,11,1)}}
+.music-chip{position:fixed;bottom:14px;right:14px;background:rgba(0,0,0,.55);color:#fff;font-family:'Cinzel',serif;font-size:11px;padding:6px 12px;border-radius:99px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);z-index:48;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .3s,transform .3s}
+.music-chip:hover{transform:scale(1.04)}
+.music-chip.muted{opacity:.5}
 @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ==================== SPLASH ==================== */
@@ -1257,7 +1262,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.41.0 · 66 games · auto-music · ❓ help hub · CAEE · 🙏</div>
+  <div class="splash-foot">v0.42.0 · pace · crossfade · 🧠 Coach hub · TTS · tour · keys · welcome gift · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1411,7 +1416,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.41.0';
+const VERSION = '0.42.0';
 
 // ----- STATE -----
 const State = {
@@ -1473,6 +1478,10 @@ const DEFAULT_SAVE = {
   cinematicPref:'on', // on/short/off
   recsHistory:{}, // {gameKey: playCount} drives shop recommendations
   helpHubSeen:false, // v0.41 has the user opened the ❓ help hub yet
+  pace:'normal', // v0.42 slow/normal/fast · time multiplier across all timed games
+  tourDone:false, // v0.42 first-time lobby tour
+  welcomeGiftClaimed:false, // v0.42 first-game free gift
+  roomTipsSeen:{}, // v0.42 first-time room entry tips
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -3048,7 +3057,7 @@ const Duels = {
 const Frenzy = {
   POOL: [
     {id:'frenzy-math',em:'➕',name:'Math Burst',duration:20, run:(area,state,onDone)=>{
-      let score=0, t=20, qIdx=0;
+      let score=0, t=Pace.scale(20), qIdx=0;
       const next=()=>{
         const a=Math.floor(Math.random()*15)+1, b=Math.floor(Math.random()*15)+1;
         const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
@@ -3072,7 +3081,7 @@ const Frenzy = {
       state.timers.push(tm);
     }},
     {id:'frenzy-color',em:'🎨',name:'Color Match',duration:15, run:(area,state,onDone)=>{
-      let score=0, t=15;
+      let score=0, t=Pace.scale(15);
       const cols=['red','blue','green','yellow','purple'];
       const colCss={red:'#EF4444',blue:'#3B82F6',green:'#10B981',yellow:'#F59E0B',purple:'#A78BFA'};
       const next=()=>{
@@ -3095,7 +3104,7 @@ const Frenzy = {
       state.timers.push(tm);
     }},
     {id:'frenzy-tap',em:'⚡',name:'Star Tap',duration:12, run:(area,state,onDone)=>{
-      let score=0, t=12;
+      let score=0, t=Pace.scale(12);
       area.innerHTML=`<div class="dim" id="frnz-t" style="text-align:center;font-size:11px">⏱ ${t}s · tap stars · NOT bombs · score 0</div>
         <div id="frnz-board" style="position:relative;height:280px;background:rgba(0,0,0,.18);border-radius:14px;overflow:hidden;margin-top:10px"></div>`;
       const board=document.getElementById('frnz-board');
@@ -3119,7 +3128,7 @@ const Frenzy = {
       state.timers.push(tm, sp);
     }},
     {id:'frenzy-mem',em:'🧠',name:'Memory Flash',duration:14, run:(area,state,onDone)=>{
-      let score=0, t=14, round=0;
+      let score=0, t=Pace.scale(14), round=0;
       const next=()=>{
         const emojis=['🐑','🦁','🕊️','🐟','🦅','🐎'];
         const seq=[];
@@ -3145,7 +3154,7 @@ const Frenzy = {
       state.timers.push(tm);
     }},
     {id:'frenzy-eq',em:'🔣',name:'Equation Flash',duration:16, run:(area,state,onDone)=>{
-      let score=0, t=16;
+      let score=0, t=Pace.scale(16);
       const next=()=>{
         const x=Math.floor(Math.random()*9)+2;
         const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
@@ -3171,7 +3180,7 @@ const Frenzy = {
       state.timers.push(tm);
     }},
     {id:'frenzy-word',em:'🔤',name:'Word Flash',duration:18, run:(area,state,onDone)=>{
-      let score=0, t=18;
+      let score=0, t=Pace.scale(18);
       const pool=[
         {q:'opposite of HOT',a:'COLD',o:['COLD','WARM','SUN','FIRE']},
         {q:'plural of FOOT',a:'FEET',o:['FEET','FOOTS','FEETS','PAWS']},
@@ -3331,6 +3340,158 @@ const ShopRecommend = {
       recs.push({id:'double',reason:'⚡ double rewards'});
     }
     return recs.slice(0,3);
+  }
+};
+
+// ====================================================================
+// ⏱ v0.42 · PACE MODULE · global timer multiplier (accessibility)
+// ====================================================================
+const Pace = {
+  factor(){
+    const p = State.data?.pace || 'normal';
+    if(p==='slow') return 1.5;
+    if(p==='fast') return 0.7;
+    return 1.0;
+  },
+  scale(seconds){ return Math.round(seconds * this.factor()); },
+  // Wrap an existing setInterval/setTimeout-style game timer source
+  // Usage: timeLeft = Pace.scale(45);
+};
+
+// ====================================================================
+// 🗣️ v0.42 · NARRATOR · uses speak() + Lang awareness · key moments
+// ====================================================================
+const Narrator = {
+  enabled(){ return State.data?.settings?.tts; },
+  say(en, es){
+    if(!this.enabled()) return;
+    const text = Lang.current()==='es' && es ? es : en;
+    try{
+      window.speechSynthesis?.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = Lang.current()==='es'?'es-ES':'en-US';
+      u.rate = 0.95; u.pitch = 1.0; u.volume = 0.85;
+      window.speechSynthesis?.speak(u);
+    }catch(e){}
+  },
+  welcomeBack(){
+    const d = State.data;
+    if(!d.onboarded) return this.say('Welcome to BrainBoard. Tap a room to begin.', 'Bienvenido a BrainBoard. Toca una sala para empezar.');
+    this.say(`Welcome back ${d.name||'saint'}.`, `Bienvenido de nuevo ${d.name||'santo'}.`);
+  },
+  win(){ this.say('Well done!', '¡Bien hecho!'); },
+  loss(){ this.say('Keep going!', '¡Sigue adelante!'); }
+};
+
+// ====================================================================
+// 🎬 v0.42 · DEMO MODE · idle splash → cycle showcase
+// ====================================================================
+const Demo = {
+  _t:null, _idleTimer:null, _idx:0,
+  showcase: ['📖 Word Lab','🧠 Brain Gym','🎯 Mind Games','🔢 Number Crunch','✝️ Scripture','🧩 Logic Lab','⚡ Speed Wing','🎪 Daily Frenzy','⚔️ 1v1 Duels','📈 Leaderboards','🏅 Medals','🌐 Español Toggle','🎬 Cinematic Intros','🛒 Smart Shop','🧠 Coach AI'],
+  armIdle(){
+    this.cancelIdle();
+    this._idleTimer = setTimeout(()=>this.start(), 30000);
+  },
+  cancelIdle(){
+    if(this._idleTimer){ clearTimeout(this._idleTimer); this._idleTimer=null; }
+  },
+  start(){
+    if(document.getElementById('demo-banner')) return;
+    const splash = document.getElementById('splash');
+    if(!splash || !splash.classList.contains('active')) return;
+    this._idx = 0;
+    const banner = document.createElement('div');
+    banner.id='demo-banner';
+    banner.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#FBBF24;padding:10px 18px;border-radius:99px;font-family:"Cinzel",serif;font-size:13px;z-index:50;backdrop-filter:blur(8px);border:1px solid rgba(245,158,11,.4);box-shadow:0 4px 20px rgba(0,0,0,.4);transition:all .4s;cursor:pointer';
+    banner.textContent = '🎬 demo · ' + this.showcase[0];
+    banner.onclick = ()=>Demo.stop();
+    splash.appendChild(banner);
+    this._t = setInterval(()=>{
+      this._idx = (this._idx+1) % this.showcase.length;
+      const el = document.getElementById('demo-banner');
+      if(!el){ Demo.stop(); return; }
+      el.style.opacity='0';
+      setTimeout(()=>{ if(el) { el.textContent='🎬 demo · '+this.showcase[Demo._idx]; el.style.opacity='1'; } }, 280);
+    }, 2400);
+  },
+  stop(){
+    if(this._t){ clearInterval(this._t); this._t=null; }
+    const b=document.getElementById('demo-banner');
+    if(b) b.remove();
+  }
+};
+
+// ====================================================================
+// 🎯 v0.42 · FIRST-TIME TOUR · lobby element arrows on first ever render
+// ====================================================================
+const Tour = {
+  steps: [
+    {sel:'.room-door', t:'🏠 ROOMS', d:'8 themed rooms · 66 games · tap any to enter'},
+    {sel:'#help-btn', t:'❓ HELP', d:'how-to-play hub · always one tap away'},
+    {sel:'.icon-btn[onclick*="openSettings"]', t:'⚙️ SETTINGS', d:'language · pace · cinematic · music · all yours'},
+    {sel:'.foot-btn:nth-child(7)', t:'🔥 FRENZY', d:'7th foot button · 3 mini-rounds · daily leaderboard'},
+    {sel:'.profile-tag', t:'👤 PROFILE', d:'avatar designer · 46 items · 6 slots'},
+  ],
+  start(){
+    if(State.data.tourDone) return;
+    if(!document.getElementById('lobby')?.classList.contains('active')) return;
+    State.data.tourDone = true;
+    Save.write();
+    this._step(0);
+  },
+  _step(i){
+    if(i>=this.steps.length){ this._done(); return; }
+    const s = this.steps[i];
+    const target = document.querySelector(s.sel);
+    if(!target){ this._step(i+1); return; }
+    const rect = target.getBoundingClientRect();
+    // build tooltip
+    const tip = document.createElement('div');
+    tip.className='tour-tip';
+    const top = Math.min(window.innerHeight-160, rect.bottom+12);
+    tip.style.cssText=`position:fixed;left:${Math.max(12,Math.min(window.innerWidth-280,rect.left))}px;top:${top}px;width:260px;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#1a1a1a;padding:10px 14px;border-radius:14px;font-family:"Cinzel",serif;font-size:13px;z-index:9998;box-shadow:0 8px 28px rgba(0,0,0,.5);animation:tourPop .35s ease-out`;
+    tip.innerHTML = `<b style="font-size:14px">${s.t}</b><div style="font-size:11px;margin-top:4px;line-height:1.45">${s.d}</div><div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:10px;opacity:.65">${i+1}/${Tour.steps.length}</span><button style="background:rgba(0,0,0,.18);color:inherit;border:none;border-radius:99px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700" onclick="Tour._next(${i})">${i+1===Tour.steps.length?'DONE ✓':'NEXT →'}</button></div>`;
+    // arrow highlight ring on target
+    const ring = document.createElement('div');
+    ring.className='tour-ring';
+    ring.style.cssText=`position:fixed;left:${rect.left-6}px;top:${rect.top-6}px;width:${rect.width+12}px;height:${rect.height+12}px;border:3px solid #FBBF24;border-radius:14px;pointer-events:none;z-index:9997;box-shadow:0 0 24px rgba(245,158,11,.7);animation:tourPulse 1.4s ease-in-out infinite`;
+    document.body.appendChild(ring); document.body.appendChild(tip);
+    this._cleanup = ()=>{ tip.remove(); ring.remove(); };
+  },
+  _next(i){ if(this._cleanup) this._cleanup(); this._step(i+1); },
+  _done(){
+    Toast.show('🎓 tour complete · earned 25 coins');
+    Wallet.add({coin:25});
+    UI.updateWallet();
+  },
+  manual(){
+    State.data.tourDone = false;
+    Save.write();
+    this.start();
+  }
+};
+
+// ====================================================================
+// ⌨️ v0.42 · KEYBOARD SHORTCUTS · global
+// ====================================================================
+const Keys = {
+  init(){
+    document.addEventListener('keydown', (e)=>{
+      // skip when typing in inputs
+      const tag = (e.target.tagName||'').toLowerCase();
+      if(['input','textarea','select'].includes(tag)) return;
+      const onLobby = document.getElementById('lobby')?.classList.contains('active');
+      if(!onLobby) return;
+      const map = {'1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6};
+      if(map[e.key]!==undefined){
+        const btn = document.querySelectorAll('.lobby-foot .foot-btn')[map[e.key]];
+        if(btn){ btn.click(); e.preventDefault(); }
+      }
+      if(e.key==='?'||e.key==='/'){ App.openHelpHub(); e.preventDefault(); }
+      if(e.key==='Escape'){ App.toLobby(); }
+      if(e.key==='m'||e.key==='M'){ App.toggleMusic(); e.preventDefault(); }
+    });
   }
 };
 
@@ -3673,14 +3834,37 @@ const Music = (()=>{
   }
   return {
     play(trackId){
-      if(!State.data?.settings?.music) return;
+      if(!State.data?.settings?.music){ updateChip(trackId,true); return; }
       const track = TRACKS[trackId];
-      if(!track){ Music.stop(); return; }
-      if(currentTrack === track) return;
-      Music.stop();
+      if(!track){ Music.stop(); updateChip('—',false); return; }
+      if(currentTrack === track){ updateChip(trackId,false); return; }
+      // v0.42 CROSSFADE · fade-out current, fade-in new
+      const wasPlaying = !!currentTrack;
+      if(wasPlaying){
+        if(master && ctx){
+          try{
+            master.gain.cancelScheduledValues(ctx.currentTime);
+            master.gain.linearRampToValueAtTime(0, ctx.currentTime+0.45);
+          }catch(e){}
+        }
+        if(schedT){ clearTimeout(schedT); schedT=null; }
+      }
       currentTrack = track;
-      // Slight delay so screen transitions don't audio-glitch
-      setTimeout(()=>{ if(currentTrack===track) loop(track); }, 200);
+      updateChip(trackId,false);
+      const startMs = wasPlaying?470:160;
+      setTimeout(()=>{
+        if(currentTrack!==track) return;
+        // fade back in
+        if(master && ctx){
+          try{
+            const v = State.data?.settings?.musicVolume ?? 0.6;
+            master.gain.cancelScheduledValues(ctx.currentTime);
+            master.gain.setValueAtTime(0, ctx.currentTime);
+            master.gain.linearRampToValueAtTime(v, ctx.currentTime+0.4);
+          }catch(e){}
+        }
+        loop(track);
+      }, startMs);
     },
     stop(){
       currentTrack = null;
@@ -3695,6 +3879,7 @@ const Music = (()=>{
           }, 400);
         }catch{}
       }
+      updateChip('—',true);
     },
     setVolume(v){
       if(master) master.gain.value = v;
@@ -3702,9 +3887,24 @@ const Music = (()=>{
     toggle(){
       State.data.settings.music = !State.data.settings.music;
       Save.write();
-      if(!State.data.settings.music) Music.stop();
+      if(!State.data.settings.music){ Music.stop(); updateChip('—',true); }
+      else { updateChip(currentTrack?Object.keys(TRACKS).find(k=>TRACKS[k]===currentTrack):'lobby',false); Music.play('lobby'); }
     },
+    nowPlaying(){ return currentTrack?Object.keys(TRACKS).find(k=>TRACKS[k]===currentTrack):null; },
   };
+  function updateChip(trackId, muted){
+    let chip = document.querySelector('.music-chip');
+    if(!chip){
+      chip = document.createElement('div');
+      chip.className='music-chip';
+      chip.onclick=()=>App.toggleMusic();
+      document.body.appendChild(chip);
+    }
+    const m = State.data?.settings?.music===false || muted;
+    chip.classList.toggle('muted', m);
+    const niceName = {splash:'splash',onboard:'onboarding',lobby:'lobby',aux:'menu',word:'word lab',brain:'brain gym',mind:'mind games',num:'numbers',script:'scripture',logic:'logic lab',speed:'speed',daily:'daily',game:'game'};
+    chip.innerHTML = `${m?'🔇':'🎵'} <span style="opacity:.85">${niceName[trackId]||trackId||'—'}</span>`;
+  }
 })();
 
 // v0.30 TTS · speak game prompts when toggle on
@@ -4132,6 +4332,8 @@ const App = {
       // v0.11: ALWAYS show splash on open · TAP TO ENTER decides next route
       App.renderSplashPersonal();
       UI.show('splash');
+      // v0.42 init keyboard shortcuts + arm demo idle
+      try{ Keys.init(); Demo.armIdle(); }catch(e){console.warn('keys/demo init',e);}
     }catch(e){
       console.error('BrainBoard init error:',e);
       _showFatal(e);
@@ -4327,24 +4529,29 @@ const App = {
   },
   tapEnter(){
     // v0.41 · ALWAYS unlock + auto-start music on first user gesture
-    // (browsers block autoplay until interaction · this IS the interaction)
     try{
       if(typeof _unlockAudio === 'function') _unlockAudio();
-      // ensure music setting defaults true if user never touched it
       if(State.data.settings.music!==false) State.data.settings.music = true;
       Save.write();
     }catch(e){}
+    // v0.42 cancel splash demo
+    try{ Demo.cancelIdle(); Demo.stop(); }catch(e){}
     if(State.data && State.data.onboarded){
       UI.show('lobby');
       App.checkDaily();
       App.renderLobbyExtras();
+      // v0.42 narrator welcome
+      try{ Narrator.welcomeBack(); }catch(e){}
+      // v0.42 launch first-time tour for users who completed onboard before v0.42
+      if(!State.data.tourDone) setTimeout(()=>Tour.start(), 800);
     }
-    else{ UI.show('onboard'); App.obStart(); }
+    else{
+      UI.show('onboard'); App.obStart();
+      try{ Narrator.welcomeBack(); }catch(e){}
+    }
     SFX.chime();
     haptic(20);
-    // v0.41 · explicitly kick music after a tick (UI.show already called Music.play but unlock was async)
     setTimeout(()=>{ try{ Music.play(State.data?.onboarded?'lobby':'onboard'); }catch(e){} }, 220);
-    // v0.26 cinematic only triggers via About button now (avoid blocking onboarding)
   },
 
   // ----- ONBOARDING -----
@@ -4564,6 +4771,10 @@ const App = {
       Ach.unlock('first_step');
       // v0.37 trigger one-time tutorial after onboarding complete
       State.data._showTutorialNext = true;
+      // v0.42 claim welcome gift right after onboard
+      setTimeout(()=>App.claimWelcomeGift(), 700);
+      // v0.42 start first-time lobby tour after gift is dismissed
+      setTimeout(()=>Tour.start(), 3500);
       // detect custom emoji used in onboarding
       const usedCustom = Object.entries(App._obData.avatar).some(([slot,id])=>{
         const list = AVATAR_ITEMS[slot]; if(!list) return false;
@@ -4637,6 +4848,8 @@ const App = {
     State.currentRoom = rid;
     setText('rm-name', `${r.em} ${r.name}`);
     setText('rm-sub', r.sub);
+    // v0.42 first-time room entry tip
+    App.showRoomTipIfNew(rid);
     const body = document.getElementById('rm-body');
     body.innerHTML = '';
     r.games.forEach(g=>{
@@ -4712,6 +4925,20 @@ const App = {
       exHtml += `<div class="lobby-banner" onclick="App.openFrenzy()" style="cursor:pointer;background:linear-gradient(135deg,rgba(239,68,68,.18),rgba(245,158,11,.14));margin-bottom:8px">
         <b style="color:#FBBF24">🔥 NEW · Daily Frenzy</b>
         <span style="font-size:11px;opacity:.85;display:block">3 timed mini-rounds · combo XP · tap to play</span>
+      </div>`;
+    }
+    // v0.42 · Coach card after 3+ plays · pulls tip + rec
+    const b = Coach.brain();
+    if(b && b.totalPlays>=3){
+      exHtml += `<div class="lobby-banner" onclick="App.openCoach()" style="cursor:pointer;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(34,211,238,.18));border-color:#A78BFA;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:28px">🧠</div>
+          <div style="flex:1;text-align:left">
+            <b style="color:#c4b5fd">Coach says</b>
+            <div style="font-size:11px;opacity:.85;margin-top:2px;font-style:italic">"${Coach.tip()}"</div>
+          </div>
+          <div style="font-size:18px">→</div>
+        </div>
       </div>`;
     }
     extras.innerHTML = exHtml;
@@ -5284,6 +5511,13 @@ const App = {
           <button class="av-tool-btn ${d.cinematicPref==='short'?'active':''}" onclick="App.setCinematicPref('short')">⚡ SHORT</button>
           <button class="av-tool-btn ${d.cinematicPref==='off'?'active':''}" onclick="App.setCinematicPref('off')">🚫 OFF</button>
         </div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">⏱ GAME PACE</h3>
+        <p class="dim" style="font-size:11px;margin-bottom:6px">multiplies timed-game durations · accessibility</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="av-tool-btn ${(d.pace||'normal')==='slow'?'active':''}" onclick="App.setPace('slow')">🐢 SLOW · 1.5x</button>
+          <button class="av-tool-btn ${(d.pace||'normal')==='normal'?'active':''}" onclick="App.setPace('normal')">⚖️ NORMAL · 1x</button>
+          <button class="av-tool-btn ${d.pace==='fast'?'active':''}" onclick="App.setPace('fast')">⚡ FAST · 0.7x</button>
+        </div>
         <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
           <button class="btn-secondary" onclick="App.openAccount()">👤 account & security</button>
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
@@ -5835,6 +6069,107 @@ const App = {
     Toast.show(`🎬 cinematic: ${code}`);
     App.openSettings();
   },
+  // v0.42 · PACE
+  setPace(p){
+    State.data.pace = p;
+    Save.write();
+    Toast.show(`⏱ pace: ${p}`);
+    App.openSettings();
+  },
+  // v0.42 · MUSIC toggle (used by chip + keyboard)
+  toggleMusic(){
+    Music.toggle();
+    Toast.show(State.data.settings.music?'🎵 music on':'🔇 music off');
+  },
+  // v0.42 · COACH AI HUB · dedicated screen with deep insights
+  openCoach(){
+    const d = State.data;
+    const b = Coach.brain();
+    document.getElementById('aux-title').innerHTML = '🧠 Coach AI';
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(34,211,238,.18))">
+        <div style="font-size:42px">🧠</div>
+        <b style="color:#c4b5fd;font-size:16px">Coach AI · v1</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">your personal brain analyst</div>
+      </div>`;
+    if(!b || b.totalPlays<3){
+      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:14px;text-align:center;margin-top:14px;font-size:13px">
+        play <b>${Math.max(0,3-(b?b.totalPlays:0))}</b> more game${(b?.totalPlays??0)===2?'':'s'} for Coach to start tuning recommendations · keep going!
+      </div>`;
+    } else {
+      const rec = Coach.recommendGame();
+      const recRoom = ROOMS[rec.room];
+      const recGame = recRoom?.games.find(g=>g.id===rec.game);
+      const labels = {memory:'🧠 Memory',speed:'⚡ Speed',pattern:'🎯 Pattern',logic:'🧩 Logic',word:'📖 Word',faith:'✝️ Faith'};
+      html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">💡 LIVE TIP</h3>
+        <div style="background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.4);border-radius:10px;padding:12px;text-align:center;font-size:13px">"${Coach.tip()}"</div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📊 BRAIN PROFILE</h3>
+        <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px 12px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>strongest</span><b style="color:#10B981">${labels[b.strongest]||b.strongest}</b></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>weakest</span><b style="color:#F87171">${labels[b.weakest]||b.weakest}</b></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>recent win rate</span><b>${Math.round((b.recentWinRate||0)*100)}%</b></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>total plays</span><b>${b.totalPlays}</b></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>brain rank</span><b>${d.iq}</b></div>
+        </div>`;
+      if(recGame){
+        html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎯 RECOMMENDED NEXT</h3>
+          <div onclick="App.openRoom('${rec.room}')" style="cursor:pointer;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:30px">${recGame.em}</div>
+            <b>${recGame.name}</b>
+            <div class="dim" style="font-size:11px;margin-top:4px">${recRoom.em} ${recRoom.name} · grows your weakest axis</div>
+            <button class="btn-primary" style="margin-top:8px;padding:6px 14px;font-size:11px;width:auto">▶ open room</button>
+          </div>`;
+      }
+      // adaptive difficulty card
+      const am = Adaptive.multiplier();
+      const amLabel = am<0.95?'🔥 raising the bar':am>1.05?'🤲 easing thresholds':'⚖️ balanced groove';
+      html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">⚖️ ADAPTIVE STATE</h3>
+        <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px 12px;font-size:12px;text-align:center">
+          <b>${amLabel}</b>
+          <div class="dim" style="font-size:11px;margin-top:4px">multiplier ${am.toFixed(2)}x · auto-tunes win thresholds</div>
+        </div>`;
+    }
+    html += `<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button></div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  // v0.42 · WELCOME GIFT
+  claimWelcomeGift(){
+    if(State.data.welcomeGiftClaimed) return;
+    State.data.welcomeGiftClaimed = true;
+    State.data.powerups = State.data.powerups || {};
+    State.data.powerups.hint = (State.data.powerups.hint||0) + 1;
+    Wallet.add({coin:100, gem:1});
+    Save.write();
+    UI.updateWallet();
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:64px">🎁</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">welcome gift unlocked!</h3>
+      <p style="font-size:13px;margin:8px 0;line-height:1.6">+ 100 🪙 coins<br>+ 1 💎 gem<br>+ 1 💡 hint power-up</p>
+      <p class="dim" style="font-size:11px;margin:6px 0">use them wisely · earn more by winning games</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ THANK YOU</button>
+    </div>`);
+  },
+  // v0.42 · ROOM ENTRY TIP · first time visiting a room
+  showRoomTipIfNew(roomId){
+    State.data.roomTipsSeen = State.data.roomTipsSeen || {};
+    if(State.data.roomTipsSeen[roomId]) return;
+    State.data.roomTipsSeen[roomId] = Date.now();
+    const tips = {
+      word:'📖 Word Lab · vocab · spelling · anagrams · build language fluency',
+      brain:'🧠 Brain Gym · memory · pattern recall · trains short-term memory',
+      mind:'🎯 Mind Games · stroop · riddles · logic puzzles · pure brain teasers',
+      num:'🔢 Number Crunch · math · sequences · equation solving · sharpens arithmetic',
+      script:'✝️ Scripture · KJV verse fill-ins · parables · bilingual support',
+      logic:'🧩 Logic Lab · lights out · sudoku · dots & boxes · spatial reasoning',
+      speed:'⚡ Speed Wing · reflex · tap · color · drill reaction time',
+      daily:'🎪 Daily · rotating spotlight game · 2x rewards',
+    };
+    if(tips[roomId]) setTimeout(()=>Toast.show(tips[roomId]), 500);
+    Save.write();
+  },
+  // v0.42 · TOUR launcher (manual replay)
+  startTour(){ Tour.manual(); App.toLobby(); },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -5852,7 +6187,8 @@ const App = {
       {em:'🛒',t:'Shop & Recommendations',d:'Power-ups · bundles · daily deal (30% off rotates daily) · ✨ RECOMMENDED section reads your play history.',cta:{label:'🛒 Open Shop',fn:'openShop'}},
       {em:'🎒',t:'Avatar Designer',d:'Tap your name in the lobby. 46+ items across 6 slots · hue/size/scene/frame/anim · save loadouts.',cta:{label:'🎨 Avatar',fn:'openAvatar'}},
       {em:'🎫',t:'Battle Pass',d:'Monthly seasonal rotation · earn XP from every game · 10 tiers of rewards. Resets first day each month.',cta:{label:'🎫 Open Pass',fn:'openBP'}},
-      {em:'🧬',t:'Brain DNA + Coach AI',d:'STATS shows your radar of strengths (memory/speed/pattern/logic/word/faith). Coach AI recommends next game once you play 3+.',cta:{label:'📊 Stats',fn:'openStats'}},
+      {em:'🧠',t:'Coach AI',d:'Your personal brain analyst · live tips · adaptive thresholds · weak-axis recommendations. Activates after 3 games.',cta:{label:'🧠 Open Coach',fn:'openCoach'}},
+      {em:'🧬',t:'Brain DNA',d:'STATS shows your radar of strengths (memory/speed/pattern/logic/word/faith) · grows as you win.',cta:{label:'📊 Stats',fn:'openStats'}},
       {em:'🌐',t:'Language',d:'Toggle EN/ES in Settings. 20 verses are bilingual. Auto-detects from browser on first launch.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
       {em:'🤝',t:'Friends',d:'Add by code · message · gift gems · cheer · MVP of week. Required for non-CPU duels.',cta:{label:'🤝 Friends',fn:'openFriends'}},
     ];
@@ -10679,7 +11015,7 @@ function _quizGame(cfg){
   const game = {};
   game.start = function(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=cfg.timeLeft||45; this.q=0;
+    this.score=0; this.timeLeft=Pace.scale(cfg.timeLeft||45); this.q=0;
     this.questions=[...cfg.pool].sort(()=>Math.random()-.5).slice(0,cfg.perRun||10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
