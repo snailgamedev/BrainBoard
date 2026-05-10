@@ -1246,7 +1246,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.25.0 · WELL-DONE · 7 difficulties · 27 games · half-baked killed · 🙏</div>
+  <div class="splash-foot">v0.26.0 · FILL EVERY ROOM · 33 games · weekly report · cinematic · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1396,7 +1396,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.25.0';
+const VERSION = '0.26.0';
 
 // ----- STATE -----
 const State = {
@@ -2944,16 +2944,19 @@ const ROOMS = {
     {id:'anagram',em:'📜',name:'Anagram Storm',sub:'unscramble · 45-sec sprint · multi-choice',launch:()=>AnagramGame.start()},
     {id:'define',em:'📚',name:'Define It',sub:'definition → pick the word · 10 rounds',launch:()=>DefineGame.start()},
     {id:'hangman',em:'🪢',name:'Hangman',sub:'guess the word · 6 wrong = hung',launch:()=>HangmanGame.start()},
+    {id:'synonym',em:'🔁',name:'Synonym Sprint',sub:'pick the synonym · 45 sec · 10 rounds',launch:()=>SynonymGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
     {id:'simon',em:'🎼',name:'Simon Says',sub:'repeat the sequence · gets longer',launch:()=>SimonGame.start()},
+    {id:'nummemory',em:'🔢',name:'Number Memory',sub:'memorize 5 numbers · recall by position',launch:()=>NumberMemoryGame.start()},
   ]},
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
     {id:'reaction',em:'⚡',name:'Reaction Tap',sub:'wait for green · tap fast · 5 rounds',launch:()=>ReactionGame.start()},
     {id:'riddle',em:'🦉',name:'Riddle Vault',sub:'8 random riddles · 90 sec · 5+ wins',launch:()=>RiddleGame.start()},
     {id:'tf',em:'✅',name:'True or False',sub:'12 questions · 45 sec · trivia + bible',launch:()=>TFGame.start()},
+    {id:'capitals',em:'🌍',name:'Capital Cities',sub:'geography · 10 random capitals · 45 sec',launch:()=>CapitalsGame.start()},
   ]},
   num:{em:'🔢',name:'Number Crunch',sub:'math · sequence · 24',games:[
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
@@ -2965,12 +2968,14 @@ const ROOMS = {
     {id:'books',em:'📖',name:'Books Race',sub:'OT or NT? · 45 sec · 66 books',launch:()=>BooksGame.start()},
     {id:'trivia',em:'🧠',name:'Bible Trivia',sub:'10 random Qs · 30+ pool · 60 sec',launch:()=>TriviaGame.start()},
     {id:'parable',em:'🕊️',name:'Parable Match',sub:'parable → meaning · 8 rounds',launch:()=>ParableGame.start()},
+    {id:'commandments',em:'📜',name:'10 Commandments',sub:'match number to commandment',launch:()=>CommandmentsGame.start()},
   ]},
   logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
     {id:'spot',em:'🔍',name:'Spot Different',sub:'find the odd one out · 45 sec',launch:()=>SpotGame.start()},
     {id:'hunt',em:'🔢',name:'Number Hunt',sub:'find the duplicate pair · 45 sec',launch:()=>HuntGame.start()},
     {id:'sudoku',em:'🧩',name:'Sudoku Mini',sub:'4x4 grid · 3 difficulties',launch:()=>SudokuGame.start()},
+    {id:'odd',em:'🔍',name:'Odd One Out',sub:'find the number that breaks the pattern',launch:()=>OddOneGame.start()},
   ]},
   speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
@@ -2978,6 +2983,7 @@ const ROOMS = {
     {id:'code',em:'🔑',name:'Code Sprint',sub:'memorize 4-digit codes · 5 rounds',launch:()=>CodeSprintGame.start()},
     {id:'numbertap',em:'🔢',name:'Number Tap',sub:'tap 1→15 in order · sub-20s wins',launch:()=>NumberTapGame.start()},
     {id:'colorwave',em:'🌊',name:'Color Wave',sub:'visual sequence · 6 colors · level up',launch:()=>ColorWaveGame.start()},
+    {id:'tapfrenzy',em:'⚡',name:'Tap Frenzy',sub:'tap as fast as you can · 5 sec',launch:()=>TapFrenzyGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -3002,6 +3008,18 @@ const App = {
       _migrateRankIfNeeded();
       // v0.24 apply persisted theme
       applyAppTheme(State.data.appTheme||'cobalt');
+      // v0.26 cinematic intro is now triggered AFTER user taps splash CTA (see tapEnter)
+      // not on init, to avoid covering the splash button
+      // v0.26 SUNDAY WEEKLY REPORT (auto-show once per week if onboarded)
+      if(State.data.onboarded){
+        const now = new Date();
+        const sunday = (now.getDay()===0); // Sunday
+        const lastShown = State.data.weeklyReportLastShown ? new Date(State.data.weeklyReportLastShown) : null;
+        const lastShownThisWeek = lastShown && (Math.abs(now-lastShown) < 7*86400000);
+        if(sunday && !lastShownThisWeek && State.data.totals.games>=5){
+          setTimeout(()=>App.showWeeklyReport(), 1500);
+        }
+      }
       // v0.21 ONE-TIME MIGRATION: prior versions auto-enabled lock-on-open
       // if user hasn't explicitly opt'd in via the new flow, disable it
       if(State.data.account && State.data.account.lockEnabled && !State.data.account.explicitlyEnabledLock){
@@ -3111,6 +3129,50 @@ const App = {
       quick.innerHTML = '';
     }
   },
+  _playCinematic(){
+    Modal.show(`<div style="text-align:center;padding:20px">
+      <div style="font-size:96px;animation:floatBob 3s ease-in-out infinite;filter:drop-shadow(0 0 32px gold)">🧠</div>
+      <h1 style="font-family:'Cinzel',serif;font-size:42px;color:var(--gold-bright);text-shadow:0 0 24px rgba(245,158,11,.7);margin:14px 0;animation:titlePulse 4s ease-in-out infinite">BrainBoard</h1>
+      <p style="font-style:italic;font-size:14px;opacity:.85;margin-bottom:18px">✨ a place to sharpen your mind · feed your spirit ✨</p>
+      <div style="font-size:11px;opacity:.7;line-height:1.7;text-align:left;background:rgba(245,158,11,.08);padding:12px 16px;border-radius:10px;border-left:3px solid var(--gold)">
+        🎮 27 mini-games across 8 rooms<br>
+        🏆 88+ achievements to unlock<br>
+        👤 craft your saint · 250+ avatar items<br>
+        ✝️ scripture & encouragement · natural<br>
+        🎫 battle pass · daily quests · tier ranks<br>
+        🧠 Coach AI tunes difficulty to YOU<br>
+        🤝 friends · messaging · cloud-ready
+      </div>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">▶ LET'S GO</button>
+    </div>`);
+    SFX.holy();
+    confetti();
+  },
+  showWeeklyReport(){
+    const d = State.data;
+    const wins = d.totals.wins||0, losses = d.totals.losses||0, games = d.totals.games||0;
+    const tier = getRankTier(d.iq||50);
+    Ach.unlock('weekly_first');
+    d.weeklyReportLastShown = Date.now();
+    Save.write();
+    // Find favorite game
+    const games_arr = Object.entries(d.perGame||{}).sort((a,b)=>(b[1].wins||0)-(a[1].wins||0));
+    const fav = games_arr[0];
+    const favName = fav ? (ROOMS[fav[0].split(':')[0]]?.games.find(g=>g.id===fav[0].split(':')[1])?.name || fav[0]) : '—';
+    Modal.show(`<div class="big">📊</div>
+      <h3>Sunday Brain Report</h3>
+      <p class="dim" style="font-size:11px">your week in BrainBoard</p>
+      <div class="stats-grid" style="margin-top:14px">
+        <div class="stat-card"><div class="lbl">total wins</div><div class="val">${wins}</div></div>
+        <div class="stat-card"><div class="lbl">games played</div><div class="val">${games}</div></div>
+        <div class="stat-card"><div class="lbl">brain rank</div><div class="val" style="font-size:16px">${rankBadge(d.iq)}<br><span style="font-size:11px">${d.iq} BR</span></div></div>
+        <div class="stat-card"><div class="lbl">streak</div><div class="val">🔥 ${d.streak}</div></div>
+      </div>
+      <p style="margin-top:12px;font-size:13px">⭐ favorite: <b style="color:var(--gold-bright)">${favName}</b></p>
+      <p class="dim" style="font-size:11px;margin:10px 0">💡 ${Coach.tip()}</p>
+      <button class="btn-primary" onclick="Modal.close()">🙏 amen</button>`);
+    SFX.holy(); confetti();
+  },
   splashJump(roomId){
     // PWA install button on splash if available
     if(window._deferredPrompt){
@@ -3144,6 +3206,8 @@ const App = {
     else{ UI.show('onboard'); App.obStart(); }
     SFX.chime();
     haptic(20);
+    // v0.26 cinematic only triggers via About button now (avoid blocking onboarding)
+    // can manually view via Settings → About
   },
 
   // ----- ONBOARDING -----
@@ -4571,6 +4635,11 @@ const App = {
   },
   _avatarOpenedOnce: false,
   openAbout(){
+    if(!State.data.cinematicSeen){
+      State.data.cinematicSeen = true;
+      Save.write();
+      Ach.unlock('cinematic_seen');
+    }
     document.getElementById('aux-title').innerHTML = 'ℹ️ About';
     document.getElementById('aux-body').innerHTML = `
       <div class="onboard-card" style="margin:0 auto">
@@ -6829,7 +6898,346 @@ const ParableGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 25 · DAILY (rotating mini)
+// 🎮 GAME 28 · SYNONYM SPRINT (Word Lab)
+// ====================================================================
+const SYNONYMS = [
+  {w:'happy',o:['joyful','sad','angry','tired'],a:'joyful'},
+  {w:'fast',o:['quick','slow','heavy','dim'],a:'quick'},
+  {w:'big',o:['huge','tiny','short','dim'],a:'huge'},
+  {w:'smart',o:['clever','dull','rude','soft'],a:'clever'},
+  {w:'brave',o:['bold','timid','soft','kind'],a:'bold'},
+  {w:'rich',o:['wealthy','poor','hungry','sad'],a:'wealthy'},
+  {w:'tired',o:['weary','fresh','strong','wide'],a:'weary'},
+  {w:'angry',o:['furious','calm','glad','warm'],a:'furious'},
+  {w:'small',o:['tiny','vast','tall','wide'],a:'tiny'},
+  {w:'beautiful',o:['lovely','ugly','plain','dim'],a:'lovely'},
+  {w:'strong',o:['mighty','weak','soft','meek'],a:'mighty'},
+  {w:'hot',o:['warm','cold','damp','dry'],a:'warm'},
+  {w:'kind',o:['gentle','cruel','rude','blunt'],a:'gentle'},
+  {w:'wise',o:['sage','foolish','silly','dull'],a:'sage'},
+  {w:'pure',o:['clean','muddy','dim','dirty'],a:'clean'},
+  {w:'holy',o:['sacred','common','vile','plain'],a:'sacred'},
+  {w:'peaceful',o:['calm','wild','loud','tense'],a:'calm'},
+  {w:'mighty',o:['powerful','feeble','weak','frail'],a:'powerful'},
+  {w:'glorious',o:['splendid','dim','plain','dull'],a:'splendid'},
+  {w:'eternal',o:['forever','brief','swift','short'],a:'forever'},
+];
+const SynonymGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45; this.q=0;
+    this.questions=[...SYNONYMS].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--; if(this.timeLeft<=0){this.end();return;} this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.current.a){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>📖 Synonym Sprint</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','synonym for...'));
+    const w=el('div','math-q',this.current.w.toUpperCase()); w.style.color='var(--gold-bright)'; wrap.appendChild(w);
+    const grid=el('div','verse-options');
+    this.options.forEach(o=>{const b=el('button','verse-opt',o); b.onclick=()=>this.pick(o); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('word','synonym',7);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*5,brain:3}:{coin:Math.max(10,this.score*2)};
+    recordResult('word','synonym',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'📖',retry:()=>SynonymGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>SynonymGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer)clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 29 · NUMBER MEMORY (Brain Gym)
+// ====================================================================
+const NumberMemoryGame = {
+  start(){
+    State.gameInst=this;
+    this.round=0; this.score=0;
+    this.next();
+    UI.show('game');
+  },
+  next(){
+    if(this.round>=5){this.end();return;}
+    this.round++;
+    this.numbers=Array.from({length:5},()=>Math.floor(Math.random()*90)+10);
+    this.target = Math.floor(Math.random()*5);
+    this.phase='show';
+    this.input='';
+    this.render();
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2500);
+  },
+  press(n){
+    if(this.phase!=='ask')return;
+    if(this.input.length>=2)return;
+    this.input+=n; SFX.tap(); haptic(4);
+    if(this.input.length===2){
+      const guess=parseInt(this.input);
+      if(guess===this.numbers[this.target]){this.score++; SFX.correct(); haptic(15);}else{SFX.wrong(); haptic(30);}
+      setTimeout(()=>this.next(),700);
+    }
+    this.render();
+  },
+  delPress(){if(this.phase!=='ask')return; this.input=this.input.slice(0,-1); this.render();},
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🧠 Number Memory</b> · round <b>${this.round}/5</b> · score <b>${this.score}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    if(this.phase==='show'){
+      wrap.appendChild(el('div','dim','memorize all 5 · 2.5 sec'));
+      const grid=el('div',''); grid.style.cssText='display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0;max-width:340px';
+      this.numbers.forEach((n,i)=>{
+        const c=el('div',''); c.style.cssText='aspect-ratio:1;background:rgba(124,58,237,.25);border:2px solid #7C3AED;border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:800;font-family:"Cinzel",serif;color:var(--gold-bright)';
+        c.innerHTML=`<div>${n}<div style="font-size:9px;opacity:.6;margin-top:2px">#${i+1}</div></div>`;
+        grid.appendChild(c);
+      });
+      wrap.appendChild(grid);
+    }else{
+      wrap.appendChild(el('div','dim',`what was number #${this.target+1}?`));
+      wrap.appendChild(el('div','math-input', this.input || '__'));
+      const pad=el('div','math-pad');
+      ['1','2','3','4','5','6','7','8','9'].forEach(n=>{const b=el('button','math-key',n); b.onclick=()=>this.press(n); pad.appendChild(b);});
+      const del=el('button','math-key del','⌫'); del.onclick=()=>this.delPress(); pad.appendChild(del);
+      const z=el('button','math-key','0'); z.onclick=()=>this.press('0'); pad.appendChild(z);
+      const sk=el('button','math-key','SKIP'); sk.onclick=()=>this.next(); pad.appendChild(sk);
+      wrap.appendChild(pad);
+    }
+    area.appendChild(wrap);
+  },
+  end(){
+    const won=this.score>=3;
+    const r=won?{coin:50+this.score*15,brain:4}:{coin:Math.max(10,this.score*8)};
+    recordResult('brain','nummemory',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/5 · 🧠`,emoji:'🧠',retry:()=>NumberMemoryGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/5`,msg:'aim for 3+!',retry:()=>NumberMemoryGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.showT)clearTimeout(this.showT);}
+};
+
+// ====================================================================
+// 🎮 GAME 30 · TAP FRENZY (Speed Wing)
+// ====================================================================
+const TapFrenzyGame = {
+  start(){
+    State.gameInst=this;
+    this.taps=0; this.timeLeft=5; this.startMs=Date.now();
+    this.timer=setInterval(()=>{
+      this.timeLeft=Math.max(0, 5 - Math.floor((Date.now()-this.startMs)/1000));
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },200);
+    this.render();
+    UI.show('game');
+  },
+  tap(){if(this.timeLeft<=0)return; this.taps++; SFX.tap(); haptic(3); this.render();},
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>⚡ Tap Frenzy</b> · taps: <b>${this.taps}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap as fast as you can · 5 sec'));
+    const big=el('button','','⚡');
+    big.style.cssText='width:280px;height:280px;border-radius:50%;background:linear-gradient(135deg,#FBBF24,#F59E0B);border:6px solid var(--cream);font-size:120px;cursor:pointer;box-shadow:0 12px 40px rgba(245,158,11,.6)';
+    big.onclick=()=>this.tap();
+    wrap.appendChild(big);
+    area.appendChild(wrap);
+  },
+  end(){
+    clearInterval(this.timer);
+    const won=this.taps>=25;
+    const r=won?{coin:30+this.taps*3,brain:2}:{coin:Math.max(10,this.taps*2)};
+    recordResult('speed','tapfrenzy',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.taps} taps in 5s · ⚡`,emoji:'⚡',retry:()=>TapFrenzyGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.taps} taps`,msg:'25+ taps for the win!',retry:()=>TapFrenzyGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer)clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 31 · 10 COMMANDMENTS ORDER (Scripture)
+// ====================================================================
+const COMMANDMENTS = [
+  {n:1, t:'No other gods before Me'},
+  {n:2, t:'No idols / graven images'},
+  {n:3, t:"Don't take the LORD's name in vain"},
+  {n:4, t:'Remember the Sabbath day'},
+  {n:5, t:'Honor your father and mother'},
+  {n:6, t:'You shall not murder'},
+  {n:7, t:'You shall not commit adultery'},
+  {n:8, t:'You shall not steal'},
+  {n:9, t:'No false witness'},
+  {n:10, t:'You shall not covet'},
+];
+const CommandmentsGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.q=0; this.timeLeft=45;
+    this.questions=[...COMMANDMENTS].sort(()=>Math.random()-.5).slice(0,8);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    const distract=[];
+    while(distract.length<3){const n=Math.floor(Math.random()*10)+1; if(n!==this.current.n && !distract.includes(n)) distract.push(n);}
+    this.options=[this.current.n,...distract].sort((a,b)=>a-b);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(n){if(this._answered)return; this._answered=true;
+    if(n===this.current.n){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>✝️ Commandments</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','which commandment number?'));
+    const w=el('div','verse-card'); w.innerHTML=`"${this.current.t}"`; w.style.fontSize='15px'; wrap.appendChild(w);
+    const grid=el('div','stroop-grid');
+    this.options.forEach(n=>{const b=el('button','stroop-btn',`#${n}`); b.style.background='linear-gradient(135deg,#B45309,#7C2D12)'; b.onclick=()=>this.pick(n); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('script','commandments',5);
+    const won=this.score>=t;
+    const r=won?{coin:50+this.score*7,faith:5}:{coin:Math.max(15,this.score*4),faith:1};
+    recordResult('script','commandments',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🙏',retry:()=>CommandmentsGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:'study Exodus 20!',retry:()=>CommandmentsGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer)clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 32 · ODD ONE OUT (Logic Lab)
+// ====================================================================
+const OddOneGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.q=0; this.timeLeft=45;
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){
+    const patterns=[
+      ()=>{const a=Math.floor(Math.random()*5)+1, d=Math.floor(Math.random()*5)+2; return {fits:[a,a+d,a+2*d,a+3*d], odd:a+2*d+1};},
+      ()=>{const a=Math.floor(Math.random()*4)+1; return {fits:[a,a*2,a*4,a*8], odd:a*5};},
+      ()=>({fits:[2,4,6,8], odd:7}),
+      ()=>({fits:[3,9,27,81], odd:64}),
+      ()=>({fits:[5,10,15,20], odd:18}),
+      ()=>({fits:[1,4,9,16], odd:20}),
+    ];
+    const p=patterns[Math.floor(Math.random()*patterns.length)]();
+    this.numbers=[...p.fits, p.odd].sort(()=>Math.random()-.5);
+    this.oddVal=p.odd;
+    this._answered=false;
+    this.q++;
+    this.render();
+  },
+  pick(n){if(this._answered)return; this._answered=true;
+    if(n===this.oddVal){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),300);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🧩 Odd One Out</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','find the number that breaks the pattern'));
+    const grid=el('div',''); grid.style.cssText='display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:320px;margin:14px 0';
+    this.numbers.forEach(n=>{
+      const c=el('div',''); c.style.cssText='aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;font-size:22px;font-weight:800;cursor:pointer;font-family:"Cinzel",serif';
+      c.textContent=n; c.onclick=()=>this.pick(n); grid.appendChild(c);
+    });
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('logic','odd',8);
+    const won=this.score>=t;
+    const r=won?{coin:30+this.score*4,brain:3}:{coin:Math.max(10,this.score*2)};
+    recordResult('logic','odd',won,r);
+    if(won) Modal.win({rewards:r,title:`Spotted ${this.score}!`,emoji:'🔍',retry:()=>OddOneGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} spotted`,msg:`aim for ${t}+!`,retry:()=>OddOneGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer)clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 33 · CAPITAL CITIES (Mind Games)
+// ====================================================================
+const CAPITALS = [
+  {q:'France',a:'Paris',o:['Paris','London','Madrid','Rome']},
+  {q:'Japan',a:'Tokyo',o:['Tokyo','Beijing','Seoul','Bangkok']},
+  {q:'Egypt',a:'Cairo',o:['Cairo','Lagos','Khartoum','Algiers']},
+  {q:'Australia',a:'Canberra',o:['Sydney','Canberra','Melbourne','Perth']},
+  {q:'Brazil',a:'Brasilia',o:['Rio','Sao Paulo','Brasilia','Salvador']},
+  {q:'Canada',a:'Ottawa',o:['Toronto','Ottawa','Montreal','Vancouver']},
+  {q:'Russia',a:'Moscow',o:['Moscow','St. Petersburg','Kiev','Minsk']},
+  {q:'India',a:'New Delhi',o:['Mumbai','Kolkata','New Delhi','Bangalore']},
+  {q:'Germany',a:'Berlin',o:['Berlin','Munich','Hamburg','Frankfurt']},
+  {q:'Italy',a:'Rome',o:['Rome','Milan','Venice','Florence']},
+  {q:'Spain',a:'Madrid',o:['Madrid','Barcelona','Seville','Valencia']},
+  {q:'South Korea',a:'Seoul',o:['Seoul','Busan','Incheon','Daegu']},
+  {q:'Argentina',a:'Buenos Aires',o:['Buenos Aires','Cordoba','Mendoza','Rosario']},
+  {q:'Greece',a:'Athens',o:['Athens','Thessaloniki','Sparta','Patras']},
+  {q:'Israel',a:'Jerusalem',o:['Jerusalem','Tel Aviv','Haifa','Eilat']},
+  {q:'Turkey',a:'Ankara',o:['Istanbul','Ankara','Izmir','Bursa']},
+];
+const CapitalsGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.q=0; this.timeLeft=45;
+    this.questions=[...CAPITALS].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.current.a){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🎯 Capital Cities</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','capital of...'));
+    const w=el('div','math-q',this.current.q.toUpperCase()); w.style.color='var(--gold-bright)'; w.style.fontSize='28px'; wrap.appendChild(w);
+    const grid=el('div','verse-options');
+    this.options.forEach(o=>{const b=el('button','verse-opt',o); b.onclick=()=>this.pick(o); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('mind','capitals',7);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*5,brain:3}:{coin:Math.max(10,this.score*2)};
+    recordResult('mind','capitals',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🌍',retry:()=>CapitalsGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>CapitalsGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer)clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 34 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
