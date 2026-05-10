@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.33.0 · GAMEPIGEON · 37 games · Drop Four · Knockout · Cup Pong · 🙏</div>
+  <div class="splash-foot">v0.34.0 · AUDIBLE MUSIC · Darts · Sea Battle · Dots Boxes · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.33.0';
+const VERSION = '0.34.0';
 
 // ----- STATE -----
 const State = {
@@ -2600,6 +2600,11 @@ const ACHIEVEMENTS = [
   {id:'knockout_5',em:'🏀',t:'Sharp Shot',d:'Win 5 Knockout games'},
   {id:'cuppong_5',em:'🥤',t:'Pong Star',d:'Win 5 Cup Pong games'},
   {id:'wordbuild_30',em:'🔨',t:'Word Builder',d:'Reach 30 points in Word Build'},
+  // v0.34
+  {id:'darts_bull',em:'🎯',t:'Bullseye',d:'Hit a bullseye in Darts'},
+  {id:'seabattle_5',em:'🚢',t:'Sea Captain',d:'Win 5 Sea Battle games'},
+  {id:'dotsboxes_5',em:'📦',t:'Box Master',d:'Win 5 Dots & Boxes games'},
+  {id:'music_tested',em:'🎵',t:'Sound Check',d:'Hit the TEST MUSIC button'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -2878,7 +2883,8 @@ const Music = (()=>{
     if(!ctx){
       ctx = new(window.AudioContext||window.webkitAudioContext)();
       master = ctx.createGain();
-      master.gain.value = State.data?.settings?.musicVolume ?? 0.35;
+      // v0.34: louder default · 0.6 instead of 0.35 so it's actually audible
+      master.gain.value = State.data?.settings?.musicVolume ?? 0.6;
       master.connect(ctx.destination);
     }
     // v0.32: resume if browser suspended (autoplay block)
@@ -2898,19 +2904,19 @@ const Music = (()=>{
   }
   function playChord(track, chordIdx){
     if(!State.data?.settings?.music) return;
-    const c=ac(); if(!c) return;
+    const c=ac(); if(!c || c.state==='suspended') return;
     const sc = scales[track.scale];
     const base = track.root + sc[chordIdx % sc.length];
-    // Pad: root + 5th + 8th (octave)
     const beatSec = 60/track.bpm;
-    envNote(midiToFreq(base),       beatSec*4*1.0, track.pad, 0.04);
-    envNote(midiToFreq(base+sc[2]), beatSec*4*1.0, track.pad, 0.03);
-    envNote(midiToFreq(base+sc[4]), beatSec*4*1.0, track.pad, 0.02);
-    // Arp: 4 quick notes per beat
+    // v0.34 boosted amplitudes (was 0.04/0.03/0.02 · now 0.08/0.06/0.04)
+    envNote(midiToFreq(base),       beatSec*4, track.pad, 0.08);
+    envNote(midiToFreq(base+sc[2]), beatSec*4, track.pad, 0.06);
+    envNote(midiToFreq(base+sc[4]), beatSec*4, track.pad, 0.04);
     for(let i=0;i<4;i++){
       const noteIdx = [0,2,4,2][i % 4];
       const noteMidi = base + sc[noteIdx];
-      setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, track.arp, 0.025), i*beatSec*1000);
+      // arp boosted 0.025 → 0.045
+      setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, track.arp, 0.045), i*beatSec*1000);
     }
   }
   function loop(track){
@@ -3264,6 +3270,7 @@ const ROOMS = {
     {id:'riddle',em:'🦉',name:'Riddle Vault',sub:'8 random riddles · 90 sec · 5+ wins',launch:()=>RiddleGame.start()},
     {id:'tf',em:'✅',name:'True or False',sub:'12 questions · 45 sec · trivia + bible',launch:()=>TFGame.start()},
     {id:'capitals',em:'🌍',name:'Capital Cities',sub:'geography · 10 random capitals · 45 sec',launch:()=>CapitalsGame.start()},
+    {id:'seabattle',em:'🚢',name:'Sea Battle',sub:'find 4 ships in 5×5 grid · 15 shots',launch:()=>SeaBattleGame.start()},
   ]},
   num:{em:'🔢',name:'Number Crunch',sub:'math · sequence · 24',games:[
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
@@ -3284,6 +3291,7 @@ const ROOMS = {
     {id:'sudoku',em:'🧩',name:'Sudoku Mini',sub:'4x4 grid · 3 difficulties',launch:()=>SudokuGame.start()},
     {id:'odd',em:'🔍',name:'Odd One Out',sub:'find the number that breaks the pattern',launch:()=>OddOneGame.start()},
     {id:'dropfour',em:'🟡',name:'Drop Four',sub:'connect 4 in a row · vs CPU · 7x6 grid',launch:()=>DropFourGame.start()},
+    {id:'dotsboxes',em:'📦',name:'Dots & Boxes',sub:'3×3 grid · capture more boxes than CPU',launch:()=>DotsBoxesGame.start()},
   ]},
   speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
@@ -3294,6 +3302,7 @@ const ROOMS = {
     {id:'tapfrenzy',em:'⚡',name:'Tap Frenzy',sub:'tap as fast as you can · 5 sec',launch:()=>TapFrenzyGame.start()},
     {id:'knockout',em:'🏀',name:'Knockout',sub:'basketball · tap on sweet spot · 10 shots',launch:()=>KnockoutGame.start()},
     {id:'cuppong',em:'🥤',name:'Cup Pong',sub:'sink 4+ of 6 cups · 10 shots',launch:()=>CupPongGame.start()},
+    {id:'darts',em:'🎯',name:'Darts',sub:'aim crosshair · 8 throws · 120+ wins',launch:()=>DartsGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -4098,6 +4107,17 @@ const App = {
     const lbl = document.getElementById('vol-label');
     if(lbl) lbl.textContent = v+'%';
   },
+  testMusic(){
+    if(!State.data.settings.music){
+      State.data.settings.music = true;
+      Save.write();
+      Toast.show('🎵 music enabled · listen now');
+    }
+    Music.stop();
+    setTimeout(()=>Music.play('aux'),100);
+    Toast.show('▶ playing aux track · 4-chord loop');
+    Ach.unlock('music_tested');
+  },
   setDifficulty(d){
     if(!State.data.settings) State.data.settings = {};
     State.data.settings.difficulty = d;
@@ -4349,8 +4369,9 @@ const App = {
         <div class="setting-row">🎨 color-blind safe <div class="toggle ${s.colorBlindSafe?'on':''}" data-set="colorBlindSafe"></div></div>
         <div class="setting-row">🎵 ambient music <div class="toggle ${s.music!==false?'on':''}" data-set="music"></div></div>
         <div class="setting-row" style="display:block">
-          <div style="display:flex;justify-content:space-between;align-items:center"><span>🔊 music volume</span><span class="dim" id="vol-label">${Math.round((s.musicVolume??0.35)*100)}%</span></div>
-          <input type="range" min="0" max="100" value="${Math.round((s.musicVolume??0.35)*100)}" style="width:100%;margin-top:6px" oninput="App.setMusicVol(this.value)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span>🔊 music volume</span><span class="dim" id="vol-label">${Math.round((s.musicVolume??0.6)*100)}%</span></div>
+          <input type="range" min="0" max="100" value="${Math.round((s.musicVolume??0.6)*100)}" style="width:100%;margin-top:6px" oninput="App.setMusicVol(this.value)">
+          <button class="btn-primary" style="padding:8px 14px;font-size:11px;margin-top:8px;width:100%" onclick="App.testMusic()">▶ TEST MUSIC NOW</button>
         </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎮 DIFFICULTY</h3>
         <p class="dim" style="font-size:11px;margin-bottom:6px">tunes Brain Rank gain/loss · doesn't change game mechanics</p>
@@ -8098,7 +8119,287 @@ const WordBuildGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 38 · DAILY (rotating mini)
+// 🎮 GAME 38 · DARTS (Speed Wing) · timing-based throw at concentric rings
+// ====================================================================
+const DartsGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.shotsLeft=8; this.lastHit=null;
+    this.startAim();
+    UI.show('game');
+  },
+  startAim(){
+    this.aimX=0; this.aimY=50; this.aimXDir=1; this.aimYDir=1;
+    this.aiming=true;
+    this.aimInt=setInterval(()=>{
+      this.aimX += this.aimXDir * 3;
+      this.aimY += this.aimYDir * 2;
+      if(this.aimX>=95){this.aimX=95;this.aimXDir=-1;}
+      if(this.aimX<=5){this.aimX=5;this.aimXDir=1;}
+      if(this.aimY>=95){this.aimY=95;this.aimYDir=-1;}
+      if(this.aimY<=5){this.aimY=5;this.aimYDir=1;}
+      this.render();
+    },20);
+  },
+  shoot(){
+    if(!this.aiming) return;
+    clearInterval(this.aimInt);
+    this.aiming=false;
+    this.shotsLeft--;
+    // Distance from center (50,50)
+    const dx=this.aimX-50, dy=this.aimY-50;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    let points=0, hit='';
+    if(dist<8){ points=50; hit='🎯 BULLSEYE!'; }
+    else if(dist<18){ points=25; hit='inner ring'; }
+    else if(dist<28){ points=15; hit='middle ring'; }
+    else if(dist<38){ points=10; hit='outer ring'; }
+    else if(dist<48){ points=5; hit='edge'; }
+    else{ points=0; hit='miss'; }
+    this.score+=points; this.lastHit={x:this.aimX, y:this.aimY, points, hit};
+    if(points>=25){SFX.holy(); haptic(20);}
+    else if(points>0){SFX.correct(); haptic(10);}
+    else{SFX.wrong(); haptic(20);}
+    this.render();
+    if(this.shotsLeft<=0){ setTimeout(()=>this.end(),700); return; }
+    setTimeout(()=>this.startAim(), 800);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🎯 Darts</b> · score: <b>${this.score}</b> · shots left: <b>${this.shotsLeft}</b>${this.lastHit?` · last: ${this.lastHit.hit} +${this.lastHit.points}`:''}`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','aim moves auto · tap THROW'));
+    // Dartboard
+    const board=el('div','');
+    board.style.cssText='position:relative;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,#FBBF24 0%,#FBBF24 8%,#7C2D12 8%,#7C2D12 18%,#10B981 18%,#10B981 28%,#7C2D12 28%,#7C2D12 38%,#0EA5E9 38%,#0EA5E9 48%,#0F172A 48%);border:4px solid #1E3A8A;margin:10px 0';
+    // Aim crosshair
+    const aim=el('div','');
+    aim.style.cssText=`position:absolute;left:${this.aimX}%;top:${this.aimY}%;transform:translate(-50%,-50%);font-size:24px;pointer-events:none;${this.aiming?'animation:pulse 1s infinite':''}`;
+    aim.textContent = this.aiming ? '⊕' : '🎯';
+    board.appendChild(aim);
+    wrap.appendChild(board);
+    const btn=el('button','btn-primary',this.aiming?'🎯 THROW':'next...');
+    btn.style.cssText='padding:16px 40px;font-size:16px';
+    if(this.aiming) btn.onclick=()=>this.shoot();
+    wrap.appendChild(btn);
+    area.appendChild(wrap);
+  },
+  end(){
+    if(this.aimInt) clearInterval(this.aimInt);
+    const won=this.score>=120;
+    const r=won?{coin:50+Math.round(this.score*0.7),brain:3}:{coin:Math.max(15,this.score)};
+    recordResult('speed','darts',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score} points · 🎯`,emoji:'🎯',retry:()=>DartsGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} points`,msg:'aim for 120+!',retry:()=>DartsGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.aimInt) clearInterval(this.aimInt);}
+};
+
+// ====================================================================
+// 🎮 GAME 39 · SEA BATTLE (Mind Games) · find 4 hidden ships in 5×5 grid
+// ====================================================================
+const SeaBattleGame = {
+  start(){
+    State.gameInst=this;
+    this.size=5;
+    this.grid=Array.from({length:this.size},()=>Array(this.size).fill(0));
+    this.revealed=Array.from({length:this.size},()=>Array(this.size).fill(false));
+    // Place 4 ships (each 1 cell · simpler)
+    let placed=0;
+    while(placed<4){
+      const r=Math.floor(Math.random()*this.size), c=Math.floor(Math.random()*this.size);
+      if(this.grid[r][c]===0){ this.grid[r][c]=1; placed++; }
+    }
+    this.shipsLeft=4;
+    this.shots=0;
+    this.maxShots=15;
+    this.render();
+    UI.show('game');
+  },
+  tap(r,c){
+    if(this.revealed[r][c] || this.shots>=this.maxShots) return;
+    this.revealed[r][c]=true;
+    this.shots++;
+    if(this.grid[r][c]===1){
+      this.shipsLeft--;
+      SFX.correct(); haptic(20);
+      Toast.show('🚢 HIT!');
+    }else{
+      SFX.wrong(); haptic(10);
+    }
+    this.render();
+    if(this.shipsLeft<=0 || this.shots>=this.maxShots){ setTimeout(()=>this.end(),500); }
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🚢 Sea Battle</b> · ships left: <b>${this.shipsLeft}/4</b> · shots: <b>${this.shots}/${this.maxShots}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','find 4 hidden ships in 15 shots'));
+    const grid=el('div','');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(5,52px);gap:4px;background:rgba(34,211,238,.2);padding:6px;border-radius:14px;margin:14px 0';
+    for(let r=0;r<this.size;r++) for(let c=0;c<this.size;c++){
+      const cell=el('div','');
+      const rev=this.revealed[r][c];
+      const hit=rev && this.grid[r][c]===1;
+      const miss=rev && this.grid[r][c]===0;
+      cell.style.cssText=`width:52px;height:52px;border-radius:8px;background:${hit?'#EF4444':miss?'rgba(255,255,255,.15)':'rgba(34,211,238,.4)'};display:grid;place-items:center;cursor:${rev?'default':'pointer'};font-size:24px;border:1px solid ${hit?'#FBBF24':'rgba(255,255,255,.2)'}`;
+      cell.textContent = hit?'💥':miss?'·':'';
+      if(!rev) cell.onclick=()=>this.tap(r,c);
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    const won = this.shipsLeft<=0;
+    const r=won?{coin:80+(this.maxShots-this.shots)*10,brain:4}:{coin:Math.max(15,(4-this.shipsLeft)*15)};
+    recordResult('mind','seabattle',won,r);
+    if(won) Modal.win({rewards:r,title:`All 4 sunk in ${this.shots} shots!`,emoji:'🚢',retry:()=>SeaBattleGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${4-this.shipsLeft}/4 sunk`,msg:'all 4 for the win!',retry:()=>SeaBattleGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 40 · DOTS & BOXES 3×3 (Logic Lab) · vs CPU
+// ====================================================================
+const DotsBoxesGame = {
+  start(){
+    State.gameInst=this;
+    this.size=3; // 3x3 dots = 2x2 box grid
+    // Lines: horizontal[row][col] for row 0..2, col 0..1; vertical[row][col] row 0..1, col 0..2
+    this.hLines = Array.from({length:this.size},()=>Array(this.size-1).fill(0));
+    this.vLines = Array.from({length:this.size-1},()=>Array(this.size).fill(0));
+    this.boxes = Array.from({length:this.size-1},()=>Array(this.size-1).fill(0));
+    this.turn=1; this.scoreYou=0; this.scoreCPU=0; this.done=false;
+    this.render();
+    UI.show('game');
+  },
+  drawH(r,c){ if(this.done||this.turn!==1||this.hLines[r][c])return; this._draw('h',r,c); },
+  drawV(r,c){ if(this.done||this.turn!==1||this.vLines[r][c])return; this._draw('v',r,c); },
+  _draw(type,r,c){
+    if(type==='h') this.hLines[r][c]=this.turn;
+    else this.vLines[r][c]=this.turn;
+    SFX.tap(); haptic(5);
+    const completed = this._checkBoxes(this.turn);
+    if(!completed){ this.turn = this.turn===1?2:1; }
+    this.render();
+    if(this._allDrawn()){ this.done=true; this.end(); return; }
+    if(this.turn===2){ setTimeout(()=>this._cpuMove(),700); }
+  },
+  _checkBoxes(player){
+    let completed=false;
+    for(let r=0;r<this.size-1;r++) for(let c=0;c<this.size-1;c++){
+      if(this.boxes[r][c]) continue;
+      const top=this.hLines[r][c], bot=this.hLines[r+1][c];
+      const lef=this.vLines[r][c], rig=this.vLines[r][c+1];
+      if(top && bot && lef && rig){
+        this.boxes[r][c]=player;
+        if(player===1) this.scoreYou++; else this.scoreCPU++;
+        completed=true;
+      }
+    }
+    return completed;
+  },
+  _cpuMove(){
+    if(this.done) return;
+    // CPU finds safe line OR completes a box if possible
+    const moves=[];
+    for(let r=0;r<this.size;r++) for(let c=0;c<this.size-1;c++) if(!this.hLines[r][c]) moves.push({t:'h',r,c});
+    for(let r=0;r<this.size-1;r++) for(let c=0;c<this.size;c++) if(!this.vLines[r][c]) moves.push({t:'v',r,c});
+    if(moves.length===0) return;
+    // Try to complete a box
+    let best=null;
+    for(const m of moves){
+      if(m.t==='h') this.hLines[m.r][m.c]=2; else this.vLines[m.r][m.c]=2;
+      const completedCount = this._countWouldComplete(2);
+      if(m.t==='h') this.hLines[m.r][m.c]=0; else this.vLines[m.r][m.c]=0;
+      if(completedCount>0){ best=m; break; }
+    }
+    if(!best) best=moves[Math.floor(Math.random()*moves.length)];
+    if(best.t==='h') this.hLines[best.r][best.c]=2; else this.vLines[best.r][best.c]=2;
+    SFX.tap();
+    const completed = this._checkBoxes(2);
+    if(!completed){ this.turn=1; }
+    this.render();
+    if(this._allDrawn()){ this.done=true; this.end(); return; }
+    if(this.turn===2 && !this.done){ setTimeout(()=>this._cpuMove(),700); }
+  },
+  _countWouldComplete(player){
+    let count=0;
+    for(let r=0;r<this.size-1;r++) for(let c=0;c<this.size-1;c++){
+      if(this.boxes[r][c]) continue;
+      const top=this.hLines[r][c], bot=this.hLines[r+1][c];
+      const lef=this.vLines[r][c], rig=this.vLines[r][c+1];
+      if(top && bot && lef && rig) count++;
+    }
+    return count;
+  },
+  _allDrawn(){
+    for(const row of this.hLines) for(const v of row) if(!v) return false;
+    for(const row of this.vLines) for(const v of row) if(!v) return false;
+    return true;
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>📦 Dots & Boxes</b> · you: <b>${this.scoreYou}</b> · CPU: <b>${this.scoreCPU}</b> · ${this.turn===1?'your turn':'CPU thinking...'}`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','click line · complete box = extra turn'));
+    const board=el('div',''); board.style.cssText='display:inline-block;padding:20px;background:rgba(255,255,255,.04);border-radius:14px;margin:14px 0';
+    // Build SVG-like grid using positioned divs
+    const cellSize=60;
+    const total=cellSize*(this.size-1);
+    const svg=el('div',''); svg.style.cssText=`position:relative;width:${total}px;height:${total}px`;
+    // Boxes background
+    for(let r=0;r<this.size-1;r++) for(let c=0;c<this.size-1;c++){
+      const b=el('div','');
+      const owner=this.boxes[r][c];
+      b.style.cssText=`position:absolute;left:${c*cellSize}px;top:${r*cellSize}px;width:${cellSize}px;height:${cellSize}px;background:${owner===1?'rgba(245,158,11,.3)':owner===2?'rgba(239,68,68,.3)':'transparent'};display:grid;place-items:center;color:#fff;font-weight:800`;
+      b.textContent = owner===1?'Y':owner===2?'C':'';
+      svg.appendChild(b);
+    }
+    // H lines
+    for(let r=0;r<this.size;r++) for(let c=0;c<this.size-1;c++){
+      const line=el('div','');
+      const drawn=this.hLines[r][c];
+      line.style.cssText=`position:absolute;left:${c*cellSize+4}px;top:${r*cellSize-2}px;width:${cellSize-8}px;height:6px;background:${drawn?(drawn===1?'#FBBF24':'#EF4444'):'rgba(255,255,255,.15)'};border-radius:3px;cursor:${drawn?'default':'pointer'}`;
+      if(!drawn && this.turn===1) line.onclick=()=>this.drawH(r,c);
+      svg.appendChild(line);
+    }
+    // V lines
+    for(let r=0;r<this.size-1;r++) for(let c=0;c<this.size;c++){
+      const line=el('div','');
+      const drawn=this.vLines[r][c];
+      line.style.cssText=`position:absolute;left:${c*cellSize-2}px;top:${r*cellSize+4}px;width:6px;height:${cellSize-8}px;background:${drawn?(drawn===1?'#FBBF24':'#EF4444'):'rgba(255,255,255,.15)'};border-radius:3px;cursor:${drawn?'default':'pointer'}`;
+      if(!drawn && this.turn===1) line.onclick=()=>this.drawV(r,c);
+      svg.appendChild(line);
+    }
+    // Dots
+    for(let r=0;r<this.size;r++) for(let c=0;c<this.size;c++){
+      const dot=el('div','');
+      dot.style.cssText=`position:absolute;left:${c*cellSize-5}px;top:${r*cellSize-5}px;width:10px;height:10px;border-radius:50%;background:#FBBF24`;
+      svg.appendChild(dot);
+    }
+    board.appendChild(svg);
+    wrap.appendChild(board);
+    area.appendChild(wrap);
+  },
+  end(){
+    const won=this.scoreYou>this.scoreCPU;
+    const tie=this.scoreYou===this.scoreCPU;
+    const r=won?{coin:70+this.scoreYou*10,brain:4}:tie?{coin:30}:{coin:15};
+    recordResult('logic','dotsboxes',won,r);
+    setTimeout(()=>{
+      if(won) Modal.win({rewards:r,title:`${this.scoreYou}-${this.scoreCPU} · YOU WIN!`,emoji:'📦',retry:()=>DotsBoxesGame.start(),lobby:()=>App.toLobby()});
+      else if(tie) Modal.lose({title:`${this.scoreYou}-${this.scoreCPU} · TIE`,msg:'draw · play again!',retry:()=>DotsBoxesGame.start(),lobby:()=>App.toLobby()});
+      else Modal.lose({title:`${this.scoreYou}-${this.scoreCPU} · CPU wins`,msg:'capture more boxes!',retry:()=>DotsBoxesGame.start(),lobby:()=>App.toLobby()});
+    },500);
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 41 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
