@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.59.1 · CHART FINISH · adaptive scaling · anti-freeze · 3-currency UI · onboarding skip · settings trim · 🙏</div>
+  <div class="splash-foot">v0.60.0 · chart finish · avatar simplified · 8 weak games trimmed · BP passive · ready for players · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1306,7 +1306,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.59.1</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.60.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1423,7 +1423,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.59.1';
+const VERSION = '0.60.0';
 
 // ----- STATE -----
 const State = {
@@ -8198,7 +8198,6 @@ const ROOMS = {
     {id:'synonym',em:'🔁',name:'Synonym Sprint',sub:'pick the synonym · 45 sec · 10 rounds',launch:()=>SynonymGame.start()},
     {id:'wordbuild',em:'🔨',name:'Word Build',sub:'build words from 7 random letters · 90s',launch:()=>WordBuildGame.start()},
     {id:'antonym',em:'🔄',name:'Antonym Sprint',sub:'pick the opposite · 45s · 10 rounds',launch:()=>AntonymGame.start()},
-    {id:'spelling',em:'🐝',name:'Spelling Bee',sub:'pick correct spelling · 45 sec',launch:()=>SpellingGame.start()},
     {id:'wordquiz',em:'📚',name:'Word Quiz',sub:'mixed grammar + vocab · 60 sec',launch:()=>NewWordQuizGame.start()},
     {id:'wordsearch',em:'🔤',name:'Word Search',sub:'find 3 hidden words in the grid',launch:()=>WordSearchGame.start()},
   ]},
@@ -8227,12 +8226,7 @@ const ROOMS = {
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
     {id:'sequence',em:'🧮',name:'Sequence Solve',sub:'find the next number · 60 sec',launch:()=>SequenceGame.start()},
     {id:'quicksum',em:'➗',name:'Quick Sum',sub:'2 numbers that sum to target · 45 sec',launch:()=>QuickSumGame.start()},
-    {id:'fastadd',em:'⚡',name:'Fast Add',sub:'add 2-digit numbers · 30 sec',launch:()=>FastAddGame.start()},
-    {id:'roman',em:'🏛️',name:'Roman Numeral',sub:'pick the value · 10 rounds · 45 sec',launch:()=>RomanGame.start()},
-    {id:'ordersort',em:'📊',name:'Order Sort',sub:'sort 5 numbers ascending · 8 rounds',launch:()=>OrderSortGame.start()},
-    {id:'pyramid',em:'🔺',name:'Pyramid Add',sub:'top = sum of 2 below · find missing',launch:()=>PyramidGame.start()},
     {id:'equation',em:'🔣',name:'Equation Solve',sub:'solve for x · 10 rounds · 60 sec',launch:()=>NewEquationGame.start()},
-    {id:'decimal',em:'🔢',name:'Decimal Match',sub:'decimal → fraction · 60 sec',launch:()=>NewDecimalGame.start()},
     {id:'calcrace',em:'⚡',name:'Calc Race',sub:'rapid mental math · 12 Qs · 45 sec',launch:()=>NewCalcRaceGame.start()},
     {id:'2048',em:'🔢',name:'2048',sub:'merge tiles · reach 2048 · 4x4 grid',launch:()=>G2048.start()},
   ]},
@@ -8242,8 +8236,6 @@ const ROOMS = {
     {id:'trivia',em:'🧠',name:'Bible Trivia',sub:'10 random Qs · 30+ pool · 60 sec',launch:()=>TriviaGame.start()},
     {id:'parable',em:'🕊️',name:'Parable Match',sub:'parable → meaning · 8 rounds',launch:()=>ParableGame.start()},
     {id:'commandments',em:'📜',name:'10 Commandments',sub:'match number to commandment',launch:()=>CommandmentsGame.start()},
-    {id:'disciple',em:'⚓',name:'Disciple Match',sub:'match disciple to their fact · 60 sec',launch:()=>DiscipleGame.start()},
-    {id:'prophecy',em:'🕊️',name:'Prophecy Match',sub:'OT prophecy → NT fulfillment',launch:()=>ProphecyGame.start()},
     {id:'beatitudes',em:'🙏',name:'Beatitudes',sub:'finish the blessing · Matthew 5 · 90 sec',launch:()=>NewBeatitudesGame.start()},
     {id:'psalm23',em:'🐑',name:'Psalm 23',sub:'fill the blank · KJV · 60 sec',launch:()=>NewPsalm23Game.start()},
   ]},
@@ -10781,6 +10773,7 @@ const App = {
       <div class="theme-grid">
         ${THEME_PRESETS.map(t=>`<div class="theme-tile" onclick="App.applyTheme('${t.id}')"><span class="em">${t.em}</span><span class="lbl">${t.name}</span></div>`).join('')}
       </div>
+      <details style="margin-top:14px"><summary style="cursor:pointer;color:var(--gold-bright);font-size:12px;padding:8px 0">🎬 ADVANCED · scene · frame · animation</summary>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🌅 SCENE</h3>
       <div class="theme-grid">
         ${SCENES.map(s=>`<div class="theme-tile ${scene===s.id?'sel':''}" onclick="App.setSceneFrameAnim('scene','${s.id}')"><span class="em">${s.em}</span><span class="lbl">${s.name}</span></div>`).join('')}
@@ -10793,13 +10786,14 @@ const App = {
       <div class="theme-grid">
         ${ANIMS.map(a=>`<div class="theme-tile ${anim===a.id?'sel':''}" onclick="App.setSceneFrameAnim('anim','${a.id}')"><span class="em">${a.em}</span><span class="lbl">${a.name}</span></div>`).join('')}
       </div>
+      </details>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📛 TITLE</h3>
       <div class="title-picker">
         ${TITLES.map(t=>`<span class="title-pick ${title===t?'sel':''} ${!t?'empty':''}" onclick="App.setTitle('${t.replace(/'/g,'\\\'')}')">${t||'(none)'}</span>`).join('')}
       </div>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📝 BIO / TAGLINE</h3>
       <textarea class="bio-input" maxlength="140" rows="2" placeholder="your motto · max 140 chars" oninput="App.setBio(this.value)">${bio.replace(/</g,'&lt;')}</textarea>
-      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎨 COLOR + GLOW</h3>
+      <details><summary style="cursor:pointer;color:var(--gold-bright);font-size:12px;padding:8px 0;margin-top:8px">🎨 ADVANCED · color · saturation · brightness · glow</summary>
       <div class="av-hue-row">
         <span style="font-size:11px;font-weight:700;opacity:.85;width:60px">🎨 hue</span>
         <input type="range" class="av-hue-slider" min="0" max="360" value="${hue}" oninput="App.setHue(this.value)">
@@ -10820,6 +10814,7 @@ const App = {
         <input type="range" min="0" max="100" value="${glow}" class="av-hue-slider" style="background:linear-gradient(90deg,#000,#fbbf24)" oninput="App.setColorAdj('glow',this.value)">
         <span style="font-size:11px;font-weight:700;width:36px;text-align:right">${glow}%</span>
       </div>
+      </details>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">👕 SLOTS</h3>`;
 
     slots.forEach(slot=>{
