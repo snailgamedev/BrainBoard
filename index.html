@@ -1179,7 +1179,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.13.0 · 20 games · TZ-aware · time-lock · 🙏</div>
+  <div class="splash-foot">v0.14.0 · 22 games · cashout · live dict · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1324,7 +1324,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.13.0';
+const VERSION = '0.14.0';
 
 // ----- STATE -----
 const State = {
@@ -1626,6 +1626,43 @@ function _antiCheatClamp(rewards){
   return out;
 }
 
+// v0.14 DEFAULT CASHOUT · uses common game-state fields if game doesn't expose .cashOut()
+function _defaultCashOut(game){
+  if(!game) return null;
+  // score-based games (Stroop/Math/Anagram/Color/Whack/Trivia/Define/Sequence/Spot/Hunt/Books)
+  if(typeof game.score === 'number' && game.score >= 3){
+    return {coin: Math.min(180, game.score * 5), brain: game.score>=8?2:1};
+  }
+  // memory match
+  if(game.matched && game.matched.size >= 4){
+    return {coin: Math.min(120, game.matched.size * 6), brain: 1};
+  }
+  // simon (sequence array)
+  if(game.sequence && game.sequence.length >= 3){
+    return {coin: Math.min(150, game.sequence.length * 8), brain: 1};
+  }
+  // round-based (reaction/code)
+  if(typeof game.round === 'number' && game.round >= 1){
+    return {coin: Math.min(140, game.round * 12)};
+  }
+  // number tap (target tracks progress)
+  if(typeof game.target === 'number' && game.target > 5){
+    return {coin: Math.min(160, (game.target-1) * 5), brain: 1};
+  }
+  // wordle (row tracks attempts; cells filled = effort)
+  if(Array.isArray(game.cellStates) && game.row > 0){
+    const greens = game.cellStates.flat().filter(s=>s==='green').length;
+    const yellows = game.cellStates.flat().filter(s=>s==='yellow').length;
+    if(greens+yellows >= 3) return {coin: Math.min(80, greens*8 + yellows*3)};
+  }
+  // lights out (some moves but not cleared)
+  if(typeof game.moves === 'number' && game.moves >= 4 && game.grid){
+    const lit = game.grid.filter(x=>x).length;
+    if(lit < game.grid.length-1) return {coin: 25};
+  }
+  return null;
+}
+
 // Tab visibility: pause active game timers when tab hidden, resume on return.
 // Prevents the "leave window open and come back" cheat.
 const VisibilityGuard = {
@@ -1798,6 +1835,25 @@ function isValidWord(w){
   return VALID_5.has(w.toUpperCase());
 }
 
+// v0.14 ONLINE FALLBACK · cache results in localStorage
+async function isValidWordAsync(w){
+  w = w.toUpperCase();
+  if(VALID_5.has(w)) return true;
+  if(!State.data._wordCache) State.data._wordCache = {};
+  const cache = State.data._wordCache;
+  if(cache[w]!==undefined) return cache[w];
+  try{
+    const ctrl = new AbortController();
+    setTimeout(()=>ctrl.abort(), 3500);
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w.toLowerCase()}`, {signal:ctrl.signal});
+    cache[w] = res.ok;
+    Save.write();
+    return res.ok;
+  }catch{
+    return false;
+  }
+}
+
 // ----- VERSES FOR FILL-IN (with blank target) -----
 const FILL_VERSES = [
   {t:"I can do all things through ___ who strengthens me.", a:"CHRIST", o:["CHRIST","FAITH","GOD","HOPE"], r:"Philippians 4:13"},
@@ -1875,6 +1931,11 @@ const ACHIEVEMENTS = [
   {id:'define_5',em:'📚',t:'Lexicon',d:'Win 5 Define It games'},
   {id:'tap_sub15',em:'⚡',t:'Lightning Tap',d:'Number Tap under 15s'},
   {id:'gameset_20',em:'🎮',t:'Twenty Strong',d:'Win 20+ across the new games'},
+  // v0.14
+  {id:'hangman_5',em:'🪢',t:'Word Saver',d:'Win 5 Hangman games'},
+  {id:'riddle_5',em:'🦉',t:'Riddler',d:'Win 5 Riddle Vault games'},
+  {id:'cashout_first',em:'💰',t:'Cash Saint',d:'Cash out a game for the first time'},
+  {id:'cashout_5',em:'💰',t:'Cash Master',d:'Cash out 5 games'},
 ];
 
 // ====================================================================
@@ -2055,9 +2116,11 @@ const Ach = {
     if((p['word:define']?.wins||0)>=5) Ach.unlock('define_5');
     const newGameWins = (p['script:trivia']?.wins||0)+(p['word:define']?.wins||0)+(p['speed:numbertap']?.wins||0);
     if(newGameWins>=20) Ach.unlock('gameset_20');
-    // try-everything: played all 19 non-daily games
-    const allIds=['word:wordle','word:anagram','word:define','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','script:trivia','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code','speed:numbertap'];
+    // try-everything: played all 21 non-daily games
+    const allIds=['word:wordle','word:anagram','word:define','word:hangman','brain:memory','brain:simon','mind:stroop','mind:reaction','mind:riddle','num:math','num:sequence','script:verse','script:books','script:trivia','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code','speed:numbertap'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
+    if((p['word:hangman']?.wins||0)>=5) Ach.unlock('hangman_5');
+    if((p['mind:riddle']?.wins||0)>=5) Ach.unlock('riddle_5');
     // dna_balanced: 5+ in every axis
     const dna = State.data.brainDNA||{};
     if(['memory','speed','pattern','logic','word','faith'].every(k=>(dna[k]||0)>=5)) Ach.unlock('dna_balanced');
@@ -2257,6 +2320,8 @@ const GAME_INTROS = {
   'word:define':    {rules:['Definition shown · pick the matching word','4 multi-choice options','10 questions per run'], win:'7/10 correct', timer:'60 sec', reward:'+40–110 🪙 · +4 🧠', dna:'word'},
   'script:trivia':  {rules:['Random Bible question','4 multi-choice options','10 questions per run'], win:'7/10 correct', timer:'60 sec', reward:'+50–130 🪙 · +5 ✝️', dna:'faith'},
   'speed:numbertap':{rules:['Numbers 1-15 in random spots','Tap them IN ORDER (1, 2, 3...)','Wrong tap = no penalty, just wait'], win:'Clear under 20s', timer:'no limit', reward:'+50–300 🪙 · +4 🧠', dna:'speed'},
+  'word:hangman':   {rules:['Guess letters one at a time','Wrong guess = lose a life · 6 lives','Solve before you run out'], win:'Solve the word', timer:'no timer', reward:'+60–150 🪙 · +3 🧠', dna:'word'},
+  'mind:riddle':    {rules:['Read the riddle carefully','Pick the answer from 4 options','8 riddles · 90 sec'], win:'5+ correct', timer:'90 sec', reward:'+50–115 🪙 · +4 🧠', dna:'pattern'},
   'daily:dotd':     {rules:['Today\'s spotlight game','Same rules as the original','2x rewards multiplier!'], win:'Per game rules', timer:'varies', reward:'2x base rewards 🔥', dna:'speed'},
 };
 
@@ -2309,6 +2374,7 @@ const ROOMS = {
     {id:'wordle',em:'🔤',name:'5-Letter Daily',sub:'guess the 5-letter word in 6 tries',launch:()=>WordleGame.start()},
     {id:'anagram',em:'📜',name:'Anagram Storm',sub:'unscramble · 45-sec sprint · multi-choice',launch:()=>AnagramGame.start()},
     {id:'define',em:'📚',name:'Define It',sub:'definition → pick the word · 10 rounds',launch:()=>DefineGame.start()},
+    {id:'hangman',em:'🪢',name:'Hangman',sub:'guess the word · 6 wrong = hung',launch:()=>HangmanGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
@@ -2317,6 +2383,7 @@ const ROOMS = {
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
     {id:'reaction',em:'⚡',name:'Reaction Tap',sub:'wait for green · tap fast · 5 rounds',launch:()=>ReactionGame.start()},
+    {id:'riddle',em:'🦉',name:'Riddle Vault',sub:'8 random riddles · 90 sec · 5+ wins',launch:()=>RiddleGame.start()},
   ]},
   num:{em:'🔢',name:'Number Crunch',sub:'math · sequence · 24',games:[
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
@@ -2692,11 +2759,14 @@ const App = {
     const body = document.getElementById('rm-body');
     body.innerHTML = '';
     r.games.forEach(g=>{
-      const stat = State.data.perGame[`${rid}:${g.id}`] || {wins:0,plays:0,best:0};
+      const key = `${rid}:${g.id}`;
+      const stat = State.data.perGame[key] || {wins:0,plays:0,best:0};
+      const hasPR = !!State.data.prRecords?.[key];
+      const prBadge = hasPR ? '<div class="stat" style="background:rgba(124,58,237,.25);color:#c4b5fd;font-size:9px;margin-bottom:2px">💎 PR</div>' : '';
       const card = el('button','game-card',`
         <div class="em">${g.em}</div>
         <div class="info"><h3>${g.name}</h3><div class="sub">${g.sub}</div></div>
-        <div class="stat">${stat.wins}🏆</div>`);
+        <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">${prBadge}<div class="stat">${stat.wins}🏆</div></div>`);
       card.onclick = ()=>{ haptic(8); GameIntro.show(rid, g); };
       body.appendChild(card);
     });
@@ -2761,6 +2831,80 @@ const App = {
     }
   },
   exitGame(){
+    if(!State.gameInst){ App.toLobby(); return; }
+    const game = State.gameInst;
+    const cash = (typeof game.cashOut === 'function') ? game.cashOut() : _defaultCashOut(game);
+    // If no progress at all, just quit immediately
+    if(!cash || !cash.coin){
+      App._doExit(false);
+      return;
+    }
+    // Pause any timers while dialog is up
+    if(game.timer){ clearInterval(game.timer); game._wasTimer = true; }
+    if(game.spawnTimer){ clearInterval(game.spawnTimer); game._wasSpawn = true; }
+    if(game.tickInt){ clearInterval(game.tickInt); game._wasTick = true; }
+    Modal.show(`
+      <div class="big">⏸️</div>
+      <h3>quit this game?</h3>
+      <p class="dim" style="margin:8px 0;font-size:13px">you have progress · keep going or cash out partial rewards</p>
+      <div class="reward-row">
+        ${Object.entries(cash).map(([k,v])=>{const e={coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||'';return v?`<span class="reward-chip">+${v} ${e}</span>`:''}).join('')}
+      </div>
+      <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:14px">
+        <button class="btn-primary" onclick="App._exitChoice('resume')">▶ keep playing</button>
+        <button class="btn-secondary" onclick="App._exitChoice('cashout')">💰 cash out · take rewards</button>
+        <button class="btn-secondary" style="background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4)" onclick="App._exitChoice('quit')">❌ quit · no rewards</button>
+      </div>`);
+    State._pendingExit = {game, cash};
+  },
+  _exitChoice(choice){
+    Modal.close();
+    const pe = State._pendingExit; if(!pe) return;
+    State._pendingExit = null;
+    if(choice==='resume'){
+      // Resume any paused timers
+      const g = pe.game;
+      if(g._wasTimer && g.timer===null||g._wasTimer){
+        // Re-create timer based on game type — simplest: trigger a render cycle
+        if(typeof g.render === 'function') g.render();
+        // For timed games, restart the interval if they had one
+        if(g.timeLeft!==undefined && g._wasTimer){
+          g.timer = setInterval(()=>{
+            g.timeLeft--;
+            if(g.timeLeft<=0){ g.end&&g.end(); return; }
+            g.render();
+          }, 1000);
+        }
+      }
+      if(g._wasSpawn && typeof g.spawn==='function'){
+        g.spawnTimer = setInterval(()=>g.spawn(), 800);
+      }
+      if(g._wasTick && typeof g.render==='function'){
+        g.tickInt = setInterval(()=>g.render(), 100);
+      }
+      delete g._wasTimer; delete g._wasSpawn; delete g._wasTick;
+      return;
+    }
+    if(choice==='cashout' && pe.cash){
+      if(pe.game.cleanup) pe.game.cleanup();
+      const c = _antiCheatClamp(pe.cash);
+      Wallet.add(c);
+      State.data._cashoutCount = (State.data._cashoutCount||0)+1;
+      Save.write();
+      Ach.unlock('cashout_first');
+      if((State.data._cashoutCount||0)>=5) Ach.unlock('cashout_5');
+      Activity.log('win','💰',`cashed out: +${c.coin||0} 🪙`);
+      Toast.show(`💰 cashed out · +${c.coin||0} 🪙`);
+      SFX.correct(); haptic(20);
+    }
+    if(choice==='quit'){
+      if(pe.game.cleanup) pe.game.cleanup();
+    }
+    State.gameInst = null;
+    if(State.currentRoom) App.openRoom(State.currentRoom);
+    else App.toLobby();
+  },
+  _doExit(){
     if(State.gameInst?.cleanup) State.gameInst.cleanup();
     State.gameInst = null;
     if(State.currentRoom) App.openRoom(State.currentRoom);
@@ -3498,14 +3642,20 @@ const WordleGame = {
     haptic(5);
     this.render();
   },
-  submit(){
-    if(this.done || this.col<5) return;
+  async submit(){
+    if(this.done || this.col<5 || this._submitting) return;
     const guess = this.guesses[this.row].join('');
-    // v0.9 anti-cheat: must be a real word
-    if(!isValidWord(guess)){
+    // v0.14 anti-cheat: must be a real word (local set OR online dict fallback)
+    this._submitting = true;
+    let valid = isValidWord(guess);
+    if(!valid){
+      Toast.show('checking…');
+      valid = await isValidWordAsync(guess);
+    }
+    this._submitting = false;
+    if(!valid){
       Toast.show('🚫 not a real word');
       SFX.wrong(); haptic(20);
-      // shake current row
       const rows = document.querySelectorAll('.word-row');
       const cur = rows[this.row];
       if(cur){ cur.classList.add('shake-card'); setTimeout(()=>cur.classList.remove('shake-card'),350); }
@@ -4933,15 +5083,184 @@ const NumberTapGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 21 · DAILY (rotating mini)
+// 🎮 GAME 21 · HANGMAN (Word Lab)
+// ====================================================================
+const HANG_WORDS = ['FAITH','GRACE','LIGHT','EARTH','HEART','POWER','TRUST','WATER','FLAME','BRAVE','SAINT','SMILE','OCEAN','NOBLE','EAGLE','CROWN','GLORY','SHEEP','BREAD','PSALM','ANGEL','RIVER','STONE','SHARP','SHINE','DREAM','PRIDE','MERCY','WORDS','CHRIST','SAVIOR','PRAYER','SPIRIT','WONDER','BELIEVE','REJOICE','TRIUMPH','VICTORY'];
+const HangmanGame = {
+  start(){
+    State.gameInst=this;
+    this.target = HANG_WORDS[Math.floor(Math.random()*HANG_WORDS.length)];
+    this.guessed = new Set();
+    this.wrong = 0;
+    this.maxWrong = 6;
+    this.done = false;
+    this.render();
+    UI.show('game');
+  },
+  guess(letter){
+    if(this.done || this.guessed.has(letter)) return;
+    this.guessed.add(letter);
+    if(!this.target.includes(letter)){
+      this.wrong++;
+      SFX.wrong(); haptic(15);
+      if(this.wrong >= this.maxWrong){
+        this.done = true;
+        this.render();
+        recordResult('word','hangman',false,{coin:Math.max(10,(this.target.length-this.wrong)*4)});
+        setTimeout(()=>Modal.lose({title:'Hung!',msg:'better luck next time',answer:this.target,
+          retry:()=>HangmanGame.start(),lobby:()=>App.toLobby()}),400);
+        return;
+      }
+    }else{
+      SFX.correct(); haptic(8);
+      // Check win
+      const allGuessed = [...this.target].every(c=>this.guessed.has(c));
+      if(allGuessed){
+        this.done = true;
+        this.render();
+        const reward = {coin: 60 + (this.maxWrong-this.wrong)*15, brain:3};
+        recordResult('word','hangman',true,reward);
+        setTimeout(()=>Modal.win({rewards:reward,title:`Saved! ${this.maxWrong-this.wrong} chances left`,emoji:'🎉',
+          retry:()=>HangmanGame.start(),lobby:()=>App.toLobby()}),400);
+        return;
+      }
+    }
+    this.render();
+  },
+  cashOut(){
+    if(this.wrong < this.maxWrong){
+      const correctLetters = [...this.target].filter(c=>this.guessed.has(c)).length;
+      if(correctLetters>=2) return {coin: correctLetters*8};
+    }
+    return null;
+  },
+  render(){
+    const lives = this.maxWrong - this.wrong;
+    document.getElementById('g-stats').innerHTML = `<b>📖 Hangman</b> · lives: <b>${'❤️'.repeat(lives)}${'🖤'.repeat(this.wrong)}</b>`;
+    const area=document.getElementById('g-area');
+    area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    // Word display with blanks
+    const wordHtml = [...this.target].map(c=>this.guessed.has(c)?c:'_').join(' ');
+    const w = el('div','math-q', wordHtml);
+    w.style.color = 'var(--gold-bright)';
+    w.style.fontFamily="'Cinzel',serif";
+    w.style.letterSpacing='.1em';
+    wrap.appendChild(w);
+    // Wrong letters
+    const wrongLetters = [...this.guessed].filter(c=>!this.target.includes(c));
+    if(wrongLetters.length){
+      wrap.appendChild(el('div','dim','tried: '+wrongLetters.join(' ')));
+    }
+    // Keyboard
+    const kb = el('div','word-keyboard');
+    const rows = ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+    rows.forEach(rk=>{
+      const r = el('div','word-keyrow');
+      [...rk].forEach(k=>{
+        const used = this.guessed.has(k);
+        const isRight = used && this.target.includes(k);
+        const isWrong = used && !this.target.includes(k);
+        const cls = isRight?'green':isWrong?'gray':'';
+        const b = el('button',`word-key ${cls}`, k);
+        if(!used && !this.done) b.onclick=()=>this.guess(k);
+        r.appendChild(b);
+      });
+      kb.appendChild(r);
+    });
+    wrap.appendChild(kb);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 22 · RIDDLE VAULT (Mind Games)
+// ====================================================================
+const RIDDLES = [
+  {q:'I speak without a mouth and hear without ears. I have no body, but come alive with wind.',o:['Echo','Cloud','Shadow','Whisper'],a:'Echo'},
+  {q:'The more you take, the more you leave behind.',o:['Memories','Footsteps','Time','Words'],a:'Footsteps'},
+  {q:"What has hands but cannot clap?",o:['Tree','Clock','Statue','Glove'],a:'Clock'},
+  {q:'I have keys but no locks. I have space but no room. You can enter, but not go inside.',o:['Map','Keyboard','Library','House'],a:'Keyboard'},
+  {q:"What gets wetter the more it dries?",o:['Sponge','Soap','Towel','Cloth'],a:'Towel'},
+  {q:"What can travel around the world while staying in a corner?",o:['Stamp','Bird','Coin','Letter'],a:'Stamp'},
+  {q:"I'm tall when I'm young, and short when I'm old. What am I?",o:['Tree','Candle','Person','Mountain'],a:'Candle'},
+  {q:"What has a head and a tail, but no body?",o:['Coin','Snake','Ghost','River'],a:'Coin'},
+  {q:'What has many teeth but cannot bite?',o:['Comb','Saw','Zipper','Gear'],a:'Comb'},
+  {q:'What has 88 keys but cannot open a single door?',o:['Computer','Piano','Calendar','Library'],a:'Piano'},
+  {q:'What has a face and two hands but no arms or legs?',o:['Mirror','Doll','Clock','Painting'],a:'Clock'},
+  {q:"What goes up but never comes down?",o:['Smoke','Age','Balloon','Steam'],a:'Age'},
+  {q:'What can you catch but not throw?',o:['Cold','Ball','Fish','Fly'],a:'Cold'},
+  {q:'What runs but never walks, has a bed but never sleeps?',o:['River','Train','Clock','Watch'],a:'River'},
+  {q:"What has cities but no houses, mountains but no trees?",o:['Map','Painting','Globe','Book'],a:'Map'},
+];
+const RiddleGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.q=0; this.timeLeft=90;
+    this.questions = [...RIDDLES].sort(()=>Math.random()-.5).slice(0,8);
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    UI.show('game');
+  },
+  next(){
+    if(this.q>=this.questions.length){this.end();return;}
+    this.current = this.questions[this.q];
+    this.options = [...this.current.o].sort(()=>Math.random()-.5);
+    this.q++;
+    this.render();
+  },
+  pick(o){
+    if(o===this.current.a){ this.score++; SFX.correct(); haptic(8); }
+    else{ SFX.wrong(); haptic(20); }
+    this.next();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>🎯 Riddle Vault</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area');
+    area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','riddle '+this.q+' of 8'));
+    const w = el('div','verse-card');
+    w.innerHTML = `"${this.current.q}"`;
+    w.style.fontSize='14px';
+    wrap.appendChild(w);
+    const grid = el('div','verse-options');
+    this.options.forEach(o=>{
+      const b = el('button','verse-opt', o);
+      b.onclick=()=>this.pick(o);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=5;
+    const rewards = won?{coin:50+this.score*8, brain:4}:{coin:Math.max(15,this.score*4)};
+    recordResult('mind','riddle',won,rewards);
+    if(won) Modal.win({rewards,title:`${this.score}/8 · Sage!`,emoji:'🦉',
+      retry:()=>RiddleGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/8`,msg:'aim for 5+ correct!',
+      retry:()=>RiddleGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 23 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
-    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame, TriviaGame, DefineGame, NumberTapGame];
+    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame, TriviaGame, DefineGame, NumberTapGame, HangmanGame, RiddleGame];
     const pickIdx = day % games.length;
     const pick = games[pickIdx];
-    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color','🌟 Whack','🔑 Code','🧠 Trivia','📚 Define','🔢 Tap'];
+    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color','🌟 Whack','🔑 Code','🧠 Trivia','📚 Define','🔢 Tap','🪢 Hangman','🦉 Riddle'];
     Toast.show(`🎲 today's spotlight: <b>${names[pickIdx]}</b> · 2x rewards!`);
     State._dailyMultiplier = 2;
     setTimeout(()=>pick.start(), 800);
