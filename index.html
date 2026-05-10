@@ -1174,7 +1174,7 @@ button{
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
-  <div class="splash-foot">v0.8.2 · scroll fixed · mobile-safe · 🙏</div>
+  <div class="splash-foot">v0.9.0 · FAIR PLAY · anti-cheat · natural faith · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1317,7 +1317,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.8.2';
+const VERSION = '0.9.0';
 
 // ----- STATE -----
 const State = {
@@ -1335,7 +1335,7 @@ const DEFAULT_SAVE = {
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
-  settings:{sfx:true,haptic:true,kidSafe:false,tts:false},
+  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true},
   // v0.3 additions
   avatar:{character:'monk',hat:'none',face:'none',aura:'none',pet:'none',outfit:'plain'},
   activityLog:[], // recent events {ts, type, msg}
@@ -1595,6 +1595,61 @@ const VERSES = [
 ];
 function randomVerse(){return VERSES[Math.floor(Math.random()*VERSES.length)]}
 
+// ===== v0.9 SECULAR ENCOURAGEMENTS (mix in to keep faith natural) =====
+const ENCOURAGEMENTS = [
+  "🔥 clean run!","nice work · saint","that's the heat","smooth","back at it 🙌",
+  "well played","sharp eye","quick thinking","steady mind","keep cooking",
+  "pure form","💪 mode","brain on","locked in","focused energy","one of those days",
+  "respect","that's the move","crisp","crispy clean","💎 pace","bar's high",
+];
+function randomEncouragement(){return ENCOURAGEMENTS[Math.floor(Math.random()*ENCOURAGEMENTS.length)]}
+
+// ===== v0.9 ANTI-CHEAT: reward clamp + tab visibility =====
+const REWARD_CAPS = {coin:600, gem:5, brain:12, faith:12, ticket:2, key:5};
+function _antiCheatClamp(rewards){
+  const out = {};
+  Object.entries(rewards||{}).forEach(([k,v])=>{
+    const cap = REWARD_CAPS[k] ?? 999;
+    out[k] = Math.max(0, Math.min(cap, Math.round(v)));
+  });
+  return out;
+}
+
+// Tab visibility: pause active game timers when tab hidden, resume on return.
+// Prevents the "leave window open and come back" cheat.
+const VisibilityGuard = {
+  _wasHidden:false,
+  init(){
+    document.addEventListener('visibilitychange', ()=>{
+      if(!State.data?.settings?.pauseOnHide) return;
+      const game = State.gameInst;
+      if(!game) return;
+      if(document.visibilityState==='hidden'){
+        VisibilityGuard._wasHidden = true;
+        // Stop all known timer intervals/timeouts on the active game
+        if(game.timer){ clearInterval(game.timer); game._timerWasInterval=true; }
+        if(game.spawnTimer){ clearInterval(game.spawnTimer); }
+        if(game.showTimer){ clearTimeout(game.showTimer); }
+      }else if(document.visibilityState==='visible' && VisibilityGuard._wasHidden){
+        VisibilityGuard._wasHidden = false;
+        Toast.show('⏸ paused while away · resuming');
+      }
+    });
+  }
+};
+
+// ===== v0.9 NATURAL FAITH frequency rule =====
+function shouldShowVerseOnWin(roomId, ctx){
+  // Scripture room ALWAYS shows verse — that's the room identity.
+  if(roomId==='script') return true;
+  // User opted out
+  if(State.data?.settings?.scriptureOnWin===false) return false;
+  // Personal record · streak milestone · daily reward → always show
+  if(ctx?.pr || ctx?.streakMilestone) return true;
+  // Otherwise ~33% chance — keeps it natural
+  return Math.random()<0.33;
+}
+
 // ----- WORD LIST (5-letter, KJV-flavor friendly) -----
 const WORDS = (
 "PSALM,FAITH,GRACE,GLORY,LIGHT,BREAD,MERCY,LORDS,CROSS,EARTH,RIVER,STONE,HEART,SAINT,ANGEL,"+
@@ -1605,6 +1660,13 @@ const WORDS = (
 ).split(',').filter(w=>w.length===5);
 
 const COMMON_WORDS = "THANK,FAITH,LIGHT,GRACE,EARTH,RIVER,STONE,HEART,SAINT,ANGEL,WORDS,POWER,TRUST,DAILY,WATER,FLAME,SMILE,QUICK,BRAVE,NOBLE,LEARN,WRITE,STUDY,FRESH,DREAM,EAGLE,SMART,SHARP,SHINE,SHALL".split(',');
+
+// v0.9 expanded 5-letter dictionary for Wordle anti-cheat (validates real words)
+const _EXTRA_5 = "ABOUT,ABOVE,AFTER,AGAIN,ALONE,ALONG,ALPHA,AMONG,APPLE,APRIL,ARGUE,ARISE,ARRAY,AVOID,AWAKE,AWARE,BACON,BADGE,BAKER,BASIC,BEACH,BEGAN,BEGIN,BEING,BELOW,BENCH,BERRY,BIRTH,BLEND,BLESS,BLOCK,BLOND,BLOOD,BOARD,BOOST,BOOTH,BOUND,BRAID,BRAND,BRASS,BREAD,BREAK,BREED,BRICK,BRIDE,BRIEF,BRING,BROAD,BROKE,BROWN,BUILD,BUILT,BUNCH,BURST,BUYER,CABLE,CAMEL,CANDY,CANOE,CARGO,CARRY,CATCH,CAUSE,CHAIN,CHAIR,CHAOS,CHARM,CHART,CHASE,CHEAP,CHECK,CHEST,CHIEF,CHILD,CHILI,CHINA,CHOIR,CHORD,CHOSE,CIVIC,CIVIL,CLAIM,CLASH,CLASS,CLEAN,CLEAR,CLERK,CLICK,CLIFF,CLOAK,CLOCK,CLONE,CLOTH,CLOWN,CLUMP,COACH,COAST,COLOR,COULD,COUNT,COURT,COVER,CRACK,CRANE,CRASH,CRAVE,CRAZY,CREAM,CREST,CRIME,CROSS,CROWD,CRUEL,CRUSH,CURVE,CYBER,DANCE,DEATH,DEBIT,DEBUG,DECAY,DELAY,DELTA,DEPTH,DERBY,DEVIL,DIARY,DOZEN,DRAFT,DRAIN,DRAMA,DRAWN,DRESS,DRIED,DRINK,DRIVE,DROVE,DRUNK,DRYER,EARLY,EATEN,EBONY,EERIE,ELBOW,ELDER,ELITE,EMAIL,EMPTY,ENEMY,ENJOY,ENTER,ENTRY,EQUAL,ERASE,ERROR,EVENT,EVERY,EVOKE,EXACT,EXIST,EXTRA,FAIRY,FALSE,FANCY,FAULT,FEAST,FEVER,FEWER,FIBER,FIELD,FIFTH,FIFTY,FIGHT,FINAL,FIRST,FLASH,FLEET,FLESH,FLOCK,FLOOD,FLOOR,FLOUR,FOCUS,FORCE,FORTH,FORTY,FORUM,FOUND,FOYER,FRAUD,FRIED,FRONT,FROST,FROZE,FRUIT,FULLY,FUNNY,GAUGE,GHOST,GIANT,GIVEN,GLAND,GLOBE,GLOOM,GLOVE,GOING,GRADE,GRAIN,GRAND,GRANT,GRAPE,GRASP,GRASS,GRAVY,GREAT,GREED,GRIEF,GRILL,GRIND,GROUP,GROVE,GROWN,GUARD,GUESS,GUEST,GUIDE,GUILT,HABIT,HAPPY,HARSH,HEAVY,HENCE,HONEY,HORSE,HOTEL,HOUSE,HOVER,HUMAN,HUMID,IDEAL,IMAGE,IMPLY,INDEX,INNER,INPUT,IVORY,JEWEL,JOINT,JOLLY,JUDGE,JUICE,KARMA,KAYAK,KNEEL,KNOCK,KNOWN,LABEL,LARGE,LATER,LAUGH,LAYER,LEAST,LEAVE,LEGAL,LEMON,LEVEL,LIMIT,LINEN,LIVER,LOBBY,LOCAL,LOGIN,LOWER,LOYAL,LUCKY,LUNAR,LUNCH,LYRIC,MAGIC,MAJOR,MAKER,MARCH,MARRY,MATCH,MAYBE,MAYOR,MEDIA,METAL,METRO,MIGHT,MINOR,MIXED,MODEL,MONEY,MONTH,MORAL,MOTOR,MOUNT,MOUSE,MOUTH,MOVIE,MUSIC,NAIVE,NAVAL,NEEDY,NEVER,NEWLY,NIGHT,NINTH,NOISE,NORTH,NOVEL,NURSE,OCCUR,OCEAN,OFFER,OFTEN,OLDER,ORDER,OTHER,OUGHT,OUTER,OWNER,PAINT,PANEL,PAPER,PARTY,PATCH,PEACE,PETAL,PHASE,PHONE,PHOTO,PIANO,PIECE,PILOT,PITCH,PIVOT,PIXEL,PIZZA,PLACE,PLAIN,PLANE,PLANT,PLATE,PLAZA,PLUMB,POINT,POLAR,POUND,PRESS,PRICE,PRIDE,PRINT,PRIOR,PRIZE,PROOF,PROUD,PROVE,PROXY,PULSE,PUNCH,PURGE,PURSE,QUAKE,QUERY,QUEST,QUIET,QUIRK,QUITE,QUOTE,RADAR,RADIO,RAISE,RANCH,RANGE,RAPID,REALM,REBEL,REIGN,RELAX,REPLY,RIGID,RISEN,RIVAL,ROAST,ROBOT,ROUGH,ROUND,ROUTE,RUGBY,RULER,SCALE,SCARE,SCENE,SCENT,SCONE,SCOPE,SCORE,SCOUT,SCREW,SCRUB,SEDAN,SENSE,SERVE,SEVEN,SHAFT,SHAKE,SHAME,SHAPE,SHARE,SHEET,SHELF,SHELL,SHIFT,SHIRT,SHOCK,SHONE,SHOOT,SHORE,SHORT,SHOWN,SHRUB,SIDED,SIGHT,SIGMA,SILLY,SINCE,SIXTH,SIXTY,SIZED,SKILL,SKIRT,SLEEP,SLEEK,SLEPT,SLICE,SLIDE,SLIME,SLOPE,SMALL,SMELL,SMOKE,SMOKY,SNACK,SNAKE,SNARE,SNEAK,SNORE,SNOWY,SOLAR,SOLID,SOLVE,SORRY,SOUTH,SPACE,SPARE,SPARK,SPEAK,SPEED,SPEND,SPENT,SPIKE,SPILL,SPINE,SPIRE,SPLIT,SPOIL,SPOKE,SPORT,SPRAY,STAGE,STAIN,STALE,STAMP,STAND,STARE,START,STATE,STEAM,STEEL,STERN,STICK,STIFF,STILL,STING,STOCK,STOOD,STOOL,STORM,STORY,STOUT,STOVE,STRAW,STRAY,STRIP,STUCK,STYLE,SUITE,SUPER,SWEAR,SWEAT,SWEEP,SWEET,SWIFT,SWING,SWIRL,SWORE,SWORN,TABLE,TAKEN,TASTE,TEACH,TEAMS,TEASE,TEETH,TEMPO,TENTH,TERMS,THEFT,THEIR,THEME,THERE,THESE,THICK,THIEF,THING,THINK,THIRD,THORN,THOSE,THREE,THREW,THROW,THUMB,TIGER,TIGHT,TILES,TIMER,TIRED,TITAN,TODAY,TOKEN,TOOTH,TOPIC,TOTAL,TOUCH,TOUGH,TOWEL,TOWER,TOWNS,TRACE,TRACK,TRADE,TRAIN,TRAIT,TRASH,TREAT,TREND,TRIAL,TRIBE,TRICK,TRIED,TROUT,TRULY,TRUNK,TRUTH,TUNED,TWICE,TWIST,UDDER,ULCER,UNDER,UNFIT,UNION,UNITE,UNTIL,UPPER,URBAN,USAGE,USHER,USING,USUAL,UTTER,VAGUE,VALID,VALUE,VAULT,VENOM,VERGE,VIDEO,VILLA,VINYL,VIRAL,VITAL,VIVID,VOICE,VOTER,WAGON,WAIST,WATCH,WEARY,WEDGE,WEIRD,WHALE,WHEAT,WHEEL,WHERE,WHICH,WHILE,WHITE,WHOLE,WHOSE,WIDOW,WIELD,WIRES,WIRED,WITCH,WOKEN,WOMAN,WOMEN,WORLD,WORRY,WORSE,WORST,WORTH,WOULD,WOUND,WOVEN,WRACK,WRECK,WRIST,WRITE,WRONG,WROTE,YACHT,YEARN,YIELD,YOUNG,YOURS,YOUTH,ZEBRA,ZONES".split(',');
+const VALID_5 = new Set([...WORDS, ...COMMON_WORDS, ..._EXTRA_5]);
+function isValidWord(w){
+  return VALID_5.has(w.toUpperCase());
+}
 
 // ----- VERSES FOR FILL-IN (with blank target) -----
 const FILL_VERSES = [
@@ -1669,6 +1731,9 @@ const ACHIEVEMENTS = [
   {id:'biographer',em:'📝',t:'Biographer',d:'Write your bio tagline'},
   {id:'scene_frame',em:'🎨',t:'Visual Saint',d:'Equip a scene + frame combo'},
   {id:'anim_saint',em:'🎬',t:'Animated Saint',d:'Equip an animation preset'},
+  // v0.9 fair-play
+  {id:'fair_play',em:'⚖️',t:'Fair Play',d:'10 wins with no cheats detected'},
+  {id:'pure_form',em:'💎',t:'Pure Form',d:'5 wins without using a power-up'},
 ];
 
 // ====================================================================
@@ -1833,6 +1898,9 @@ const Ach = {
     if(d.bio) Ach.unlock('biographer');
     if(d.scene && d.scene!=='none' && d.frame && d.frame!=='none') Ach.unlock('scene_frame');
     if(d.anim && d.anim!=='none') Ach.unlock('anim_saint');
+    // v0.9 fair-play
+    if(d.totals.wins>=10) Ach.unlock('fair_play');
+    if(d.totals.wins>=5 && (d._powerupUses||0)===0) Ach.unlock('pure_form');
     // try-everything: played all 16 non-daily games
     const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
@@ -1904,23 +1972,33 @@ const Modal = {
     document.getElementById('modal').classList.add('active');
   },
   close(){ document.getElementById('modal').classList.remove('active'); },
-  win({rewards, title='🎉 YOU GOT IT!', emoji='🎉', verse=null, retry, lobby}){
-    const v = verse || randomVerse();
+  win({rewards, title='🎉 YOU GOT IT!', emoji='🎉', verse=null, retry, lobby, roomId, ctx}){
+    if(!roomId) roomId = State._lastResultRoom;
     const r = Object.entries(rewards||{}).map(([k,n])=>{
       const e = {coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️',ticket:'🎫',key:'🗝️'}[k]||'';
       return `<span class="reward-chip">+${n} ${e}</span>`;
     }).join('');
+    // v0.9 natural-faith: scripture only when contextually appropriate
+    const showVerse = verse !== null || shouldShowVerseOnWin(roomId, ctx);
+    let bottom;
+    if(showVerse){
+      const v = verse || randomVerse();
+      bottom = `<div class="verse">"${v.t}"<cite>— ${v.r}</cite></div>`;
+      SFX.holy();
+    }else{
+      bottom = `<div class="bio-quote" style="margin:14px 0">${randomEncouragement()}</div>`;
+      SFX.win();
+    }
     Modal.show(`
       <div class="big">${emoji}</div>
       <h3>${title}</h3>
       <div class="reward-row">${r}</div>
-      <div class="verse">"${v.t}"<cite>— ${v.r}</cite></div>
+      ${bottom}
       <button class="share-btn" onclick="App.shareScore('${title.replace(/'/g,'')}')">📤 share my score</button>
       <div class="modal-actions">
         <button class="btn-secondary" onclick="App._modalLobby()">🏛️ lobby</button>
         <button class="btn-primary" onclick="App._modalRetry()">🔁 again</button>
       </div>`);
-    SFX.holy();
     confetti();
     State._modalCallbacks = {retry,lobby};
   },
@@ -2368,6 +2446,9 @@ const App = {
         <div class="setting-row">📳 haptics <div class="toggle ${s.haptic?'on':''}" data-set="haptic"></div></div>
         <div class="setting-row">🧒 kid-safe <div class="toggle ${s.kidSafe?'on':''}" data-set="kidSafe"></div></div>
         <div class="setting-row">🎤 TTS <div class="toggle ${s.tts?'on':''}" data-set="tts"></div></div>
+        <div class="setting-row">📜 scripture on wins <div class="toggle ${s.scriptureOnWin!==false?'on':''}" data-set="scriptureOnWin"></div></div>
+        <div class="setting-row">⏸ pause when tab hidden <div class="toggle ${s.pauseOnHide!==false?'on':''}" data-set="pauseOnHide"></div></div>
+        <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
         <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
           <button class="btn-secondary" onclick="App.openAbout()">ℹ️ about</button>
           <button class="btn-secondary" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)" onclick="if(confirm('reset all progress?'))Save.reset()">🗑️ reset</button>
@@ -2863,6 +2944,10 @@ const App = {
 // ====================================================================
 function recordResult(roomId, gameId, won, rewards={}){
   const d = State.data;
+  // v0.9 anti-cheat: clamp rewards to sane bounds
+  rewards = _antiCheatClamp(rewards);
+  // pass roomId so Modal.win can apply natural-faith rule without explicit param
+  State._lastResultRoom = roomId;
   const key = `${roomId}:${gameId}`;
   if(!d.perGame[key]) d.perGame[key] = {wins:0,plays:0,best:0,lastWin:0};
   d.perGame[key].plays++;
@@ -2969,6 +3054,16 @@ const WordleGame = {
   submit(){
     if(this.done || this.col<5) return;
     const guess = this.guesses[this.row].join('');
+    // v0.9 anti-cheat: must be a real word
+    if(!isValidWord(guess)){
+      Toast.show('🚫 not a real word');
+      SFX.wrong(); haptic(20);
+      // shake current row
+      const rows = document.querySelectorAll('.word-row');
+      const cur = rows[this.row];
+      if(cur){ cur.classList.add('shake-card'); setTimeout(()=>cur.classList.remove('shake-card'),350); }
+      return;
+    }
     // mark cells
     const target = this.target.split('');
     const states = Array(5).fill('gray');
@@ -4172,6 +4267,7 @@ const DailyGame = {
 // BOOT
 // ====================================================================
 window.App = App; // expose for inline handlers
+VisibilityGuard.init();
 function _showFatal(e){
   const msg = (e && (e.message||String(e)))||'unknown error';
   const stack = (e && e.stack)||'';
