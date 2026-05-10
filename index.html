@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.49.0 · 💬 Coach DMs · 🎓 lessons · 🏆 LB · 🌀 fusion · 🎁 100xp gifts · name+IQ identity · 🙏</div>
+  <div class="splash-foot">v0.50.0 · 🐛 Parable crash fixed · 🗣️ voice acting · 🎂 birthday · 🎭 personality · 🤝 friend DMs · 📊 analytics · 🎬 intro · cinematic everywhere · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.49.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.50.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.49.0';
+const VERSION = '0.50.0';
 
 // ----- STATE -----
 const State = {
@@ -1522,6 +1522,12 @@ const DEFAULT_SAVE = {
   coachFusion:{slot:null}, // {a:'aura1',b:'aura2',name:'AuraName'} merged cosmetic
   coachLastGiftXp:0, // last XP threshold where gift was dispensed
   coachDmLastDate:'', // YYYY-MM-DD of last daily DM
+  // v0.50 Coach updates
+  coachBirthdate:0, // when Coach was unlocked (first onboard)
+  coachLastBirthdayYear:0, // year of last bday modal shown
+  coachTraits:[], // ['sassy','zen','competitive','holy','playful'] · personality
+  coachIntroSeen:false, // first-time Coach intro cinematic
+  coachAnalyticsOpened:0, // count of analytics views
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -2102,6 +2108,8 @@ function startGameTimer(game, durationSec, onTick, onEnd){
   game._timerDurationSec = durationSec;
   game.timeLeft = durationSec;
   const fire = ()=>{
+    // v0.50 · skip tick when game has been ended (instance swapped or cleared)
+    if(State.gameInst !== game){ clearInterval(game.timer); return; }
     const elapsed = Math.floor((Date.now() - game._timerStartMs)/1000);
     const remaining = Math.max(0, game._timerDurationSec - elapsed);
     game.timeLeft = remaining;
@@ -2111,7 +2119,7 @@ function startGameTimer(game, durationSec, onTick, onEnd){
       onEnd && onEnd();
       return;
     }
-    onTick && onTick(remaining);
+    try{ onTick && onTick(remaining); }catch(e){ console.warn('tick err',e); }
   };
   game.timer = setInterval(fire, 250); // 4× per sec — drift-tolerant
   fire();
@@ -3457,6 +3465,20 @@ const Frenzy = {
     }},
   ],
   start(mode='classic'){
+    // v0.50 · cinematic wrapper · ducks music + 3-2-1 splash
+    if(!Frenzy._cineDone){
+      Frenzy._cineDone = true;
+      try{ Music.duck(true); }catch(e){}
+      Cinematic.show('daily', {em:'🔥', name:'Daily Frenzy', id:'frenzy'}, ()=>{
+        Frenzy._cineDone = false;
+        try{ Music.duck(false); }catch(e){}
+        Frenzy._reallyStart(mode);
+      });
+      return;
+    }
+    this._reallyStart(mode);
+  },
+  _reallyStart(mode='classic'){
     State.gameInst = this;
     this.mode = mode;
     this.round = 0;
@@ -4544,6 +4566,17 @@ const Chain = {
 const Carnival = {
   _timer:null, _switchTimer:null, _score:0, _timeLeft:0,
   start(){
+    if(!Carnival._cineDone){
+      Carnival._cineDone = true;
+      Cinematic.show('daily', {em:'🎪', name:'Carnival Mode', id:'carnival'}, ()=>{
+        Carnival._cineDone = false;
+        Carnival._reallyStart();
+      });
+      return;
+    }
+    Carnival._reallyStart();
+  },
+  _reallyStart(){
     this._score=0;
     this._timeLeft=300; // 5 min
     State.gameInst=this;
@@ -4744,6 +4777,17 @@ const Favorites = {
 const Wave = {
   _round:0, _score:0, _state:null,
   start(){
+    if(!Wave._cineDone){
+      Wave._cineDone = true;
+      Cinematic.show('daily', {em:'🌊', name:'Wave Mode', id:'wave'}, ()=>{
+        Wave._cineDone = false;
+        Wave._reallyStart();
+      });
+      return;
+    }
+    Wave._reallyStart();
+  },
+  _reallyStart(){
     State.gameInst=this;
     this._round=0; this._score=0; this._state={timers:[]};
     UI.show('game');
@@ -5231,6 +5275,234 @@ const CoachGift = {
       }, i*1200);
     }
     Save.write();
+  }
+};
+
+// ====================================================================
+// 🗣️ v0.50 · COACH VOICE ACTING · TTS pitch/rate by tier
+// ====================================================================
+const CoachVoice = {
+  say(textEn, textEs){
+    if(!State.data?.settings?.tts) return;
+    const t = Coach.tier();
+    const text = (Lang.current()==='es' && textEs) ? textEs : textEn;
+    try{
+      window.speechSynthesis?.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = Lang.current()==='es'?'es-ES':'en-US';
+      // tier-mapped voice params
+      const cfg = {
+        Hatchling:  {pitch:1.6, rate:1.15, volume:0.8},  // squeaky
+        Rookie:     {pitch:1.4, rate:1.10, volume:0.85}, // bright young
+        Apprentice: {pitch:1.1, rate:1.00, volume:0.85}, // standard
+        Mentor:     {pitch:1.0, rate:0.95, volume:0.9},  // warm
+        Sage:       {pitch:0.85,rate:0.90, volume:0.9},  // grounded
+        Master:     {pitch:0.75,rate:0.85, volume:0.92}, // deep
+        Apostle:    {pitch:0.7, rate:0.80, volume:0.95}, // slow, reverent
+      };
+      const v = cfg[t.name] || {pitch:1.0, rate:1.0, volume:0.85};
+      u.pitch = v.pitch; u.rate = v.rate; u.volume = v.volume;
+      window.speechSynthesis?.speak(u);
+    }catch(e){}
+  }
+};
+
+// ====================================================================
+// 🎂 v0.50 · COACH BIRTHDAY · annual celebration
+// ====================================================================
+const CoachBirthday = {
+  init(){
+    if(!State.data.coachBirthdate) State.data.coachBirthdate = Date.now();
+  },
+  check(){
+    this.init();
+    const bd = new Date(State.data.coachBirthdate);
+    const now = new Date();
+    const sameDay = bd.getMonth()===now.getMonth() && bd.getDate()===now.getDate();
+    if(!sameDay) return;
+    if(State.data.coachLastBirthdayYear === now.getFullYear()) return;
+    State.data.coachLastBirthdayYear = now.getFullYear();
+    Save.write();
+    setTimeout(()=>this.celebrate(), 800);
+  },
+  celebrate(){
+    const yrs = new Date().getFullYear() - new Date(State.data.coachBirthdate).getFullYear();
+    const name = State.data.coachName || 'Bud';
+    Wallet.add({coin:500, gem:10, brain:10, faith:5});
+    Coach.bumpXp(100);
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:84px;animation:cineLogoZoom .9s cubic-bezier(.2,1.4,.5,1)">🎂</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">${name}'S BIRTHDAY</h3>
+      <p style="font-size:13px;margin:8px 0">${yrs} year${yrs!==1?'s':''} together · we leveled up so much</p>
+      <p style="font-size:12px">+500🪙 +10💎 +10🧠 +5✝️ +100 Coach XP</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">🎉 PRAISE</button>
+    </div>`);
+    CoachVoice.say(`Happy birthday from ${name}!`, `¡Feliz cumpleaños de ${name}!`);
+  }
+};
+
+// ====================================================================
+// 🎭 v0.50 · COACH PERSONALITY QUIZ · pick 5 traits to shape voice
+// ====================================================================
+const CoachQuiz = {
+  TRAITS: [
+    {id:'sassy',em:'😏',name:'Sassy',desc:'cheeky humor'},
+    {id:'zen',em:'🧘',name:'Zen',desc:'calm steady'},
+    {id:'competitive',em:'⚔️',name:'Competitive',desc:'push for wins'},
+    {id:'holy',em:'✝️',name:'Holy',desc:'scripture-forward'},
+    {id:'playful',em:'🎈',name:'Playful',desc:'gamy energy'},
+    {id:'analytical',em:'📊',name:'Analytical',desc:'data-driven'},
+    {id:'cheerful',em:'😊',name:'Cheerful',desc:'always positive'},
+    {id:'wise',em:'🦉',name:'Wise',desc:'sage advice'},
+    {id:'savage',em:'🔥',name:'Savage',desc:'no sugarcoat'},
+    {id:'patient',em:'🌿',name:'Patient',desc:'gentle pacing'},
+  ],
+  toggle(id){
+    State.data.coachTraits = State.data.coachTraits || [];
+    const idx = State.data.coachTraits.indexOf(id);
+    if(idx>=0) State.data.coachTraits.splice(idx,1);
+    else{
+      if(State.data.coachTraits.length>=5){ Toast.show('max 5 traits · remove one first'); return; }
+      State.data.coachTraits.push(id);
+    }
+    Save.write();
+    App.openCoachQuiz();
+  },
+  renderHub(){
+    const t = Coach.tier();
+    const picked = State.data.coachTraits || [];
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33)">
+      <div style="font-size:42px">🎭</div>
+      <b style="color:${t.color};font-size:16px">${State.data.coachName||'Bud'}'s Personality</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">pick up to 5 traits · shapes voice + DMs</div>
+      <div style="font-size:11px;margin-top:6px;color:var(--gold-bright)">${picked.length}/5 selected</div>
+    </div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:14px">`;
+    this.TRAITS.forEach(tr=>{
+      const on = picked.includes(tr.id);
+      html += `<div onclick="CoachQuiz.toggle('${tr.id}')" style="background:${on?'linear-gradient(135deg,rgba(245,158,11,.3),rgba(124,58,237,.2))':'rgba(0,0,0,.18)'};border:1px solid ${on?'#FBBF24':'rgba(255,255,255,.1)'};border-radius:10px;padding:10px;cursor:pointer;text-align:center">
+        <div style="font-size:24px">${tr.em}</div>
+        <b style="font-size:12px">${tr.name}</b>
+        <div class="dim" style="font-size:10px">${tr.desc}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🤝 v0.50 · FRIEND-ONLINE DMs · Coach notifies when "friend" appears
+// ====================================================================
+const FriendOnlineDM = {
+  check(){
+    const friends = State.data.friends || [];
+    if(!friends.length) return;
+    // simulate: 8% chance per lobby render that ONE friend "logs on"
+    if(Math.random() > 0.08) return;
+    const f = friends[Math.floor(Math.random()*friends.length)];
+    if(!f?.name) return;
+    State.data.coachDms = State.data.coachDms || [];
+    const t = Coach.tier();
+    const name = State.data.coachName || 'Bud';
+    const txt = `👋 ${f.name} just popped online · maybe send a duel?`;
+    State.data.coachDms.unshift({ts:Date.now(), em:t.em, text:txt, read:false, kind:'friend'});
+    if(State.data.coachDms.length>20) State.data.coachDms = State.data.coachDms.slice(0,20);
+    Save.write();
+    Toast.show(`💬 ${name}: ${f.name} just popped online`);
+  }
+};
+
+// ====================================================================
+// 📊 v0.50 · COACH ANALYTICS DASHBOARD · full stat dump
+// ====================================================================
+const CoachAnalytics = {
+  renderHub(){
+    State.data.coachAnalyticsOpened = (State.data.coachAnalyticsOpened||0)+1;
+    Save.write();
+    const d = State.data;
+    const b = Coach.brain();
+    if(!b || b.totalPlays<3){
+      return `<div class="lobby-banner" style="text-align:center"><div style="font-size:42px">📊</div><b>Analytics</b><div class="dim" style="font-size:12px;margin-top:8px;padding:14px">play 3+ games to unlock full analytics</div></div>`;
+    }
+    const dna = b.dna;
+    const dnaTotal = Object.values(dna).reduce((a,b)=>a+b,0)||1;
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(34,211,238,.18))">
+      <div style="font-size:42px">📊</div>
+      <b style="color:var(--gold-bright);font-size:16px">${State.data.coachName||'Bud'}'s Analytics</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">deep dive · all your numbers</div>
+    </div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">🧬 BRAIN DNA</h3>
+    <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px">`;
+    const axisEm={memory:'🧠',speed:'⚡',pattern:'🎯',logic:'🧩',word:'📖',faith:'✝️'};
+    Object.entries(dna).forEach(([k,v])=>{
+      const pct = Math.round((v/dnaTotal)*100);
+      html += `<div style="margin:4px 0">
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span>${axisEm[k]||''} ${k}</span><span>${v} pts · ${pct}%</span></div>
+        <div style="background:rgba(255,255,255,.08);height:6px;border-radius:99px;overflow:hidden;margin-top:2px"><div style="background:linear-gradient(90deg,#FBBF24,#F59E0B);height:100%;width:${pct}%"></div></div>
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">📈 PERFORMANCE</h3>
+    <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>total games</span><b>${b.totalPlays}</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>wins</span><b>${d.totals.wins}</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>losses</span><b>${d.totals.losses}</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>win rate</span><b>${Math.round((d.totals.wins/(d.totals.games||1))*100)}%</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>recent win rate</span><b>${Math.round((b.recentWinRate||0)*100)}%</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>brain rank</span><b>${d.iq}</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>coach IQ</span><b>${Coach.iq()}</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>achievements</span><b>${Object.keys(d.ach||{}).length}/${ACHIEVEMENTS.length}</b></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>medals earned</span><b>${Cabinet.countAll().total}</b></div>
+    </div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🎬 v0.50 · COACH INTRO CINEMATIC · first-time unlock story
+// ====================================================================
+const CoachIntro = {
+  show(){
+    if(State.data.coachIntroSeen) return;
+    State.data.coachIntroSeen = true;
+    Save.write();
+    const name = State.data.coachName || 'Bud';
+    const userName = State.data.name || 'saint';
+    const frames = [
+      {em:'🌅', txt:`it's the first day for ${userName}.`, dur:2400},
+      {em:'🥚', txt:`somewhere · a Coach hatches.`, dur:2200},
+      {em:'🐣', txt:`"hi ${userName}! i'm ${name}."`, dur:2400},
+      {em:'🤝', txt:`"i don't know much yet · but i'm here."`, dur:2400},
+      {em:'🧠', txt:`"as you grow · so will i."`, dur:2200},
+      {em:'✨', txt:`let's begin · together.`, dur:1800},
+    ];
+    let i = 0;
+    const overlay = document.createElement('div');
+    overlay.id='coach-intro';
+    overlay.style.cssText='position:fixed;inset:0;background:linear-gradient(135deg,#1a103b,#0a1633);z-index:9998;display:grid;place-items:center;color:#fff;font-family:"Cinzel",serif;cursor:pointer';
+    overlay.innerHTML = `<div id="ci-frame" style="text-align:center;padding:30px"><div id="ci-em" style="font-size:96px"></div><div id="ci-txt" style="font-size:18px;margin-top:14px;max-width:320px;line-height:1.6;font-style:italic"></div><div class="dim" style="font-size:10px;margin-top:30px;opacity:.5">tap to skip</div></div>`;
+    document.body.appendChild(overlay);
+    let cleanup = ()=>{
+      const o = document.getElementById('coach-intro');
+      if(o) o.remove();
+      // give reward
+      Wallet.add({coin:50, faith:1});
+      Coach.bumpXp(10);
+    };
+    overlay.onclick = ()=>{ cleanup(); cleanup=()=>{}; };
+    const step = ()=>{
+      if(i>=frames.length){ cleanup(); cleanup=()=>{}; return; }
+      const f = frames[i];
+      const emEl = document.getElementById('ci-em');
+      const txtEl = document.getElementById('ci-txt');
+      if(emEl) emEl.textContent = f.em;
+      if(txtEl) txtEl.textContent = f.txt;
+      CoachVoice.say(f.txt);
+      i++;
+      setTimeout(step, f.dur);
+    };
+    step();
   }
 };
 
@@ -6623,8 +6895,12 @@ const App = {
       State.data._showTutorialNext = true;
       // v0.42 claim welcome gift right after onboard
       setTimeout(()=>App.claimWelcomeGift(), 700);
-      // v0.42 start first-time lobby tour after gift is dismissed
-      setTimeout(()=>Tour.start(), 3500);
+      // v0.50 · Coach intro story right after gift
+      setTimeout(()=>CoachIntro.show(), 2400);
+      // v0.42 start first-time lobby tour after intro
+      setTimeout(()=>Tour.start(), 16000);
+      // v0.50 · init Coach birthday tracking
+      CoachBirthday.init();
       // detect custom emoji used in onboarding
       const usedCustom = Object.entries(App._obData.avatar).some(([slot,id])=>{
         const list = AVATAR_ITEMS[slot]; if(!list) return false;
@@ -6733,6 +7009,9 @@ const App = {
     try{ WeeklyTourney.checkPayout(); }catch(e){}
     // v0.49 · ensure today's Coach DM is pushed
     try{ CoachDM.ensureDailyDM(); }catch(e){}
+    // v0.50 · Coach birthday + friend-online checks
+    try{ CoachBirthday.check(); }catch(e){}
+    try{ FriendOnlineDM.check(); }catch(e){}
     // v0.41 · help pulse · until user taps it once
     const pulse = document.getElementById('help-pulse');
     if(pulse) pulse.style.display = State.data.helpHubSeen ? 'none' : 'block';
@@ -8009,7 +8288,11 @@ const App = {
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLessons()">🎓 Lessons · ${(State.data.coachLessonsDone||[]).length}/${CoachLessons.LESSONS.length}</button>
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLB()">🏆 LB</button>
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachFusion()">🌀 Fusion${State.data.coachFusion?.em?' '+State.data.coachFusion.em:''}</button>
-      </div>`;
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachQuiz()">🎭 Personality · ${(State.data.coachTraits||[]).length}/5</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachAnalytics()">📊 Analytics</button>
+        <button class="btn-secondary" style="padding:12px;grid-column:span 2" onclick="App.replayCoachIntro()">🎬 replay intro cinematic</button>
+      </div>
+      ${State.data.coachBirthdate?`<div style="text-align:center;margin-top:10px;font-size:10px" class="dim">🎂 unlocked ${new Date(State.data.coachBirthdate).toLocaleDateString()}</div>`:''}`;
     if(!b || b.totalPlays<3){
       html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:14px;text-align:center;margin-top:14px;font-size:13px">
         play <b>${Math.max(0,3-(b?b.totalPlays:0))}</b> more game${(b?.totalPlays??0)===2?'':'s'} for Coach to start tuning recommendations · keep going!
@@ -8208,6 +8491,18 @@ const App = {
     document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachFusion.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
     UI.show('aux');
   },
+  // v0.50 Coach hubs
+  openCoachQuiz(){
+    document.getElementById('aux-title').innerHTML = '🎭 Personality';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachQuiz.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
+    UI.show('aux');
+  },
+  openCoachAnalytics(){
+    document.getElementById('aux-title').innerHTML = '📊 Analytics';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachAnalytics.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
+    UI.show('aux');
+  },
+  replayCoachIntro(){ State.data.coachIntroSeen = false; Save.write(); CoachIntro.show(); },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -10889,8 +11184,8 @@ const ParableGame = {
     State.gameInst=this;
     this.score=0; this.q=0;
     this.questions = [...PARABLES].sort(()=>Math.random()-.5).slice(0,8);
+    this.next(); // v0.50 FIX: set this.current BEFORE timer's immediate fire()
     startGameTimer(this, 90, ()=>this.render(), ()=>this.end());
-    this.next();
     UI.show('game');
   },
   next(){
@@ -10906,6 +11201,7 @@ const ParableGame = {
     this.next();
   },
   render(){
+    if(!this.current) return; // v0.50 defensive guard
     document.getElementById('g-stats').innerHTML = `<b>✝️ Parable Match</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
     const area=document.getElementById('g-area');
     area.innerHTML='';
