@@ -129,6 +129,7 @@ button{
 }
 .screen.active{display:flex !important;opacity:1 !important;z-index:2}
 .screen.fade-in{animation:screenIn .35s ease forwards}
+@keyframes helpPulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.4);opacity:1}}
 @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ==================== SPLASH ==================== */
@@ -1256,7 +1257,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.40.0 · 66 games · leaderboards · cinematic · duels · frenzy · 🙏</div>
+  <div class="splash-foot">v0.41.0 · 66 games · auto-music · ❓ help hub · CAEE · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1294,6 +1295,7 @@ button{
         <span class="wallet-chip">🧠 <span id="w-brain">0</span></span>
         <span class="wallet-chip">✝️ <span id="w-faith">0</span></span>
       </div>
+      <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
     </div>
     <div class="hud-row">
@@ -1409,7 +1411,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.40.0';
+const VERSION = '0.41.0';
 
 // ----- STATE -----
 const State = {
@@ -1470,6 +1472,7 @@ const DEFAULT_SAVE = {
   lang:'en', // i18n · en/es
   cinematicPref:'on', // on/short/off
   recsHistory:{}, // {gameKey: playCount} drives shop recommendations
+  helpHubSeen:false, // v0.41 has the user opened the ❓ help hub yet
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -4323,6 +4326,14 @@ const App = {
     }
   },
   tapEnter(){
+    // v0.41 · ALWAYS unlock + auto-start music on first user gesture
+    // (browsers block autoplay until interaction · this IS the interaction)
+    try{
+      if(typeof _unlockAudio === 'function') _unlockAudio();
+      // ensure music setting defaults true if user never touched it
+      if(State.data.settings.music!==false) State.data.settings.music = true;
+      Save.write();
+    }catch(e){}
     if(State.data && State.data.onboarded){
       UI.show('lobby');
       App.checkDaily();
@@ -4331,8 +4342,9 @@ const App = {
     else{ UI.show('onboard'); App.obStart(); }
     SFX.chime();
     haptic(20);
+    // v0.41 · explicitly kick music after a tick (UI.show already called Music.play but unlock was async)
+    setTimeout(()=>{ try{ Music.play(State.data?.onboarded?'lobby':'onboard'); }catch(e){} }, 220);
     // v0.26 cinematic only triggers via About button now (avoid blocking onboarding)
-    // can manually view via Settings → About
   },
 
   // ----- ONBOARDING -----
@@ -4654,6 +4666,9 @@ const App = {
     Quests.ensureToday();
     // v0.40 · auto-detect language on first ever lobby render
     Lang.autoDetect();
+    // v0.41 · help pulse · until user taps it once
+    const pulse = document.getElementById('help-pulse');
+    if(pulse) pulse.style.display = State.data.helpHubSeen ? 'none' : 'block';
     // v0.40 · DUEL NOTIF BANNER · show pending duel count
     const dPending = (State.data.duels?.outgoing||[]).length + (State.data.duels?.incoming||[]).length;
     let extras = document.getElementById('v40-extras');
@@ -4664,6 +4679,19 @@ const App = {
       if(rp && rp.parentNode) rp.parentNode.insertBefore(extras, rp);
     }
     let exHtml = '';
+    // v0.41 · WELCOME card for first-time users
+    if(!State.data.helpHubSeen){
+      exHtml += `<div class="lobby-banner" onclick="App.openHelpHub()" style="cursor:pointer;background:linear-gradient(135deg,rgba(124,58,237,.28),rgba(245,158,11,.22));border-color:#FBBF24;animation:helpPulse 2.5s ease-in-out infinite;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:30px">🎓</div>
+          <div style="flex:1;text-align:left">
+            <b style="color:#FBBF24">new here? tap for full how-to-play</b>
+            <div style="font-size:11px;opacity:.85;margin-top:2px">12 sections · games · frenzy · duels · medals · español · all of it</div>
+          </div>
+          <div style="font-size:22px">→</div>
+        </div>
+      </div>`;
+    }
     if(dPending){
       exHtml += `<div class="lobby-banner" onclick="App.openDuels()" style="cursor:pointer;background:linear-gradient(135deg,rgba(220,38,38,.25),rgba(245,158,11,.22));border-color:#F87171;margin-bottom:8px">
         <b style="color:#FBBF24">⚔️ ${dPending} pending duel${dPending>1?'s':''}</b>
@@ -5261,7 +5289,8 @@ const App = {
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
         </div>
         <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
-        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="btn-secondary" onclick="App.openHelpHub()">❓ how to play</button>
           <button class="btn-secondary" onclick="App.openAbout()">ℹ️ about</button>
           <button class="btn-secondary" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)" onclick="if(confirm('reset all progress?'))Save.reset()">🗑️ reset</button>
         </div>
@@ -5805,6 +5834,57 @@ const App = {
     Save.write();
     Toast.show(`🎬 cinematic: ${code}`);
     App.openSettings();
+  },
+  // v0.41 · HELP HUB · full how-to-play tour
+  openHelpHub(){
+    State.data.helpHubSeen = true;
+    if(State.data.tutorialSeen!==true){ Ach.unlock('tutorial_done'); State.data.tutorialSeen = true; }
+    Save.write();
+    const pulse=document.getElementById('help-pulse'); if(pulse) pulse.style.display='none';
+    document.getElementById('aux-title').innerHTML = '❓ How to Play';
+    const sections = [
+      {em:'🏠',t:'The Lobby',d:'8 themed rooms host 66+ games · 7 foot buttons unlock STATS · ACHIEVEMENTS · SHOP · BATTLE PASS · HALL OF FAME · FRIENDS · DAILY FRENZY.',cta:null},
+      {em:'🎮',t:'Playing Games',d:'Tap a room → tap a game card → see RULES + LEADERBOARD + MEDALS in the intro modal → ▶ START. Wins earn coins/brain/faith/gems.',cta:null},
+      {em:'🎬',t:'Cinematic Intros',d:'Every game opens with a 3-phase splash (logo → countdown → GO). Tap to skip. Toggle full/short/off in Settings → Cinematic.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
+      {em:'🔥',t:'Daily Frenzy',d:'7th foot button. 3 mini-rounds (or 5 in Gauntlet). Combo XP per round. Daily SPOTLIGHT round = 2x score. Streak bonus stacks up to +75 coins.',cta:{label:'🔥 Open Frenzy',fn:'openFrenzy'}},
+      {em:'⚔️',t:'1v1 Duels',d:'Send a friend code challenge OR ⚡ QUICK MATCH vs CPU. Same seed · highest score wins gems. Rematch from history list.',cta:{label:'⚔️ Open Duels',fn:'openDuels'}},
+      {em:'📈',t:'Leaderboards',d:'Daily/weekly/all-time per game. Top-3 daily = +1 gem. #1 = +3 gems. Medal thresholds (🥉🥈🥇) shown in game intro.',cta:null},
+      {em:'🛒',t:'Shop & Recommendations',d:'Power-ups · bundles · daily deal (30% off rotates daily) · ✨ RECOMMENDED section reads your play history.',cta:{label:'🛒 Open Shop',fn:'openShop'}},
+      {em:'🎒',t:'Avatar Designer',d:'Tap your name in the lobby. 46+ items across 6 slots · hue/size/scene/frame/anim · save loadouts.',cta:{label:'🎨 Avatar',fn:'openAvatar'}},
+      {em:'🎫',t:'Battle Pass',d:'Monthly seasonal rotation · earn XP from every game · 10 tiers of rewards. Resets first day each month.',cta:{label:'🎫 Open Pass',fn:'openBP'}},
+      {em:'🧬',t:'Brain DNA + Coach AI',d:'STATS shows your radar of strengths (memory/speed/pattern/logic/word/faith). Coach AI recommends next game once you play 3+.',cta:{label:'📊 Stats',fn:'openStats'}},
+      {em:'🌐',t:'Language',d:'Toggle EN/ES in Settings. 20 verses are bilingual. Auto-detects from browser on first launch.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
+      {em:'🤝',t:'Friends',d:'Add by code · message · gift gems · cheer · MVP of week. Required for non-CPU duels.',cta:{label:'🤝 Friends',fn:'openFriends'}},
+    ];
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
+        <div style="font-size:42px">🎓</div>
+        <b style="color:var(--gold-bright);font-size:16px">how to play</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">12 sections · tap any to jump in</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px">
+        ${sections.map(s=>`<div class="setting-row" style="display:block;padding:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:24px">${s.em}</span>
+            <b style="font-size:13px">${s.t}</b>
+          </div>
+          <div style="font-size:11px;opacity:.85;line-height:1.5">${s.d}</div>
+          ${s.cta?`<button class="btn-primary" style="margin-top:8px;padding:5px 10px;font-size:10px;width:auto" onclick="App.${s.cta.fn}()">${s.cta.label} →</button>`:''}
+        </div>`).join('')}
+      </div>
+      <h3 style="margin:18px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">⌨️ TIPS</h3>
+      <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;font-size:11px;line-height:1.6">
+        🪙 <b>coins</b> = base reward · spend in shop<br>
+        💎 <b>gems</b> = premium · earned from leaderboards + duels<br>
+        🧠 <b>brain</b> = puzzle currency · for power-ups<br>
+        ✝️ <b>stars</b> = scripture · for faith bundles<br>
+        🎟️ <b>tickets</b> = special events<br>
+        🔥 keep a daily streak to unlock streak achievements
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
   },
   openBP(){
     ensureMonthlyPass();
