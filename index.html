@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.56.0 · 🐛 Coach silence killed · ALWAYS responds · bulletproof send · fallback layered · 🙏</div>
+  <div class="splash-foot">v0.57.0 · PROFILE merge · 🛍️ shop tabs · ⚙️ in-game settings · 🌍 Friends Hub · 🎯 Coach predicts · 🐐 COACH foot btn · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.56.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.57.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1361,13 +1361,13 @@ button{
       </button>
     </div>
     <div class="lobby-foot">
-      <button class="foot-btn" onclick="App.openStats()"><span class="em">🏆</span>STATS</button>
-      <button class="foot-btn" onclick="App.openAch()"><span class="em">🎖️</span>ACH</button>
+      <button class="foot-btn" onclick="App.openProfile()"><span class="em">👤</span>PROFILE</button>
       <button class="foot-btn" onclick="App.openShop()"><span class="em">🛒</span>SHOP</button>
       <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
       <button class="foot-btn" onclick="App.openHallOfFame()"><span class="em">🏛️</span>HOF</button>
-      <button class="foot-btn" onclick="App.openFriends()"><span class="em">🤝</span>FRIENDS</button>
+      <button class="foot-btn" onclick="App.openFriendsHub()"><span class="em">🤝</span>FRIENDS</button>
       <button class="foot-btn" onclick="App.openFrenzy()"><span class="em">🔥</span>FRENZY</button>
+      <button class="foot-btn" onclick="App.openCoach()"><span class="em">🐐</span>COACH</button>
     </div>
   </div>
 </section>
@@ -1390,6 +1390,7 @@ button{
   <div class="game-header">
     <button class="back-btn" onclick="App.exitGame()">←</button>
     <div class="game-stats" id="g-stats">—</div>
+    <button class="back-btn" onclick="App.openInGameDrawer()" title="quick settings">⚙️</button>
     <button class="back-btn" onclick="Pause.toggle()" title="pause (P)">⏸</button>
     <div class="mini-wallet" id="g-wallet"></div>
   </div>
@@ -1421,7 +1422,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.56.0';
+const VERSION = '0.57.0';
 
 // ----- STATE -----
 const State = {
@@ -6172,11 +6173,20 @@ const CoachChallenge = {
     State.data.coachActiveChallenges = State.data.coachActiveChallenges || [];
     State.data.coachActiveChallenges.push(ch);
     Save.write();
+    // v0.57 · Coach predicts challenge outcome
+    let predHtml = '';
+    try{
+      const p = Preview.predict(ch.rid, ch.gid);
+      predHtml = `<div style="background:rgba(0,0,0,.25);border:1px solid ${p.color};border-radius:10px;padding:8px 10px;margin:10px 0 6px;text-align:center;font-size:11px">
+        <b style="color:${p.color}">${name} predicts</b> · ${Math.round(p.prob*100)}% you beat it · ${p.label}
+      </div>`;
+    }catch(e){}
     Modal.show(`<div style="text-align:center;padding:8px">
       <div style="font-size:54px">🎯</div>
       <h3 style="margin:8px 0;color:var(--gold-bright)">${name}'s CHALLENGE</h3>
       <p style="font-size:13px;margin:6px 0">bet u can't get a ${ch.target}+ score in</p>
       <div style="font-size:24px;margin:8px 0">${ch.em} <b>${ch.gameName}</b></div>
+      ${predHtml}
       <p class="dim" style="font-size:11px">expires in 24h · reward: 80🪙 +1💎 +2🧠</p>
       <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">CHALLENGE ACCEPTED</button>
     </div>`);
@@ -9491,6 +9501,17 @@ const App = {
     });
     UI.show('aux');
   },
+  // v0.57 · PROFILE merge · Stats + Achievements tabbed
+  openProfile(tab){
+    const which = tab || 'stats';
+    document.getElementById('aux-title').innerHTML = '👤 Profile';
+    const tabBar = `<div style="display:flex;gap:6px;margin-bottom:14px">
+      <button class="${which==='stats'?'btn-primary':'btn-secondary'}" style="flex:1;padding:10px" onclick="App.openProfile('stats')">📊 Stats</button>
+      <button class="${which==='ach'?'btn-primary':'btn-secondary'}" style="flex:1;padding:10px" onclick="App.openProfile('ach')">🎖️ Achievements</button>
+    </div>`;
+    if(which==='stats'){ App.openStats(); document.getElementById('aux-body').insertAdjacentHTML('afterbegin', tabBar); document.getElementById('aux-title').innerHTML = '👤 Profile'; }
+    else { App.openAch(); document.getElementById('aux-body').insertAdjacentHTML('afterbegin', tabBar); document.getElementById('aux-title').innerHTML = '👤 Profile'; }
+  },
   openStats(){
     Ach.unlock('coach_consulted');
     const d = State.data;
@@ -9720,7 +9741,27 @@ const App = {
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
   },
-  openShop(){
+  // v0.57 · SHOP wrapper · adds tab bar for Trader + Card Pack
+  openShop(tab){
+    const which = tab || 'main';
+    if(which==='trader'){ App.openTrader(); App._shopTabBar(); return; }
+    if(which==='pack'){ App.openCardPack(); App._shopTabBar(); return; }
+    App._openShopMain();
+    App._shopTabBar();
+  },
+  _shopTabBar(){
+    const body = document.getElementById('aux-body');
+    if(!body) return;
+    const which = document.getElementById('aux-title').innerHTML.includes('Trader')?'trader':document.getElementById('aux-title').innerHTML.includes('Card')?'pack':'main';
+    const tabs = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">
+      <button class="${which==='main'?'btn-primary':'btn-secondary'}" style="padding:10px;font-size:11px" onclick="App.openShop('main')">🛒 Shop</button>
+      <button class="${which==='trader'?'btn-primary':'btn-secondary'}" style="padding:10px;font-size:11px" onclick="App.openShop('trader')">💸 Trader</button>
+      <button class="${which==='pack'?'btn-primary':'btn-secondary'}" style="padding:10px;font-size:11px" onclick="App.openShop('pack')">🃏 Pack</button>
+    </div>`;
+    body.insertAdjacentHTML('afterbegin', tabs);
+    document.getElementById('aux-title').innerHTML = '🛒 Shop';
+  },
+  _openShopMain(){
     Ach.unlock('shop_browser');
     if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0,streakSave:0};
     document.getElementById('aux-title').innerHTML = '🛒 Shop';
@@ -10459,6 +10500,49 @@ const App = {
     Save.write();
     Toast.show(State.data.coachStreamingEnabled?'⏳ streaming ON':'⏳ streaming OFF');
     App.openCoachTune();
+  },
+  // v0.57 In-game quick-settings drawer
+  openInGameDrawer(){
+    const s = State.data.settings || {};
+    const existing = document.getElementById('ingame-drawer');
+    if(existing){ existing.remove(); return; }
+    const d = document.createElement('div');
+    d.id='ingame-drawer';
+    d.style.cssText='position:fixed;top:60px;right:8px;background:rgba(10,20,40,.94);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px;z-index:9991;backdrop-filter:blur(8px);min-width:200px;box-shadow:0 8px 28px rgba(0,0,0,.5)';
+    d.innerHTML = `<div style="font-size:11px;font-weight:700;color:#FBBF24;margin-bottom:8px;letter-spacing:.06em">⚙️ QUICK</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+        <button class="btn-secondary" style="padding:8px;font-size:11px" onclick="App.toggleMusic();this.parentNode.parentNode.remove()">🎵 Music · ${s.music!==false?'ON':'OFF'}</button>
+        <button class="btn-secondary" style="padding:8px;font-size:11px" onclick="State.data.settings.sfx=!State.data.settings.sfx;Save.write();Toast.show('🔊 SFX '+(State.data.settings.sfx?'ON':'OFF'));this.parentNode.parentNode.remove()">🔊 SFX · ${s.sfx?'ON':'OFF'}</button>
+        <button class="btn-secondary" style="padding:8px;font-size:11px" onclick="State.data.settings.haptic=!State.data.settings.haptic;Save.write();Toast.show('📳 Haptics '+(State.data.settings.haptic?'ON':'OFF'));this.parentNode.parentNode.remove()">📳 Haptics · ${s.haptic?'ON':'OFF'}</button>
+        <button class="btn-secondary" style="padding:8px;font-size:11px" onclick="Pause.toggle();this.parentNode.parentNode.remove()">⏸ Pause</button>
+        <button class="btn-secondary" style="padding:8px;font-size:11px;background:rgba(239,68,68,.15)" onclick="App.exitGame();this.parentNode.parentNode.remove()">🚪 Exit Game</button>
+      </div>`;
+    document.body.appendChild(d);
+    // dismiss on outside tap
+    setTimeout(()=>{
+      const dismiss = (e)=>{ if(!d.contains(e.target)){ d.remove(); document.removeEventListener('click', dismiss); }};
+      document.addEventListener('click', dismiss);
+    }, 200);
+  },
+  // v0.57 Friends Hub merge
+  openFriendsHub(){
+    document.getElementById('aux-title').innerHTML = '🌍 Friends Hub';
+    const friends = State.data.friends || [];
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
+        <div style="font-size:42px">🌍</div>
+        <b style="color:var(--gold-bright);font-size:16px">Friends Hub</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">${friends.length} friends · invites · chat · duels · all in one</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px">
+        <button class="btn-secondary" style="padding:14px" onclick="App.openFriends()">📇 Friends List</button>
+        <button class="btn-secondary" style="padding:14px" onclick="App.openDuels()">⚔️ Duels${(State.data.duels?.outgoing||[]).length+(State.data.duels?.incoming||[]).length?' · '+((State.data.duels?.outgoing||[]).length+(State.data.duels?.incoming||[]).length):''}</button>
+        <button class="btn-secondary" style="padding:14px;grid-column:span 2;background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(167,139,250,.15))" onclick="App.duelQuickMatch()">⚡ QUICK DUEL vs CPU</button>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
   },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
