@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.60.0 · PLAYABILITY · adaptive skill scaling · anti-freeze timers · newbie→sweat auto-tune · 🙏</div>
+  <div class="splash-foot">v0.59.1 · CHART FINISH · adaptive scaling · anti-freeze · 3-currency UI · onboarding skip · settings trim · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1290,6 +1290,7 @@ button{
       <input id="ob-name" class="name-input" placeholder="your name" maxlength="20">
     </div>
     <button id="ob-next" class="btn-primary" disabled onclick="App.obNext()">CONTINUE</button>
+    <button class="btn-secondary" style="margin-top:8px;width:100%;font-size:12px;opacity:.7" onclick="App.skipOnboarding()">→ skip · just let me play</button>
   </div>
 </section>
 
@@ -1301,11 +1302,11 @@ button{
         <span class="wallet-chip">🪙 <span id="w-coin">0</span></span>
         <span class="wallet-chip">💎 <span id="w-gem">0</span></span>
         <span class="wallet-chip">🧠 <span id="w-brain">0</span></span>
-        <span class="wallet-chip">✝️ <span id="w-faith">0</span></span>
+        <span class="wallet-chip" style="display:none">✝️ <span id="w-faith">0</span></span>
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.60.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.59.1</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1422,7 +1423,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.60.0';
+const VERSION = '0.59.1';
 
 // ----- STATE -----
 const State = {
@@ -9462,7 +9463,7 @@ const App = {
         <div class="setting-row">🔊 sound effects <div class="toggle ${s.sfx?'on':''}" data-set="sfx"></div></div>
         <div class="setting-row">📳 haptics <div class="toggle ${s.haptic?'on':''}" data-set="haptic"></div></div>
         <div class="setting-row">🧒 kid-safe <div class="toggle ${s.kidSafe?'on':''}" data-set="kidSafe"></div></div>
-        <div class="setting-row">🎤 TTS <div class="toggle ${s.tts?'on':''}" data-set="tts"></div></div>
+        <div class="setting-row" style="display:none">🎤 TTS <div class="toggle ${s.tts?'on':''}" data-set="tts"></div></div>
         <div class="setting-row">📜 scripture on wins <div class="toggle ${s.scriptureOnWin!==false?'on':''}" data-set="scriptureOnWin"></div></div>
         <div class="setting-row">⏸ pause when tab hidden <div class="toggle ${s.pauseOnHide!==false?'on':''}" data-set="pauseOnHide"></div></div>
         <div class="setting-row">🚀 skip game intros <div class="toggle ${s.skipGameIntro?'on':''}" data-set="skipGameIntro"></div></div>
@@ -10596,6 +10597,20 @@ const App = {
     html += `<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button></div>`;
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
+  },
+  // v0.59.1 · skip onboarding · neutral default name
+  skipOnboarding(){
+    State.data.name = 'Player';
+    State.data.preset = 'custom';
+    State.data.mood = 'curious';
+    State.data.iq = 1000;
+    State.data.onboarded = true;
+    State.data.emoji = '🎮';
+    State.data._showTutorialNext = false;
+    State.data.welcomeGiftClaimed = true; // skip welcome gift too · no friction
+    Save.write();
+    Toast.show('⚡ skipped · welcome');
+    setTimeout(()=>{ UI.show('lobby'); App.checkDaily?.(); App.renderLobbyExtras?.(); }, 200);
   },
   quickPlay(){
     const all = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
