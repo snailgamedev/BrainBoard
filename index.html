@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.44.0 · music overlap fixed · pause polish · ducking · cleaner transitions · 🙏</div>
+  <div class="splash-foot">v0.45.0 · 🎙️ voice · 🥇 medal hunt · 📅 30-day · 🌈 custom music · 🏟️ bracket · 🎚️ visualizer · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.44.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.45.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.44.0';
+const VERSION = '0.45.0';
 
 // ----- STATE -----
 const State = {
@@ -1494,6 +1494,13 @@ const DEFAULT_SAVE = {
   adaptiveFrenzy:false, // when true Frenzy picks rounds from Coach
   duelReactions:[], // [{duelId, em, ts, from:'me'|'them'}]
   abPreviewSeen:0, // count of A/B previews shown
+  // v0.45 ALL THE THINGS PT 2
+  voiceEnabled:false, // voice command launcher toggle
+  medalHunt:{active:false, roomId:'', gameId:'', startedAt:0, runs:0, wins:0},
+  dailyCal:{}, // {YYYY-MM-DD: {claimed:true, gameKey, score}}
+  calStreak:0, // consecutive days played in challenge calendar
+  customMusic:{scale:'mixolydian', bpm:90, pad:'sine', arp:'triangle', root:48}, // user-built track
+  bracket:{active:false, round:0, scores:[], names:[]}, // tournament bracket state
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -3819,6 +3826,391 @@ const Preview = {
 };
 
 // ====================================================================
+// 🎙️ v0.45 · VOICE COMMAND LAUNCHER · Web Speech API
+// ====================================================================
+const Voice = {
+  _recog:null, _on:false,
+  available(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); },
+  start(){
+    if(this._on) return;
+    if(!this.available()){ Toast.show('🎙️ voice not supported in this browser'); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this._recog = new SR();
+    this._recog.continuous = true;
+    this._recog.lang = Lang.current()==='es'?'es-ES':'en-US';
+    this._recog.interimResults = false;
+    this._recog.onresult = (e)=>{
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(!e.results[i].isFinal) continue;
+        const t = e.results[i][0].transcript.toLowerCase().trim();
+        this._handle(t);
+      }
+    };
+    this._recog.onerror = (e)=>{ console.warn('voice err',e); };
+    this._recog.onend = ()=>{ if(this._on) try{this._recog.start();}catch(e){} };
+    try{ this._recog.start(); this._on=true; State.data.voiceEnabled=true; Save.write(); Toast.show('🎙️ voice: ON · try "frenzy" or "shop"'); }catch(e){ Toast.show('🎙️ voice already running'); }
+  },
+  stop(){
+    this._on=false;
+    State.data.voiceEnabled=false; Save.write();
+    if(this._recog){ try{this._recog.stop();}catch(e){} this._recog=null; }
+    Toast.show('🎙️ voice: OFF');
+  },
+  toggle(){ this._on?this.stop():this.start(); },
+  _handle(t){
+    const map = {
+      'frenzy':()=>App.openFrenzy(), 'frenesí':()=>App.openFrenzy(),
+      'shop':()=>App.openShop(), 'tienda':()=>App.openShop(),
+      'stats':()=>App.openStats(),
+      'achievements':()=>App.openAch(), 'logros':()=>App.openAch(),
+      'help':()=>App.openHelpHub(), 'ayuda':()=>App.openHelpHub(),
+      'lobby':()=>App.toLobby(), 'home':()=>App.toLobby(),
+      'pause':()=>Pause.toggle(),
+      'coach':()=>App.openCoach(),
+      'cabinet':()=>App.openCabinet(), 'medals':()=>App.openCabinet(),
+      'tournament':()=>App.openWeeklyTourney(), 'torneo':()=>App.openWeeklyTourney(),
+      'duels':()=>App.openDuels(), 'duelos':()=>App.openDuels(),
+      'friends':()=>App.openFriends(), 'amigos':()=>App.openFriends(),
+      'mute':()=>App.toggleMusic(), 'silenciar':()=>App.toggleMusic(),
+      'settings':()=>App.openSettings(), 'configuración':()=>App.openSettings(),
+      'calendar':()=>App.openCalendar(), 'calendario':()=>App.openCalendar(),
+    };
+    for(const [k,fn] of Object.entries(map)){
+      if(t.includes(k)){ Toast.show(`🎙️ heard "${k}"`); fn(); SFX.tap(); return; }
+    }
+    // try game names from rooms
+    const allGames = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
+    for(const {rid,g} of allGames){
+      if(t.includes(g.name.toLowerCase()) || t.includes(g.id)){
+        Toast.show(`🎙️ launching "${g.name}"`);
+        GameIntro.show(rid, g);
+        return;
+      }
+    }
+  }
+};
+
+// ====================================================================
+// 🥇 v0.45 · MEDAL HUNT MODE · grind a game until gold
+// ====================================================================
+const MedalHunt = {
+  start(roomId, gameId){
+    const game = ROOMS[roomId]?.games.find(g=>g.id===gameId);
+    if(!game){ Toast.show('game not found'); return; }
+    State.data.medalHunt = {active:true, roomId, gameId, startedAt:Date.now(), runs:0, wins:0};
+    Save.write();
+    Toast.show(`🥇 Medal Hunt · ${game.name} · go for GOLD!`);
+    GameIntro.show(roomId, game);
+  },
+  end(success){
+    if(!State.data.medalHunt?.active) return;
+    State.data.medalHunt.active=false;
+    Save.write();
+    if(success){
+      Wallet.add({coin:200,gem:5,brain:5,faith:2});
+      Modal.show(`<div style="text-align:center;padding:8px">
+        <div style="font-size:64px">🥇</div>
+        <h3 style="margin:8px 0;color:var(--gold-bright)">GOLD CLAIMED!</h3>
+        <p style="font-size:13px;margin:8px 0">+200🪙 +5💎 +5🧠 +2✝️</p>
+        <p class="dim" style="font-size:11px">runs: ${State.data.medalHunt.runs}</p>
+        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      </div>`);
+    } else {
+      Toast.show('🥉 medal hunt ended · keep trying!');
+    }
+  },
+  status(){
+    const mh = State.data.medalHunt;
+    if(!mh?.active) return null;
+    const game = ROOMS[mh.roomId]?.games.find(g=>g.id===mh.gameId);
+    return {game, room:ROOMS[mh.roomId], runs:mh.runs, wins:mh.wins};
+  },
+  bumpRun(won){
+    if(!State.data.medalHunt?.active) return;
+    State.data.medalHunt.runs++;
+    if(won) State.data.medalHunt.wins++;
+    // check if reached gold
+    const mh = State.data.medalHunt;
+    const m = Cabinet.earnedFor(mh.roomId, mh.gameId);
+    if(m && m.name==='gold'){ this.end(true); }
+    Save.write();
+  },
+  renderHub(){
+    const st = this.status();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(220,38,38,.18))">
+      <div style="font-size:42px">🥇</div>
+      <b style="color:var(--gold-bright);font-size:16px">Medal Hunt</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">pick a game · grind until gold · +200🪙 +5💎 reward</div>
+    </div>`;
+    if(st){
+      html += `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(245,158,11,.18))">
+        <b style="color:var(--gold-bright)">⚡ ACTIVE HUNT</b>
+        <div style="font-size:13px;margin-top:4px">${st.game?.em} ${st.game?.name}</div>
+        <div class="dim" style="font-size:11px">runs: ${st.runs} · wins: ${st.wins}</div>
+        <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
+          <button class="btn-primary" style="padding:6px 12px;font-size:11px" onclick="GameIntro.show('${st.room ? Object.keys(ROOMS).find(k=>ROOMS[k]===st.room) : ''}', ROOMS['${Object.keys(ROOMS).find(k=>ROOMS[k]===st.room)}'].games.find(g=>g.id==='${State.data.medalHunt.gameId}'))">▶ play</button>
+          <button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="MedalHunt.end(false)">🚪 end</button>
+        </div>
+      </div>`;
+    }
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎯 PICK A GAME TO HUNT</h3>`;
+    Object.entries(ROOMS).forEach(([rid,r])=>{
+      html += `<h3 style="margin:10px 0 4px;font-size:12px;opacity:.85">${r.em} ${r.name}</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px">
+        ${r.games.map(g=>{
+          const m = Cabinet.earnedFor(rid, g.id);
+          const isGold = m?.name==='gold';
+          return `<div onclick="${isGold?'':`MedalHunt.start('${rid}','${g.id}')`}" style="background:rgba(0,0,0,.18);border-radius:8px;padding:8px;text-align:center;font-size:11px;${isGold?'opacity:.4':'cursor:pointer'}">
+            <div style="font-size:18px">${g.em}</div>
+            <div style="font-size:10px">${g.name}</div>
+            <div style="font-size:12px;margin-top:2px">${m?m.em:'⚪'}</div>
+            ${isGold?'<div class="dim" style="font-size:9px">already gold</div>':''}
+          </div>`;
+        }).join('')}
+      </div>`;
+    });
+    return html;
+  }
+};
+
+// ====================================================================
+// 📅 v0.45 · 30-DAY CHALLENGE CALENDAR
+// ====================================================================
+const Calendar = {
+  todayKey(){
+    const d=new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  },
+  monthStartDay(){
+    const d=new Date();
+    return new Date(d.getFullYear(),d.getMonth(),1).getDay();
+  },
+  daysInMonth(){
+    const d=new Date();
+    return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  },
+  todayChallengeGame(){
+    const day = new Date().getDate();
+    const games = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
+    return games[(day-1)%games.length];
+  },
+  claim(score){
+    const k = this.todayKey();
+    if(State.data.dailyCal?.[k]?.claimed) return;
+    State.data.dailyCal = State.data.dailyCal || {};
+    const ch = this.todayChallengeGame();
+    State.data.dailyCal[k] = {claimed:true, gameKey:`${ch.rid}:${ch.g.id}`, score, ts:Date.now()};
+    // streak
+    const yesterdayD = new Date(); yesterdayD.setDate(yesterdayD.getDate()-1);
+    const y = `${yesterdayD.getFullYear()}-${String(yesterdayD.getMonth()+1).padStart(2,'0')}-${String(yesterdayD.getDate()).padStart(2,'0')}`;
+    if(State.data.dailyCal[y]?.claimed) State.data.calStreak = (State.data.calStreak||0)+1;
+    else State.data.calStreak = 1;
+    const streakBonus = Math.min(7, State.data.calStreak)*15;
+    Wallet.add({coin:50+streakBonus, brain:2, gem:State.data.calStreak%7===0?1:0});
+    Save.write();
+    Toast.show(`📅 daily ${State.data.calStreak}-day streak · +${50+streakBonus}🪙`);
+  },
+  renderHub(){
+    const d=new Date();
+    const dim = this.daysInMonth();
+    const startDay = this.monthStartDay();
+    const today = d.getDate();
+    const ch = this.todayChallengeGame();
+    const todayClaimed = State.data.dailyCal?.[this.todayKey()]?.claimed;
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">📅</div>
+      <b style="color:var(--gold-bright);font-size:16px">Daily Challenge Calendar</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">${d.toLocaleDateString('en',{month:'long',year:'numeric'})} · streak ${State.data.calStreak||0}🔥</div>
+    </div>`;
+    html += `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18));border-color:#FBBF24;margin-top:12px">
+      <div class="dim" style="font-size:10px">TODAY'S CHALLENGE</div>
+      <div style="font-size:24px;margin:4px 0">${ch.g.em}</div>
+      <b>${ch.g.name}</b>
+      <div class="dim" style="font-size:11px;margin:4px 0">${ROOMS[ch.rid].em} ${ROOMS[ch.rid].name}</div>
+      ${todayClaimed?'<div style="font-size:13px;color:#10B981;margin-top:6px">✅ claimed today</div>':`<button class="btn-primary" style="margin-top:6px;padding:8px 14px;font-size:12px" onclick="GameIntro.show('${ch.rid}', ROOMS['${ch.rid}'].games.find(g=>g.id==='${ch.g.id}'))">▶ play challenge</button>`}
+    </div>`;
+    // grid
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📋 GRID</h3>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px;text-align:center">
+      ${['S','M','T','W','T','F','S'].map(d=>`<div style="opacity:.65;font-weight:700;padding:4px 0">${d}</div>`).join('')}`;
+    for(let i=0;i<startDay;i++) html += `<div></div>`;
+    for(let day=1;day<=dim;day++){
+      const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const done = State.data.dailyCal?.[dk]?.claimed;
+      const isToday = day===today;
+      const bg = done?'background:linear-gradient(135deg,#10B981,#059669);color:#fff':isToday?'background:rgba(245,158,11,.3);border:1px solid #FBBF24':'background:rgba(255,255,255,.04)';
+      html += `<div style="aspect-ratio:1;border-radius:6px;${bg};display:grid;place-items:center;font-weight:700;font-size:11px">${done?'✓':day}</div>`;
+    }
+    html += `</div>`;
+    html += `<div class="dim" style="font-size:10px;text-align:center;margin-top:8px">7-day streak = bonus 💎 · keep going!</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🏟️ v0.45 · TOURNAMENT BRACKET · 8-player single-elim
+// ====================================================================
+const Bracket = {
+  start(){
+    const friends = (State.data.friends||[]).slice(0,5).map(f=>f.name||'Friend');
+    const botPool = ['Aaron','Mary','David','Ruth','John','Paul','Lydia','Daniel','Sarah','Esther'];
+    const fillBots = botPool.sort(()=>Math.random()-.5).slice(0,8-1-friends.length);
+    const players = [State.data.name||'You', ...friends, ...fillBots].slice(0,8);
+    State.data.bracket = {active:true, round:0, players, scores:{}, results:[], you:State.data.name||'You'};
+    Save.write();
+    Toast.show('🏟️ bracket started · 8-player single-elim');
+  },
+  advance(myScore){
+    const b = State.data.bracket;
+    if(!b?.active) return;
+    // each round: simulate opponents
+    const bracketSize = 8;
+    const round = b.round;
+    const live = b.results.length===0 ? b.players : b.results[b.results.length-1].advancing;
+    if(live.length<=1){ this.finish(); return; }
+    // simulate scores
+    const scores = {};
+    live.forEach(p=>{
+      if(p===b.you) scores[p] = myScore;
+      else scores[p] = Math.max(5, Math.round(myScore*(0.5+Math.random()*0.9)));
+    });
+    // pair them up
+    const pairs = [];
+    const advancing = [];
+    for(let i=0;i<live.length;i+=2){
+      const a = live[i], c = live[i+1];
+      if(scores[a]>=scores[c]){ pairs.push({a,c,winner:a}); advancing.push(a); }
+      else { pairs.push({a,c,winner:c}); advancing.push(c); }
+    }
+    b.results.push({round, pairs, scores, advancing});
+    b.round++;
+    Save.write();
+  },
+  finish(){
+    const b = State.data.bracket;
+    if(!b?.active) return;
+    const last = b.results[b.results.length-1];
+    const champ = last?.advancing?.[0] || '?';
+    const youWon = champ === b.you;
+    b.active = false;
+    Save.write();
+    const reward = youWon?{gem:30,coin:500,brain:10}:{gem:5,coin:100,brain:2};
+    Wallet.add(reward);
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:64px">${youWon?'👑':'🏟️'}</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">${youWon?'CHAMPION!':'tourney over'}</h3>
+      <p style="font-size:13px;margin:8px 0">winner: <b>${champ}</b></p>
+      <p style="font-size:12px">+${reward.coin}🪙 +${reward.gem}💎 +${reward.brain}🧠</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+    </div>`);
+  },
+  renderHub(){
+    const b = State.data.bracket;
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(220,38,38,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">🏟️</div>
+      <b style="color:var(--gold-bright);font-size:16px">Tournament Bracket</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">8-player single elimination · friends + bots fill · 👑 champion = 30💎 +500🪙</div>
+    </div>`;
+    if(b?.active){
+      html += `<div class="lobby-banner" style="text-align:center;background:rgba(245,158,11,.15);border-color:#FBBF24">
+        <b style="color:var(--gold-bright)">⚡ ACTIVE TOURNAMENT</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">round ${b.round+1}/3 · play a Frenzy to advance</div>
+      </div>`;
+      if(b.results.length){
+        html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">📊 RESULTS</h3>`;
+        b.results.forEach((r,i)=>{
+          html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;margin-bottom:6px"><b style="font-size:11px">Round ${i+1}</b>${r.pairs.map(p=>`<div style="font-size:11px;padding:3px 0">${p.winner===p.a?'<b>':''}${p.a} ${r.scores[p.a]}${p.winner===p.a?'</b>':''} vs ${p.winner===p.c?'<b>':''}${p.c} ${r.scores[p.c]}${p.winner===p.c?'</b>':''}</div>`).join('')}</div>`;
+        });
+      }
+      html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:14px" onclick="Frenzy.start();">▶ play Frenzy to advance</button>`;
+      html += `<button class="btn-secondary" style="margin-top:6px;width:100%" onclick="Bracket.finish()">🚪 forfeit</button>`;
+    } else {
+      html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:14px" onclick="Bracket.start()">▶ START BRACKET</button>`;
+    }
+    return html;
+  }
+};
+
+// ====================================================================
+// 🎚️ v0.45 · MUSIC VISUALIZER · bars in chip · reactive
+// ====================================================================
+const Visualizer = {
+  _bars: null, _tick:null,
+  attach(){
+    const chip = document.querySelector('.music-chip');
+    if(!chip || chip.querySelector('.viz-bars')) return;
+    const wrap = document.createElement('span');
+    wrap.className='viz-bars';
+    wrap.style.cssText='display:inline-flex;gap:2px;align-items:flex-end;margin-left:6px;height:14px';
+    for(let i=0;i<4;i++){
+      const b=document.createElement('span');
+      b.style.cssText=`display:inline-block;width:3px;background:#FBBF24;border-radius:1px;transition:height .12s ease-out;height:3px`;
+      wrap.appendChild(b);
+    }
+    chip.appendChild(wrap);
+    this._bars = wrap;
+    this._start();
+  },
+  _start(){
+    if(this._tick) clearInterval(this._tick);
+    this._tick = setInterval(()=>{
+      if(!this._bars || !State.data?.settings?.music) return;
+      const muted = document.querySelector('.music-chip')?.classList.contains('muted');
+      [...this._bars.children].forEach(b=>{
+        const h = muted?2:2+Math.random()*12;
+        b.style.height = h+'px';
+        b.style.opacity = muted?0.3:0.9;
+      });
+    }, 180);
+  }
+};
+
+// ====================================================================
+// 🌈 v0.45 · CUSTOM MUSIC PALETTE · user builds their own track
+// ====================================================================
+const CustomMusic = {
+  apply(){
+    // Inject user's custom track into the Music TRACKS table
+    if(!State.data.customMusic) return;
+    const cm = State.data.customMusic;
+    // We can't modify the local TRACKS object directly · but we can play via a fake key
+    Music._customTrack = {bpm:cm.bpm, scale:cm.scale, root:cm.root, chords:[0,3,4,0], pad:cm.pad, arp:cm.arp};
+  },
+  preview(){
+    this.apply();
+    // call Music.play with our custom track via the helper
+    Toast.show('🌈 playing custom track');
+    if(Music._playCustom) Music._playCustom();
+  },
+  renderHub(){
+    const cm = State.data.customMusic || {scale:'mixolydian',bpm:90,pad:'sine',arp:'triangle',root:48};
+    const scales = ['phrygian','phrygianDom','mixolydian','dorian','aeolian','lydian','major'];
+    const oscs = ['sine','triangle','square','sawtooth'];
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(34,211,238,.18))">
+      <div style="font-size:42px">🌈</div>
+      <b style="color:var(--gold-bright);font-size:16px">Custom Music Palette</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">build your own track · 4 dials · live preview</div>
+    </div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">🎼 SCALE</h3>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+      ${scales.map(s=>`<button class="av-tool-btn ${cm.scale===s?'active':''}" onclick="App.cmSet('scale','${s}')">${s}</button>`).join('')}</div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">⏱ BPM · ${cm.bpm}</h3>
+      <input type="range" min="60" max="160" value="${cm.bpm}" style="width:100%" oninput="App.cmSet('bpm',parseInt(this.value));this.parentNode.querySelector('h3').textContent='⏱ BPM · '+this.value">`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">🎹 PAD INSTRUMENT</h3>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      ${oscs.map(o=>`<button class="av-tool-btn ${cm.pad===o?'active':''}" onclick="App.cmSet('pad','${o}')">${o}</button>`).join('')}</div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">🎵 ARP INSTRUMENT</h3>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      ${oscs.map(o=>`<button class="av-tool-btn ${cm.arp===o?'active':''}" onclick="App.cmSet('arp','${o}')">${o}</button>`).join('')}</div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">🎚 ROOT NOTE · MIDI ${cm.root}</h3>
+      <input type="range" min="36" max="60" value="${cm.root}" style="width:100%" oninput="App.cmSet('root',parseInt(this.value));this.parentNode.querySelector('h3').textContent='🎚 ROOT NOTE · MIDI '+this.value">`;
+    html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:12px" onclick="CustomMusic.preview()">▶ PREVIEW CUSTOM TRACK</button>`;
+    html += `<button class="btn-secondary" style="margin-top:6px;width:100%" onclick="Music.play('lobby')">↩ back to lobby track</button>`;
+    return html;
+  }
+};
+
+// ====================================================================
 // 💾 SAVE / LOAD
 // ====================================================================
 const Save = {
@@ -4060,6 +4452,9 @@ const Music = (()=>{
     pendingTimers.forEach(id=>clearTimeout(id));
     pendingTimers.clear();
     if(schedT){ clearTimeout(schedT); schedT=null; }
+    // v0.45 · KILL all currently-playing oscillators too · they have AudioContext-scheduled stops
+    // that would otherwise let the old track bleed into the new one
+    killAllNodes();
   }
   const scales = {
     phrygian:    [0,1,3,5,7,8,10], // dark · holy
@@ -4099,6 +4494,16 @@ const Music = (()=>{
     return ctx;
   }
   function midiToFreq(m){ return 440 * Math.pow(2,(m-69)/12); }
+  // v0.45 · Track every AudioNode so transitions don't bleed past
+  let activeNodes = new Set();
+  function trackNode(n){ activeNodes.add(n); return n; }
+  function killAllNodes(){
+    activeNodes.forEach(n=>{
+      try{ if(n.stop) n.stop(); }catch(e){}
+      try{ n.disconnect(); }catch(e){}
+    });
+    activeNodes.clear();
+  }
   function envNote(freq, dur, type='sine', vol=0.05){
     const c=ac(); if(!c) return;
     const o=c.createOscillator(); const g=c.createGain();
@@ -4108,6 +4513,8 @@ const Music = (()=>{
     g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+dur);
     o.connect(g); g.connect(master);
     o.start(); o.stop(c.currentTime+dur+0.05);
+    trackNode(o);
+    o.onended = ()=>activeNodes.delete(o);
   }
   function envKick(){
     const c=ac(); if(!c||c.state==='suspended')return;
@@ -4118,6 +4525,8 @@ const Music = (()=>{
     g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.15);
     o.connect(g); g.connect(master);
     o.start(); o.stop(c.currentTime+0.18);
+    trackNode(o);
+    o.onended = ()=>activeNodes.delete(o);
   }
   function envHat(){
     const c=ac(); if(!c||c.state==='suspended')return;
@@ -4130,6 +4539,8 @@ const Music = (()=>{
     g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.05);
     src.connect(g); g.connect(master);
     src.start();
+    trackNode(src);
+    src.onended = ()=>activeNodes.delete(src);
   }
   function playChord(track, chordIdx){
     if(!State.data?.settings?.music) return;
@@ -4291,6 +4702,8 @@ const Music = (()=>{
     chip.classList.toggle('muted', m);
     const niceName = {splash:'splash',onboard:'onboarding',lobby:'lobby',aux:'menu',word:'word lab',brain:'brain gym',mind:'mind games',num:'numbers',script:'scripture',logic:'logic lab',speed:'speed',daily:'daily',game:'game'};
     chip.innerHTML = `${m?'🔇':'🎵'} <span style="opacity:.85">${niceName[trackId]||trackId||'—'}</span>`;
+    // v0.45 reattach visualizer bars
+    try{ Visualizer.attach(); }catch(e){}
   }
 })();
 
@@ -5948,6 +6361,11 @@ const App = {
           <button class="btn-secondary" onclick="App.openCabinet()">🏆 medal cabinet</button>
           <button class="btn-secondary" onclick="App.openWeeklyTourney()">📅 weekly tournament</button>
           <button class="btn-secondary" onclick="App.openCoach()">🧠 coach AI</button>
+          <button class="btn-secondary" onclick="App.openMedalHunt()">🥇 medal hunt</button>
+          <button class="btn-secondary" onclick="App.openCalendar()">📅 30-day calendar</button>
+          <button class="btn-secondary" onclick="App.openBracket()">🏟️ tournament bracket</button>
+          <button class="btn-secondary" onclick="App.openCustomMusic()">🌈 custom music</button>
+          <button class="btn-secondary" onclick="App.toggleVoice()">🎙️ voice commands · ${State.data.voiceEnabled?'ON':'OFF'}</button>
           <button class="btn-secondary" onclick="App.startTour()">🎯 replay tour</button>
         </div>
         <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
@@ -6630,6 +7048,33 @@ const App = {
     Toast.show(State.data.adaptiveFrenzy?'🎯 adaptive frenzy ON · Coach picks rounds':'🎲 random frenzy rounds');
     App.openSettings();
   },
+  // v0.45 hubs
+  openMedalHunt(){
+    document.getElementById('aux-title').innerHTML = '🥇 Medal Hunt';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${MedalHunt.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back</button></div>`;
+    UI.show('aux');
+  },
+  openCalendar(){
+    document.getElementById('aux-title').innerHTML = '📅 Daily Calendar';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${Calendar.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back</button></div>`;
+    UI.show('aux');
+  },
+  openBracket(){
+    document.getElementById('aux-title').innerHTML = '🏟️ Bracket';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${Bracket.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back</button></div>`;
+    UI.show('aux');
+  },
+  openCustomMusic(){
+    document.getElementById('aux-title').innerHTML = '🌈 Custom Music';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CustomMusic.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back</button></div>`;
+    UI.show('aux');
+  },
+  cmSet(k,v){
+    State.data.customMusic = State.data.customMusic || {scale:'mixolydian',bpm:90,pad:'sine',arp:'triangle',root:48};
+    State.data.customMusic[k] = v;
+    Save.write();
+  },
+  toggleVoice(){ Voice.toggle(); App.openSettings(); },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -7150,7 +7595,16 @@ function recordResult(roomId, gameId, won, rewards={}){
       // v0.40 LAYER 2 · Medal earned toast
       const medal = Medals.earned(roomId, gameId, lbScore);
       if(medal) setTimeout(()=>Toast.show(`${medal.em} ${medal.name.toUpperCase()} medal · ${lbScore} pts!`), 600);
+      // v0.45 · Medal Hunt run bump · Calendar claim · Bracket advance
+      try{ MedalHunt.bumpRun(true); }catch(e){}
+      try{
+        const ch = Calendar.todayChallengeGame();
+        if(ch.rid===roomId && ch.g.id===gameId) Calendar.claim(lbScore);
+      }catch(e){}
+      try{ if(State.data.bracket?.active && (roomId==='daily' || gameId==='frenzy')) Bracket.advance(lbScore); }catch(e){}
     }catch(e){console.warn('lb err',e);}
+  } else {
+    try{ MedalHunt.bumpRun(false); }catch(e){}
   }
   Save.write();
   Ach.check();
