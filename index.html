@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.58.0 · pivoted for real players · Coach UI scratched · ⚡ QUICK PLAY foot btn · cleaner settings · 🙏</div>
+  <div class="splash-foot">v0.59.0 · LEAN REBUILD · Frenzy fixed · 3 difficulties · cleaner settings · ready for real players · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.58.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.59.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1364,7 +1364,7 @@ button{
       <button class="foot-btn" onclick="App.openProfile()"><span class="em">👤</span>PROFILE</button>
       <button class="foot-btn" onclick="App.openShop()"><span class="em">🛒</span>SHOP</button>
       <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
-      <button class="foot-btn" onclick="App.openHallOfFame()"><span class="em">🏛️</span>HOF</button>
+      <button class="foot-btn" onclick="App.openDaily()"><span class="em">📅</span>DAILY</button>
       <button class="foot-btn" onclick="App.openFriendsHub()"><span class="em">🤝</span>FRIENDS</button>
       <button class="foot-btn" onclick="App.openFrenzy()"><span class="em">🔥</span>FRENZY</button>
       <button class="foot-btn" onclick="App.quickPlay()"><span class="em">⚡</span>QUICK PLAY</button>
@@ -1422,7 +1422,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.58.0';
+const VERSION = '0.59.0';
 
 // ----- STATE -----
 const State = {
@@ -1484,7 +1484,7 @@ const DEFAULT_SAVE = {
   cinematicPref:'on', // on/short/off
   recsHistory:{}, // {gameKey: playCount} drives shop recommendations
   helpHubSeen:false, // v0.41 has the user opened the ❓ help hub yet
-  pace:'normal', // v0.42 slow/normal/fast · time multiplier across all timed games
+  pace:'slow', // v0.59 default slow for new players · was 'normal'
   tourDone:false, // v0.42 first-time lobby tour
   welcomeGiftClaimed:false, // v0.42 first-game free gift
   roomTipsSeen:{}, // v0.42 first-time room entry tips
@@ -3352,8 +3352,8 @@ const Duels = {
 // ====================================================================
 const Frenzy = {
   POOL: [
-    {id:'frenzy-math',em:'➕',name:'Math Burst',duration:20, run:(area,state,onDone)=>{
-      let score=0, t=Pace.scale(20), qIdx=0;
+    {id:'frenzy-math',em:'➕',name:'Math Burst',duration:30, run:(area,state,onDone)=>{
+      let score=0, t=Pace.scale(30), qIdx=0;
       const next=()=>{
         const a=Math.floor(Math.random()*15)+1, b=Math.floor(Math.random()*15)+1;
         const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
@@ -3376,8 +3376,8 @@ const Frenzy = {
       const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);} else next();},1000);
       state.timers.push(tm);
     }},
-    {id:'frenzy-color',em:'🎨',name:'Color Match',duration:15, run:(area,state,onDone)=>{
-      let score=0, t=Pace.scale(15);
+    {id:'frenzy-color',em:'🎨',name:'Color Match',duration:22, run:(area,state,onDone)=>{
+      let score=0, t=Pace.scale(22);
       const cols=['red','blue','green','yellow','purple'];
       const colCss={red:'#EF4444',blue:'#3B82F6',green:'#10B981',yellow:'#F59E0B',purple:'#A78BFA'};
       const next=()=>{
@@ -3399,8 +3399,8 @@ const Frenzy = {
       const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
       state.timers.push(tm);
     }},
-    {id:'frenzy-tap',em:'⚡',name:'Star Tap',duration:12, run:(area,state,onDone)=>{
-      let score=0, t=Pace.scale(12);
+    {id:'frenzy-tap',em:'⚡',name:'Star Tap',duration:18, run:(area,state,onDone)=>{
+      let score=0, t=Pace.scale(18);
       area.innerHTML=`<div class="dim" id="frnz-t" style="text-align:center;font-size:11px">⏱ ${t}s · tap stars · NOT bombs · score 0</div>
         <div id="frnz-board" style="position:relative;height:280px;background:rgba(0,0,0,.18);border-radius:14px;overflow:hidden;margin-top:10px"></div>`;
       const board=document.getElementById('frnz-board');
@@ -3423,8 +3423,8 @@ const Frenzy = {
       const tm=setInterval(()=>{t--; update(); if(t<=0){clearInterval(tm); clearInterval(sp); onDone(score);}},1000);
       state.timers.push(tm, sp);
     }},
-    {id:'frenzy-mem',em:'🧠',name:'Memory Flash',duration:14, run:(area,state,onDone)=>{
-      let score=0, t=Pace.scale(14), round=0;
+    {id:'frenzy-mem',em:'🧠',name:'Memory Flash',duration:22, run:(area,state,onDone)=>{
+      let score=0, t=Pace.scale(22), round=0;
       const next=()=>{
         const emojis=['🐑','🦁','🕊️','🐟','🦅','🐎'];
         const seq=[];
@@ -3449,8 +3449,8 @@ const Frenzy = {
       const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
       state.timers.push(tm);
     }},
-    {id:'frenzy-eq',em:'🔣',name:'Equation Flash',duration:16, run:(area,state,onDone)=>{
-      let score=0, t=Pace.scale(16);
+    {id:'frenzy-eq',em:'🔣',name:'Equation Flash',duration:24, run:(area,state,onDone)=>{
+      let score=0, t=Pace.scale(24);
       const next=()=>{
         const x=Math.floor(Math.random()*9)+2;
         const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
@@ -3475,8 +3475,8 @@ const Frenzy = {
       const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
       state.timers.push(tm);
     }},
-    {id:'frenzy-word',em:'🔤',name:'Word Flash',duration:18, run:(area,state,onDone)=>{
-      let score=0, t=Pace.scale(18);
+    {id:'frenzy-word',em:'🔤',name:'Word Flash',duration:27, run:(area,state,onDone)=>{
+      let score=0, t=Pace.scale(27);
       const pool=[
         {q:'opposite of HOT',a:'COLD',o:['COLD','WARM','SUN','FIRE']},
         {q:'plural of FOOT',a:'FEET',o:['FEET','FOOTS','FEETS','PAWS']},
@@ -3564,15 +3564,35 @@ const Frenzy = {
   _tick(){
     if(this.round>=this.runs.length){ this.end(); return; }
     const cur = this.runs[this.round];
-    document.getElementById('g-stats').innerHTML = `<b>🔥 Daily Frenzy</b> · round <b>${this.round+1}/3</b> · ${cur.em} ${cur.name} · total <b>${this.totalScore}</b>`;
+    document.getElementById('g-stats').innerHTML = `<b>🔥 Daily Frenzy</b> · round <b>${this.round+1}/${this.runs.length}</b> · ${cur.em} ${cur.name} · total <b>${this.totalScore}</b>`;
     const area = document.getElementById('g-area');
-    area.innerHTML = `<div class="big" style="text-align:center">${cur.em}</div>
-      <h3 style="text-align:center;margin:6px 0">${cur.name}</h3>
-      <div class="dim" style="text-align:center;font-size:11px">${cur.duration}s starting in 1...</div>`;
-    setTimeout(()=>{
+    // v0.59 · 3-2-1-GO countdown before each round · less jarring
+    let cd = 3;
+    const renderCountdown = ()=>{
+      area.innerHTML = `<div style="text-align:center;padding:30px">
+        <div style="font-size:88px">${cur.em}</div>
+        <h2 style="margin:6px 0;font-size:22px">${cur.name}</h2>
+        <div class="dim" style="font-size:12px;margin-bottom:14px">${cur.duration}s · ${cur.id.replace('frenzy-','')} round</div>
+        <div style="font-size:120px;font-weight:900;color:#FBBF24;animation:cineCount .9s ease-out forwards">${cd>0?cd:'GO!'}</div>
+      </div>`;
+    };
+    renderCountdown();
+    const step = ()=>{
+      cd--;
+      if(cd<0){
+        const a = document.getElementById('g-area');
+        if(!a) return;
+        a.innerHTML='';
+        runIt();
+        return;
+      }
+      renderCountdown();
+      setTimeout(step, 900);
+    };
+    setTimeout(step, 900);
+    const runIt = ()=>{
       const a = document.getElementById('g-area');
       if(!a) return;
-      a.innerHTML='';
       cur.run(a, this.state, (score)=>{
         // v0.40 LAYER 2 · spotlight 2x bonus
         let effScore = score;
@@ -3587,7 +3607,7 @@ const Frenzy = {
         this.round++;
         setTimeout(()=>this._tick(), 500);
       });
-    }, 900);
+    };
   },
   end(){
     this.cleanup();
@@ -9379,23 +9399,18 @@ const App = {
           <button class="btn-primary" style="padding:8px 14px;font-size:11px;margin-top:8px;width:100%" onclick="App.testMusic()">▶ TEST MUSIC NOW</button>
         </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎮 DIFFICULTY</h3>
-        <p class="dim" style="font-size:11px;margin-bottom:6px">tunes Brain Rank gain/loss · doesn't change game mechanics</p>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
-          <button class="av-tool-btn ${s.difficulty==='tutorial'?'active':''}" onclick="App.setDifficulty('tutorial')">🌿 TUTORIAL</button>
-          <button class="av-tool-btn ${s.difficulty==='casual'?'active':''}" onclick="App.setDifficulty('casual')">😊 CASUAL</button>
+        <p class="dim" style="font-size:11px;margin-bottom:6px">tunes Brain Rank gain/loss · 3 simple options</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="av-tool-btn ${s.difficulty==='casual'?'active':''}" onclick="App.setDifficulty('casual')">😊 EASY</button>
           <button class="av-tool-btn ${(s.difficulty==='normal'||!s.difficulty)?'active':''}" onclick="App.setDifficulty('normal')">⚖️ NORMAL</button>
-          <button class="av-tool-btn ${s.difficulty==='zen'?'active':''}" onclick="App.setDifficulty('zen')">🧘 ZEN</button>
-          <button class="av-tool-btn ${s.difficulty==='hardcore'?'active':''}" onclick="App.setDifficulty('hardcore')">🔥 HARDCORE</button>
-          <button class="av-tool-btn ${s.difficulty==='sweat'?'active':''}" onclick="App.setDifficulty('sweat')">💦 SWEAT</button>
-          <button class="av-tool-btn ${s.difficulty==='apostle'?'active':''}" onclick="App.setDifficulty('apostle')">🌋 APOSTLE</button>
-          <button class="av-tool-btn ${s.difficulty==='random'?'active':''}" onclick="App.setDifficulty('random')">🎲 RANDOM</button>
+          <button class="av-tool-btn ${s.difficulty==='hardcore'?'active':''}" onclick="App.setDifficulty('hardcore')">🔥 HARD</button>
         </div>
         <p class="dim" style="font-size:10px;margin-top:6px">
-          ${s.difficulty==='tutorial'?'🌿 Tutorial · 2x gain · NO losses · zero pressure':s.difficulty==='casual'?'😊 Casual · +50% gain · -50% loss · climb easier':s.difficulty==='zen'?'🧘 Zen · NO rank changes · play for fun':s.difficulty==='hardcore'?'🔥 Hardcore · +50% loss · steeper falls':s.difficulty==='sweat'?'💦 Sweat · -30% gain · +80% loss · grinder mode':s.difficulty==='apostle'?'🌋 Apostle · -50% gain · 3x loss · BRUTAL test':s.difficulty==='random'?'🎲 Random · rolls fresh per game · chaos':'⚖️ Normal · adaptive · gain decreases as you climb'}
+          ${s.difficulty==='casual'?'😊 Easy · gentler rank climb':s.difficulty==='hardcore'?'🔥 Hard · steeper losses · for grinders':'⚖️ Normal · balanced'}
         </p>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎨 APP THEME</h3>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-          ${Object.entries(APP_THEMES).map(([id,t])=>`<button class="av-tool-btn ${(d.appTheme||'cobalt')===id?'active':''}" onclick="App.setAppTheme('${id}')">${t.name}</button>`).join('')}
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+          ${['cobalt','neon','forest','crimson'].map(id=>{const t=APP_THEMES[id];return `<button class="av-tool-btn ${(d.appTheme||'cobalt')===id?'active':''}" onclick="App.setAppTheme('${id}')">${t.name}</button>`;}).join('')}
         </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎬 CINEMATIC INTROS</h3>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
@@ -10485,6 +10500,33 @@ const App = {
     }, 200);
   },
   // v0.58 · QUICK PLAY · jump straight into a random game · prioritizes unwon games
+  // v0.59 · DAILY hub · today's challenge · streak · daily reward
+  openDaily(){
+    document.getElementById('aux-title').innerHTML = '📅 Daily';
+    const d = State.data;
+    let ch = null;
+    try{ ch = Calendar.todayChallengeGame(); }catch(e){}
+    const todayClaimed = State.data.dailyCal?.[Calendar.todayKey?.()]?.claimed;
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18))">
+        <div style="font-size:42px">📅</div>
+        <b style="color:var(--gold-bright);font-size:16px">Daily</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">streak ${d.streak||0}🔥 · today's challenge · 30-day grid</div>
+      </div>`;
+    if(ch?.g){
+      html += `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18));border-color:#FBBF24;margin-top:14px">
+        <div class="dim" style="font-size:10px">TODAY'S CHALLENGE</div>
+        <div style="font-size:36px;margin:6px 0">${ch.g.em}</div>
+        <b style="font-size:14px">${ch.g.name}</b>
+        <div class="dim" style="font-size:11px;margin:4px 0">${ROOMS[ch.rid].em} ${ROOMS[ch.rid].name}</div>
+        ${todayClaimed?'<div style="font-size:13px;color:#10B981;margin-top:8px">✅ claimed today</div>':`<button class="btn-primary" style="margin-top:8px;padding:8px 16px" onclick="Calendar.playToday()">▶ play challenge</button>`}
+      </div>`;
+    }
+    try{ html += Calendar.renderHub().replace(/<div class="lobby-banner"[\s\S]*?<\/div><\/div>/,''); }catch(e){}
+    html += `<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button></div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
   quickPlay(){
     const all = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
     // weight: prefer games user has fewer wins on (replay value)
@@ -13340,7 +13382,7 @@ const NumberMemoryGame = {
     this.phase='show';
     this.input='';
     this.render();
-    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2500);
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},4000);
   },
   press(n){
     if(this.phase!=='ask')return;
@@ -15484,7 +15526,7 @@ const NewAudioMemoryGame = (()=>{
     this.target=this.sequence[this.targetIdx];
     this.phase='show';
     this.render();
-    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2500);
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},4000);
   };
   game.pick=function(i){
     if(this.phase!=='ask')return;
@@ -15496,7 +15538,7 @@ const NewAudioMemoryGame = (()=>{
     const area=document.getElementById('g-area'); area.innerHTML='';
     const wrap=el('div','stroop-area');
     if(this.phase==='show'){
-      wrap.appendChild(el('div','dim','memorize the sequence · 2.5 sec'));
+      wrap.appendChild(el('div','dim','memorize the sequence · 4 sec'));
       const row=el('div',''); row.style.cssText='display:flex;gap:6px;margin:14px 0;font-size:32px;flex-wrap:wrap;justify-content:center;max-width:340px';
       this.sequence.forEach((n,i)=>{
         const sp=el('div',''); sp.style.cssText='width:50px;height:50px;background:rgba(124,58,237,.3);border:2px solid #7C3AED;border-radius:10px;display:grid;place-items:center';
@@ -15553,7 +15595,7 @@ const NewWordRecallGame = (()=>{
     this.options=[this.target,...distract].sort(()=>Math.random()-.5);
     this.phase='show';
     this.render();
-    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2500);
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},4000);
   };
   game.pick=function(o){
     if(this.phase!=='ask')return;
@@ -15565,7 +15607,7 @@ const NewWordRecallGame = (()=>{
     const area=document.getElementById('g-area'); area.innerHTML='';
     const wrap=el('div','stroop-area');
     if(this.phase==='show'){
-      wrap.appendChild(el('div','dim','memorize 4 words · 2.5 sec'));
+      wrap.appendChild(el('div','dim','memorize 4 words · 4 sec'));
       const row=el('div',''); row.style.cssText='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0;max-width:300px';
       this.shown.forEach((w,i)=>{
         const c=el('div',''); c.style.cssText='padding:14px;background:rgba(124,58,237,.25);border:2px solid #7C3AED;border-radius:10px;font-size:18px;font-weight:800;font-family:"Cinzel",serif;text-align:center';
