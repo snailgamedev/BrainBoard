@@ -54,6 +54,16 @@ body.color-blind .room-script{filter:hue-rotate(20deg)}
 body.color-blind .word-cell.green{background:#0066CC !important}
 body.color-blind .word-cell.yellow{background:#FFC107 !important}
 
+/* v0.29 SCROLL EVERYWHERE · every screen body scrolls, headers stick */
+.lobby-content, #aux-body, .room-body, .game-area{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+#splash{ overflow-y:auto; }
+#onboard{ overflow-y:auto; }
+.modal-card{ max-height:90vh; overflow-y:auto; }
+
 /* v0.23 PRO POLISH · consistent micro-anims · mobile-tight */
 @media (max-width:540px){
   .lobby-foot{ grid-template-columns:repeat(3,1fr) !important; }
@@ -1246,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.28.0 · POWER-UPS LIVE · 2x · Freeze · Holy Fire · Skip · 🙏</div>
+  <div class="splash-foot">v0.29.0 · scroll-everywhere · monthly pass · resume · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1397,7 +1407,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.28.0';
+const VERSION = '0.29.0';
 
 // ----- STATE -----
 const State = {
@@ -1629,6 +1639,41 @@ function applyAppTheme(themeId){
   const t = APP_THEMES[themeId] || APP_THEMES.cobalt;
   document.documentElement.style.setProperty('--app-bg', t.bg);
   document.body.style.background = t.bg;
+}
+
+// ===== v0.29 MONTHLY BATTLE PASS · 12 themed seasons =====
+const MONTHLY_PASSES = [
+  {month:0,  id:'jan2026', em:'❄️', name:'NEW BEGINNINGS', color:'#22D3EE', theme:'fresh start · winter clarity'},
+  {month:1,  id:'feb2026', em:'❤️', name:'LOVE & GRACE',   color:'#EC4899', theme:'1 Cor 13 · agape vibes'},
+  {month:2,  id:'mar2026', em:'🌱', name:'SPROUT SEASON',  color:'#10B981', theme:'growth · spring renewal'},
+  {month:3,  id:'apr2026', em:'✝️', name:'EASTER RISEN',   color:'#FBBF24', theme:'resurrection power'},
+  {month:4,  id:'may2026', em:'🔥', name:'PENTECOST FIRE', color:'#DC2626', theme:'tongues of flame · spirit'},
+  {month:5,  id:'jun2026', em:'☀️', name:'SUMMER LIGHT',   color:'#F59E0B', theme:'longest days · joy'},
+  {month:6,  id:'jul2026', em:'🦅', name:'EAGLE SEASON',   color:'#7C3AED', theme:'rise on wings · Isaiah 40'},
+  {month:7,  id:'aug2026', em:'🌾', name:'HARVEST',        color:'#A78BFA', theme:'reap what you sowed'},
+  {month:8,  id:'sep2026', em:'📜', name:'WISDOM MONTH',   color:'#0EA5E9', theme:'Proverbs · sage growth'},
+  {month:9,  id:'oct2026', em:'🪙', name:'GOLDEN HOUR',    color:'#F59E0B', theme:'autumn glory · ten talents'},
+  {month:10, id:'nov2026', em:'🙏', name:'GRATEFUL HEART', color:'#FB923C', theme:'thanksgiving · 1 Thess 5:18'},
+  {month:11, id:'dec2026', em:'⭐', name:'ADVENT STAR',    color:'#FBBF24', theme:'King is born · Bethlehem'},
+];
+function currentMonthPass(){
+  return MONTHLY_PASSES[new Date().getMonth()];
+}
+function ensureMonthlyPass(){
+  const d = State.data;
+  const cur = currentMonthPass();
+  if(!d.bp) d.bp = {xp:0, claimed:[], seasonId:cur.id};
+  if(d.bp.seasonId !== cur.id){
+    // Season change · archive old, start fresh
+    if(!d._archivedPasses) d._archivedPasses = [];
+    if(d.bp.seasonId){
+      d._archivedPasses.push({id:d.bp.seasonId, xp:d.bp.xp, claimed:d.bp.claimed.length});
+      if(d._archivedPasses.length>12) d._archivedPasses = d._archivedPasses.slice(-12);
+    }
+    d.bp = {xp:0, claimed:[], seasonId:cur.id};
+    Save.write();
+    Toast.show(`🎫 new pass · ${cur.em} ${cur.name}`);
+  }
 }
 
 // ===== v0.24 SEASONAL EVENT DETECTION =====
@@ -2534,6 +2579,11 @@ const ACHIEVEMENTS = [
   {id:'double_used',em:'⚡',t:'Doubler',d:'Win with 2x Rewards equipped'},
   {id:'fire_used',em:'🔥',t:'Fire Brand',d:'Win with Holy Fire equipped'},
   {id:'equipped_first',em:'🛠️',t:'Equipped',d:'Equip your first power-up'},
+  // v0.29
+  {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
+  {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
+  {id:'pass_easter',em:'✝️',t:'Easter Saint',d:'Active during Easter (Apr) pass'},
+  {id:'archived_3',em:'📚',t:'Archive',d:'Hold 3+ archived passes'},
   // v0.20
   {id:'difficulty_set',em:'🎮',t:'Calibrated',d:'Pick a difficulty mode'},
   {id:'casual_50',em:'😊',t:'Easygoing',d:'Win 50 games on Casual'},
@@ -2706,6 +2756,12 @@ const Ach = {
     if(d.iq>=1100) Ach.unlock('rank_sovereign');
     if(d.iq>=1500) Ach.unlock('rank_legend');
     if(d.iq>=2000) Ach.unlock('rank_mythic');
+    // v0.29 monthly pass achievements
+    const seasonNow = currentMonthPass();
+    if(seasonNow.id.startsWith('dec')) Ach.unlock('pass_advent');
+    if(seasonNow.id.startsWith('may')) Ach.unlock('pass_pentecost');
+    if(seasonNow.id.startsWith('apr')) Ach.unlock('pass_easter');
+    if((d._archivedPasses?.length||0)>=3) Ach.unlock('archived_3');
     // v0.20 difficulty achievements
     if(d.settings?.difficulty==='casual' && d.totals.wins>=50) Ach.unlock('casual_50');
     if(d.settings?.difficulty==='hardcore' && d.totals.wins>=25) Ach.unlock('hardcore_25');
@@ -3092,6 +3148,8 @@ const App = {
       _migrateRankIfNeeded();
       // v0.24 apply persisted theme
       applyAppTheme(State.data.appTheme||'cobalt');
+      // v0.29 ensure current month's BP is active
+      ensureMonthlyPass();
       // v0.26 cinematic intro is now triggered AFTER user taps splash CTA (see tapEnter)
       // not on init, to avoid covering the splash button
       // v0.26 SUNDAY WEEKLY REPORT (auto-show once per week if onboarded)
@@ -4446,17 +4504,21 @@ const App = {
     UI.updateWallet();
   },
   openBP(){
-    document.getElementById('aux-title').innerHTML = '🎫 Battle Pass · S1';
+    ensureMonthlyPass();
+    document.getElementById('aux-title').innerHTML = '🎫 Battle Pass';
     const bp = State.data.bp || {xp:0, claimed:[]};
     const cur = BP.currentTier();
     const nextTier = BP_TIERS[cur+1];
     const progress = nextTier ? Math.min(100, Math.round((bp.xp / nextTier.xp)*100)) : 100;
+    const season = currentMonthPass();
     let html = `<div class="settings-list">
-      <div class="lobby-banner" style="text-align:center">
-        <b style="color:var(--gold-bright);font-size:18px">PENTECOST BRAIN · Season 1</b><br>
-        <span class="dim">XP: ${bp.xp}${nextTier?` / ${nextTier.xp}`:' · MAX'}</span>
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,${season.color}33,${season.color}1a);border-color:${season.color}66">
+        <div style="font-size:11px;font-weight:700;opacity:.85">${season.em} MONTHLY PASS · ${new Date().toLocaleDateString('en',{month:'long',year:'numeric'})}</div>
+        <b style="color:${season.color};font-size:18px;display:block;margin-top:4px">${season.name}</b>
+        <div class="dim" style="font-size:11px;font-style:italic">"${season.theme}"</div>
+        <span class="dim" style="font-size:11px;margin-top:6px;display:block">XP: ${bp.xp}${nextTier?` / ${nextTier.xp}`:' · MAX'}</span>
         <div style="background:rgba(255,255,255,.1);height:10px;border-radius:99px;margin-top:8px;overflow:hidden">
-          <div style="background:linear-gradient(90deg,var(--gold),var(--gold-bright));height:100%;width:${progress}%;transition:width .3s"></div>
+          <div style="background:linear-gradient(90deg,${season.color},var(--gold-bright));height:100%;width:${progress}%;transition:width .3s"></div>
         </div>
       </div>`;
     BP_TIERS.forEach((t,i)=>{
