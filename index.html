@@ -47,6 +47,12 @@ html,body{
   -webkit-font-smoothing:antialiased;
   user-select:none;
 }
+/* v0.20 large-text + color-blind safe modes */
+body.large-text{font-size:118%}
+body.color-blind .room-mind,
+body.color-blind .room-script{filter:hue-rotate(20deg)}
+body.color-blind .word-cell.green{background:#0066CC !important}
+body.color-blind .word-cell.yellow{background:#FFC107 !important}
 body{
   padding-top:env(safe-area-inset-top);
   padding-bottom:env(safe-area-inset-bottom);
@@ -1198,7 +1204,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.19.0 · Brain Rank tiers · 🙏</div>
+  <div class="splash-foot">v0.20.0 · TIER SUPREMACY · adaptive · accessible · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1348,7 +1354,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.19.0';
+const VERSION = '0.20.0';
 
 // ----- STATE -----
 const State = {
@@ -1366,7 +1372,7 @@ const DEFAULT_SAVE = {
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
-  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true,skipGameIntro:false},
+  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true,skipGameIntro:false,difficulty:'normal',largeText:false,colorBlindSafe:false},
   // v0.3 additions
   avatar:{character:'monk',hat:'none',face:'none',aura:'none',pet:'none',outfit:'plain'},
   activityLog:[], // recent events {ts, type, msg}
@@ -1761,7 +1767,8 @@ const Account = {
   setPin(pin){
     if(!State.data.account) State.data.account = {};
     State.data.account.pinHash = Account.hash(pin);
-    State.data.account.lockEnabled = !!pin;
+    // v0.20: setting a PIN does NOT auto-enable lock-on-open · user must opt-in via toggle
+    // (prevents bombarding users who just wanted security available, not enforced)
     State.data.account.failedAttempts = 0;
     Save.write();
   },
@@ -1934,6 +1941,24 @@ function rankProgressToNext(rank){
 function rankBadge(rank){
   const t = getRankTier(rank||1000);
   return `<span style="color:${t.color};font-weight:700">${t.em} ${t.name}</span>`;
+}
+
+// v0.20 ADAPTIVE BRAIN RANK · feels good at every level
+// Newbies climb fast w/ tiny losses · veterans face real challenge
+function rankDelta(currentRank, won){
+  const diff = State.data?.settings?.difficulty || 'normal';
+  let gain, loss;
+  if(currentRank < 1100){       gain = 14; loss = -2; }   // 🌱🐑 generous start
+  else if(currentRank < 1300){  gain = 10; loss = -3; }   // 📖 Scholar curve
+  else if(currentRank < 1500){  gain = 8;  loss = -4; }   // 🦉 Sage steady
+  else if(currentRank < 1700){  gain = 6;  loss = -6; }   // 🌟 Saint balanced
+  else if(currentRank < 1900){  gain = 5;  loss = -7; }   // ✝️ Apostle harder
+  else if(currentRank < 2100){  gain = 4;  loss = -8; }   // 👑 Sovereign Elite
+  else                       {  gain = 3;  loss = -10; }  // ⚡🔥 Legend/Mythic
+  // Casual mode = +50% gain, -50% loss · Hardcore = +50% loss, no gain change
+  if(diff==='casual'){ gain = Math.round(gain*1.5); loss = Math.round(loss*0.5); }
+  else if(diff==='hardcore'){ loss = Math.round(loss*1.5); }
+  return won ? gain : loss;
 }
 
 // ===== v0.12 QUESTS + COMBOS + PRs =====
@@ -2201,6 +2226,10 @@ const ACHIEVEMENTS = [
   {id:'five_friends',em:'👥',t:'Squad',d:'Add 5 friends'},
   {id:'first_message',em:'💬',t:'Connected',d:'Send your first message'},
   {id:'chatty',em:'💬',t:'Chatty Saint',d:'Send 20 messages'},
+  // v0.20
+  {id:'difficulty_set',em:'🎮',t:'Calibrated',d:'Pick a difficulty mode'},
+  {id:'casual_50',em:'😊',t:'Easygoing',d:'Win 50 games on Casual'},
+  {id:'hardcore_25',em:'🔥',t:'Iron Saint',d:'Win 25 games on Hardcore'},
   // v0.19 rank tier promotions
   {id:'rank_sage',em:'🦉',t:'Sage Tier',d:'Reach Brain Rank 1150 · Sage'},
   {id:'rank_saint',em:'🌟',t:'Saint Tier',d:'Reach Brain Rank 1300 · Saint'},
@@ -2369,6 +2398,9 @@ const Ach = {
     if(d.iq>=1700) Ach.unlock('rank_sovereign');
     if(d.iq>=1900) Ach.unlock('rank_legend');
     if(d.iq>=2100) Ach.unlock('rank_mythic');
+    // v0.20 difficulty achievements
+    if(d.settings?.difficulty==='casual' && d.totals.wins>=50) Ach.unlock('casual_50');
+    if(d.settings?.difficulty==='hardcore' && d.totals.wins>=25) Ach.unlock('hardcore_25');
     // BP-based
     if((d.bp?.claimed?.length||0)>=3) Ach.unlock('bp_tier3');
     if((d.bp?.claimed?.length||0)>=10) Ach.unlock('bp_tier10');
@@ -2481,6 +2513,12 @@ const Modal = {
     }
     if(comboMult>1){
       title = `🔥 ${comboMult}x COMBO · ${title}`;
+    }
+    // v0.20 tier promotion cinematic
+    if(State._lastTierPromotion){
+      const t = State._lastTierPromotion;
+      title = `${t.em} TIER UP · ${t.name} · ${title}`;
+      State._lastTierPromotion = null;
     }
     const r = Object.entries(rewards||{}).map(([k,n])=>{
       const e = {coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️',ticket:'🎫',key:'🗝️'}[k]||'';
@@ -2723,7 +2761,10 @@ const App = {
       else{ State.data = JSON.parse(JSON.stringify(DEFAULT_SAVE)); }
       UI.updateWallet();
       Account.ensureFriendCode();
-      // v0.17 lock check — if PIN is set + lockEnabled, show lock screen first
+      // v0.20 apply persistent accessibility settings
+      document.body.classList.toggle('large-text', !!State.data.settings?.largeText);
+      document.body.classList.toggle('color-blind', !!State.data.settings?.colorBlindSafe);
+      // v0.17/0.20 lock check — only when explicitly opt'd-in
       if(Account.isLocked()){
         App.showLockScreen();
         return;
@@ -3349,6 +3390,15 @@ const App = {
       </div>`;
     UI.show('aux');
   },
+  setDifficulty(d){
+    if(!State.data.settings) State.data.settings = {};
+    State.data.settings.difficulty = d;
+    Save.write();
+    haptic(15); SFX.tap();
+    Toast.show(`difficulty: ${d}`);
+    Ach.unlock('difficulty_set');
+    App.openSettings();
+  },
   copyFriendCode(){
     const code = State.data.account?.friendCode;
     if(code && navigator.clipboard){
@@ -3539,7 +3589,19 @@ const App = {
         <div class="setting-row">📜 scripture on wins <div class="toggle ${s.scriptureOnWin!==false?'on':''}" data-set="scriptureOnWin"></div></div>
         <div class="setting-row">⏸ pause when tab hidden <div class="toggle ${s.pauseOnHide!==false?'on':''}" data-set="pauseOnHide"></div></div>
         <div class="setting-row">🚀 skip game intros <div class="toggle ${s.skipGameIntro?'on':''}" data-set="skipGameIntro"></div></div>
-        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+        <div class="setting-row">🔠 large text <div class="toggle ${s.largeText?'on':''}" data-set="largeText"></div></div>
+        <div class="setting-row">🎨 color-blind safe <div class="toggle ${s.colorBlindSafe?'on':''}" data-set="colorBlindSafe"></div></div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎮 DIFFICULTY</h3>
+        <p class="dim" style="font-size:11px;margin-bottom:6px">tunes Brain Rank gain/loss · doesn't change game mechanics</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="av-tool-btn ${s.difficulty==='casual'?'active':''}" onclick="App.setDifficulty('casual')">😊 CASUAL</button>
+          <button class="av-tool-btn ${(s.difficulty==='normal'||!s.difficulty)?'active':''}" onclick="App.setDifficulty('normal')">⚖️ NORMAL</button>
+          <button class="av-tool-btn ${s.difficulty==='hardcore'?'active':''}" onclick="App.setDifficulty('hardcore')">🔥 HARDCORE</button>
+        </div>
+        <p class="dim" style="font-size:10px;margin-top:6px">
+          ${s.difficulty==='casual'?'😊 +50% rank gain · -50% loss · climb easier':s.difficulty==='hardcore'?'🔥 normal gain · +50% loss · steeper falls':'⚖️ adaptive · gain decreases as you climb · loss increases'}
+        </p>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
           <button class="btn-secondary" onclick="App.openAccount()">👤 account & security</button>
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
         </div>
@@ -3555,6 +3617,9 @@ const App = {
       t.classList.toggle('on');
       Save.write();
       haptic(8);
+      // v0.20 apply body classes for accessibility toggles
+      document.body.classList.toggle('large-text', !!State.data.settings.largeText);
+      document.body.classList.toggle('color-blind', !!State.data.settings.colorBlindSafe);
     });
     UI.show('aux');
   },
@@ -3570,7 +3635,17 @@ const App = {
         <div class="stat-card"><div class="lbl">🪙 coins</div><div class="val">${fmt(d.wallet.coin)}</div></div>
         <div class="stat-card"><div class="lbl">✝️ stars</div><div class="val">${fmt(d.wallet.faith)}</div></div>
       </div>`;
-    let dnaSection = `
+    // v0.20 tier progress bar
+    const tier = getRankTier(d.iq);
+    const prog = rankProgressToNext(d.iq);
+    let tierBlock = `<div class="lobby-banner" style="text-align:center;margin-bottom:10px">
+      <div style="font-size:16px;font-weight:700;color:${tier.color}">${tier.em} ${tier.name} · ${d.iq} BR</div>
+      ${prog.next?`<div class="dim" style="font-size:11px;margin-top:4px">${prog.next.min - d.iq} BR to ${prog.next.em} ${prog.next.name}</div>
+      <div style="background:rgba(255,255,255,.08);border-radius:99px;height:8px;margin-top:6px;overflow:hidden">
+        <div style="background:linear-gradient(90deg,${tier.color},${prog.next.color});height:100%;width:${prog.pct}%"></div>
+      </div>`:'<div class="dim" style="font-size:11px">MAX TIER REACHED 🔥</div>'}
+    </div>`;
+    let dnaSection = tierBlock + `
       <h3 style="margin:14px 0 4px;color:var(--gold-bright);font-size:15px;text-align:center">🧬 Brain DNA</h3>
       <p class="dim text-center" style="font-size:11px;margin-bottom:6px">your skill profile · grows as you win</p>
       ${DNA.renderRadar(220)}`;
@@ -4182,7 +4257,13 @@ function recordResult(roomId, gameId, won, rewards={}){
     d.perGame[key].wins++;
     d.perGame[key].lastWin = Date.now();
     d.totals.wins++;
-    d.iq = Math.min(2400, d.iq + 8);
+    const prevTier = getRankTier(d.iq);
+    d.iq = Math.min(2400, d.iq + rankDelta(d.iq, true));
+    const newTier = getRankTier(d.iq);
+    if(newTier.name !== prevTier.name){
+      // TIER PROMOTION cinematic
+      State._lastTierPromotion = newTier;
+    }
     Wallet.add(rewards);
     DNA.bumpFromRoom(roomId);
     Activity.log('win','🏆',`won ${gName}${comboMult>1?` · ${comboMult}x combo!`:''}`);
@@ -4194,7 +4275,7 @@ function recordResult(roomId, gameId, won, rewards={}){
   }else{
     Combo.bump(false);
     d.totals.losses++;
-    d.iq = Math.max(800, d.iq - 4);
+    d.iq = Math.max(800, d.iq + rankDelta(d.iq, false));
     Activity.log('loss','💪',`played ${gName}`);
     BP.addXp(1);
     State._lastPR = false;
