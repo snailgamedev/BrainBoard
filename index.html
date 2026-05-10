@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.45.0 · 🎙️ voice · 🥇 medal hunt · 📅 30-day · 🌈 custom music · 🏟️ bracket · 🎚️ visualizer · 🙏</div>
+  <div class="splash-foot">v0.46.0 · 🎤 karaoke · 👻 ghost · 🛡️ shield · 🌟 chain · 🎪 carnival · 🎁 mystery · 🐛 splash fix · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.45.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.46.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.45.0';
+const VERSION = '0.46.0';
 
 // ----- STATE -----
 const State = {
@@ -1501,6 +1501,11 @@ const DEFAULT_SAVE = {
   calStreak:0, // consecutive days played in challenge calendar
   customMusic:{scale:'mixolydian', bpm:90, pad:'sine', arp:'triangle', root:48}, // user-built track
   bracket:{active:false, round:0, scores:[], names:[]}, // tournament bracket state
+  // v0.46 NEW
+  streakShield:0, // count of shields owned (protects 1 missed day each)
+  mysteryDrops:[], // [{ts, em, reward}]
+  carnivalBest:0, // best carnival score
+  ghostRuns:{}, // {gameKey: bestRunSnapshot}
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -4211,6 +4216,187 @@ const CustomMusic = {
 };
 
 // ====================================================================
+// 🎤 v0.46 · KARAOKE VERSES · scripture sing-along · word-by-word highlight
+// ====================================================================
+const Karaoke = {
+  start(){
+    const v = randomVerse();
+    const words = (Lang.current()==='es' && v.es ? v.es : v.t).split(/\s+/);
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:48px">🎤</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">Karaoke Verse</h3>
+      <div class="dim" style="font-size:11px;margin-bottom:10px">tap WORDS in order · TTS reads along if enabled</div>
+      <div id="kar-text" style="font-size:18px;line-height:1.7;margin:14px 0;font-style:italic;text-align:center"></div>
+      <div class="dim" style="font-size:11px;margin-top:6px">${v.r}</div>
+      <button class="btn-secondary" style="margin-top:14px" onclick="Modal.close()">✕ done</button>
+    </div>`);
+    let i=0;
+    const renderWord=()=>{
+      const t = document.getElementById('kar-text');
+      if(!t) return;
+      t.innerHTML = words.map((w,idx)=>{
+        const cls = idx<i?'opacity:.45':idx===i?'background:linear-gradient(90deg,#FBBF24,#F59E0B);color:#0a0a0a;padding:1px 4px;border-radius:4px':'';
+        return `<span style="${cls};cursor:pointer" onclick="Karaoke._tap(${idx})">${w}</span>`;
+      }).join(' ');
+    };
+    Karaoke._tap = (idx)=>{
+      if(idx!==i) return;
+      Narrator.say(words[idx], words[idx]);
+      i++;
+      if(i>=words.length){
+        Wallet.add({faith:3, coin:30});
+        Toast.show('🎤 verse complete · +3✝️ +30🪙');
+        Ach.unlock('karaoke_first');
+      }
+      renderWord();
+    };
+    renderWord();
+  }
+};
+
+// ====================================================================
+// 👻 v0.46 · GHOST MODE · best-run score shown as overlay to beat
+// ====================================================================
+const Ghost = {
+  record(roomId, gameId, score){
+    const k = `${roomId}:${gameId}`;
+    if(!State.data.ghostRuns[k] || State.data.ghostRuns[k].score < score){
+      State.data.ghostRuns[k] = {score, ts:Date.now(), name:State.data.name||'You'};
+      Save.write();
+    }
+  },
+  ghostFor(roomId, gameId){
+    return State.data.ghostRuns?.[`${roomId}:${gameId}`];
+  },
+  renderHud(roomId, gameId){
+    const g = this.ghostFor(roomId, gameId);
+    if(!g) return '';
+    return `<div style="position:fixed;top:80px;right:10px;background:rgba(124,58,237,.85);color:#fff;padding:6px 10px;border-radius:8px;font-size:11px;z-index:40;backdrop-filter:blur(4px);font-family:'Cinzel',serif">👻 ghost · beat <b>${g.score}</b></div>`;
+  }
+};
+
+// ====================================================================
+// 🛡️ v0.46 · STREAK SHIELD · protect daily streak from a missed day
+// ====================================================================
+const Shield = {
+  buy(){
+    if(!Wallet.spend({gem:5})){ Toast.show('not enough 💎 · need 5'); return; }
+    State.data.streakShield = (State.data.streakShield||0)+1;
+    Save.write();
+    Toast.show(`🛡️ +1 streak shield (have ${State.data.streakShield})`);
+  },
+  consume(){
+    if((State.data.streakShield||0)<1) return false;
+    State.data.streakShield--;
+    Save.write();
+    Toast.show('🛡️ streak shield saved your streak!');
+    return true;
+  }
+};
+
+// ====================================================================
+// 🌟 v0.46 · ACHIEVEMENT CHAIN · 3 in a row = combo bonus
+// ====================================================================
+const Chain = {
+  recent:[], // last 5 achievement IDs unlocked in this session
+  push(achId){
+    this.recent.push({id:achId, ts:Date.now()});
+    if(this.recent.length>5) this.recent.shift();
+    // 3 within 60 seconds = chain combo
+    const now = Date.now();
+    const last3 = this.recent.slice(-3);
+    if(last3.length===3 && (now - last3[0].ts) < 60000){
+      Wallet.add({coin:100, gem:2, brain:3});
+      Toast.show('🌟 ACHIEVEMENT CHAIN · 3 in 60s · +100🪙 +2💎 +3🧠!');
+      this.recent = []; // reset to require a fresh chain
+    }
+  }
+};
+
+// ====================================================================
+// 🎪 v0.46 · CARNIVAL MODE · 5-min chaos · random game every 30s
+// ====================================================================
+const Carnival = {
+  _timer:null, _switchTimer:null, _score:0, _timeLeft:0,
+  start(){
+    this._score=0;
+    this._timeLeft=300; // 5 min
+    State.gameInst=this;
+    UI.show('game');
+    this._tick();
+    Toast.show('🎪 CARNIVAL · 5 min of chaos · random game every 30s!');
+    this._timer = setInterval(()=>{this._timeLeft--; if(this._timeLeft<=0){this.end();return;} this._renderHud();},1000);
+    this._switchTimer = setInterval(()=>this._switchGame(), 30000);
+    this._switchGame();
+  },
+  _switchGame(){
+    // pick random round from Frenzy.POOL
+    const pool = Frenzy.POOL;
+    const pick = pool[Math.floor(Math.random()*pool.length)];
+    const area=document.getElementById('g-area');
+    if(!area)return;
+    area.innerHTML='';
+    const fakeState = {timers:[]};
+    pick.run(area, fakeState, (s)=>{
+      this._score += s*1.5; // 1.5x multiplier
+      Toast.show(`+${Math.round(s*1.5)} · stacking!`);
+    });
+    this._renderHud();
+  },
+  _renderHud(){
+    const m=Math.floor(this._timeLeft/60), s=this._timeLeft%60;
+    document.getElementById('g-stats').innerHTML=`<b>🎪 CARNIVAL</b> · ${m}:${String(s).padStart(2,'0')} · <b>${Math.round(this._score)}</b> pts`;
+  },
+  end(){
+    clearInterval(this._timer); clearInterval(this._switchTimer);
+    const score = Math.round(this._score);
+    if(score > (State.data.carnivalBest||0)){
+      State.data.carnivalBest = score;
+      Save.write();
+    }
+    const reward = {coin: 100+score, gem: score>=500?5:score>=200?2:0, brain:3, faith:1};
+    Wallet.add(reward);
+    Modal.win({rewards:reward, title:`CARNIVAL ${score} pts!`, emoji:'🎪', retry:()=>Carnival.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){
+    if(this._timer) clearInterval(this._timer);
+    if(this._switchTimer) clearInterval(this._switchTimer);
+  }
+};
+
+// ====================================================================
+// 🎁 v0.46 · MYSTERY DROPS · random rewards from logins/wins
+// ====================================================================
+const Mystery = {
+  TYPES: [
+    {em:'🪙', label:'coin rain', reward:{coin:50}},
+    {em:'💎', label:'gem flash', reward:{gem:2}},
+    {em:'🧠', label:'brain boost', reward:{brain:3}},
+    {em:'✝️', label:'faith spark', reward:{faith:2}},
+    {em:'💡', label:'hint drop', reward:{}, special:'hint'},
+    {em:'🔥', label:'fire drop', reward:{}, special:'fire'},
+    {em:'🛡️', label:'shield drop', reward:{}, special:'shield'},
+    {em:'🎁', label:'jackpot', reward:{coin:200,gem:5,brain:5,faith:3}},
+  ],
+  roll(){
+    const t = this.TYPES[Math.floor(Math.random()*this.TYPES.length)];
+    Wallet.add(t.reward||{});
+    if(t.special==='hint'){ State.data.powerups=State.data.powerups||{}; State.data.powerups.hint=(State.data.powerups.hint||0)+1; }
+    if(t.special==='fire'){ State.data.powerups=State.data.powerups||{}; State.data.powerups.fire=(State.data.powerups.fire||0)+1; }
+    if(t.special==='shield'){ State.data.streakShield=(State.data.streakShield||0)+1; }
+    State.data.mysteryDrops = State.data.mysteryDrops || [];
+    State.data.mysteryDrops.push({ts:Date.now(), em:t.em, label:t.label});
+    Save.write();
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:64px;animation:cineLogoZoom .9s cubic-bezier(.2,1.4,.5,1)">${t.em}</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">${t.label.toUpperCase()}!</h3>
+      <p style="font-size:13px;margin:8px 0">${Object.entries(t.reward||{}).map(([k,n])=>`+${n} ${{coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||k}`).join(' · ')||(t.special?`+1 ${t.special}`:'')}</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+    </div>`);
+  }
+};
+
+// ====================================================================
 // 💾 SAVE / LOAD
 // ====================================================================
 const Save = {
@@ -4336,6 +4522,8 @@ const Ach = {
     Save.write();
     Toast.show(`${def.em} <span class="ach">${def.t}</span> · ${def.d}`);
     SFX.win();
+    // v0.46 · achievement chain combo
+    try{ Chain.push(id); }catch(e){}
   },
   check(){
     const d = State.data, p = d.perGame;
@@ -4690,6 +4878,7 @@ const Music = (()=>{
         master.gain.linearRampToValueAtTime(quiet?baseVol*0.18:baseVol, ctx.currentTime+(quiet?0.2:0.4));
       }catch(e){}
     },
+  };
   function updateChip(trackId, muted){
     let chip = document.querySelector('.music-chip');
     if(!chip){
@@ -6367,6 +6556,10 @@ const App = {
           <button class="btn-secondary" onclick="App.openCustomMusic()">🌈 custom music</button>
           <button class="btn-secondary" onclick="App.toggleVoice()">🎙️ voice commands · ${State.data.voiceEnabled?'ON':'OFF'}</button>
           <button class="btn-secondary" onclick="App.startTour()">🎯 replay tour</button>
+          <button class="btn-secondary" onclick="App.startKaraoke()">🎤 karaoke verse</button>
+          <button class="btn-secondary" onclick="App.startCarnival()">🎪 carnival mode</button>
+          <button class="btn-secondary" onclick="App.rollMystery()">🎁 roll mystery (free)</button>
+          <button class="btn-secondary" onclick="App.buyShield()">🛡️ buy streak shield (5💎) · have ${State.data.streakShield||0}</button>
         </div>
         <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
         <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -7075,6 +7268,11 @@ const App = {
     Save.write();
   },
   toggleVoice(){ Voice.toggle(); App.openSettings(); },
+  // v0.46 launchers
+  startKaraoke(){ Karaoke.start(); },
+  startCarnival(){ Carnival.start(); },
+  rollMystery(){ Mystery.roll(); },
+  buyShield(){ Shield.buy(); App.openShop(); },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -7602,6 +7800,9 @@ function recordResult(roomId, gameId, won, rewards={}){
         if(ch.rid===roomId && ch.g.id===gameId) Calendar.claim(lbScore);
       }catch(e){}
       try{ if(State.data.bracket?.active && (roomId==='daily' || gameId==='frenzy')) Bracket.advance(lbScore); }catch(e){}
+      try{ Ghost.record(roomId, gameId, lbScore); }catch(e){}
+      // v0.46 · 10% mystery drop chance on win
+      try{ if(Math.random()<0.1) setTimeout(()=>Mystery.roll(), 1400); }catch(e){}
     }catch(e){console.warn('lb err',e);}
   } else {
     try{ MedalHunt.bumpRun(false); }catch(e){}
