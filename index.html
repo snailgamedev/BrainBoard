@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="BrainBoard">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231E3A8A'/%3E%3Ctext y='48' x='32' text-anchor='middle' font-size='40'%3E🧠%3C/text%3E%3C/svg%3E">
 <title>🧠 BrainBoard · sharpen the mind · feed the spirit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -301,7 +303,7 @@ button{
 .room-speed{background:linear-gradient(135deg,#DC2626 0%,#7C2D12 100%)}
 .room-daily{background:linear-gradient(135deg,#10B981 0%,#064E3B 100%)}
 .lobby-foot{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
   margin-top:8px;
 }
 .foot-btn{
@@ -1179,7 +1181,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.14.0 · 22 games · cashout · live dict · 🙏</div>
+  <div class="splash-foot">v0.15.0 · 24 games · PWA · Hall of Fame · accurate clocks · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1275,6 +1277,7 @@ button{
       <button class="foot-btn" onclick="App.openAch()"><span class="em">🎖️</span>ACH</button>
       <button class="foot-btn" onclick="App.openShop()"><span class="em">🛒</span>SHOP</button>
       <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
+      <button class="foot-btn" onclick="App.openHallOfFame()"><span class="em">🏛️</span>HOF</button>
     </div>
   </div>
 </section>
@@ -1324,7 +1327,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.14.0';
+const VERSION = '0.15.0';
 
 // ----- STATE -----
 const State = {
@@ -1624,6 +1627,51 @@ function _antiCheatClamp(rewards){
     out[k] = Math.max(0, Math.min(cap, Math.round(v)));
   });
   return out;
+}
+
+// v0.15 ACCURATE TIMER · drift-corrected via Date.now() · resyncs on visibility
+function startGameTimer(game, durationSec, onTick, onEnd){
+  game._timerStartMs = Date.now();
+  game._timerDurationSec = durationSec;
+  game.timeLeft = durationSec;
+  const fire = ()=>{
+    const elapsed = Math.floor((Date.now() - game._timerStartMs)/1000);
+    const remaining = Math.max(0, game._timerDurationSec - elapsed);
+    game.timeLeft = remaining;
+    if(remaining<=0){
+      clearInterval(game.timer);
+      game.timer = null;
+      onEnd && onEnd();
+      return;
+    }
+    onTick && onTick(remaining);
+  };
+  game.timer = setInterval(fire, 250); // 4× per sec — drift-tolerant
+  fire();
+  return game.timer;
+}
+function pauseGameTimer(game){
+  if(game.timer){
+    clearInterval(game.timer);
+    game._pausedAtMs = Date.now();
+    game.timer = null;
+  }
+}
+function resumeGameTimer(game, onTick, onEnd){
+  if(game._pausedAtMs && game._timerStartMs && game._timerDurationSec){
+    // Shift the start forward by the pause duration so timeLeft computation stays accurate
+    game._timerStartMs += (Date.now() - game._pausedAtMs);
+    game._pausedAtMs = null;
+    const fire = ()=>{
+      const elapsed = Math.floor((Date.now()-game._timerStartMs)/1000);
+      const remaining = Math.max(0, game._timerDurationSec - elapsed);
+      game.timeLeft = remaining;
+      if(remaining<=0){ clearInterval(game.timer); onEnd&&onEnd(); return; }
+      onTick && onTick(remaining);
+    };
+    game.timer = setInterval(fire, 250);
+    fire();
+  }
 }
 
 // v0.14 DEFAULT CASHOUT · uses common game-state fields if game doesn't expose .cashOut()
@@ -1936,6 +1984,11 @@ const ACHIEVEMENTS = [
   {id:'riddle_5',em:'🦉',t:'Riddler',d:'Win 5 Riddle Vault games'},
   {id:'cashout_first',em:'💰',t:'Cash Saint',d:'Cash out a game for the first time'},
   {id:'cashout_5',em:'💰',t:'Cash Master',d:'Cash out 5 games'},
+  // v0.15
+  {id:'sudoku_5',em:'🧩',t:'Sudoku Saint',d:'Win 5 Sudoku Mini games'},
+  {id:'parable_5',em:'🕊️',t:'Parable Sage',d:'Win 5 Parable Match games'},
+  {id:'pwa_install',em:'📱',t:'Installed',d:'Install BrainBoard as PWA'},
+  {id:'hof_open',em:'🏛️',t:'Glory Visitor',d:'Open the Hall of Fame'},
 ];
 
 // ====================================================================
@@ -2116,11 +2169,13 @@ const Ach = {
     if((p['word:define']?.wins||0)>=5) Ach.unlock('define_5');
     const newGameWins = (p['script:trivia']?.wins||0)+(p['word:define']?.wins||0)+(p['speed:numbertap']?.wins||0);
     if(newGameWins>=20) Ach.unlock('gameset_20');
-    // try-everything: played all 21 non-daily games
-    const allIds=['word:wordle','word:anagram','word:define','word:hangman','brain:memory','brain:simon','mind:stroop','mind:reaction','mind:riddle','num:math','num:sequence','script:verse','script:books','script:trivia','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code','speed:numbertap'];
+    // try-everything: played all 23 non-daily games
+    const allIds=['word:wordle','word:anagram','word:define','word:hangman','brain:memory','brain:simon','mind:stroop','mind:reaction','mind:riddle','num:math','num:sequence','script:verse','script:books','script:trivia','script:parable','logic:lights','logic:spot','logic:hunt','logic:sudoku','speed:colormatch','speed:whack','speed:code','speed:numbertap'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
     if((p['word:hangman']?.wins||0)>=5) Ach.unlock('hangman_5');
     if((p['mind:riddle']?.wins||0)>=5) Ach.unlock('riddle_5');
+    if((p['logic:sudoku']?.wins||0)>=5) Ach.unlock('sudoku_5');
+    if((p['script:parable']?.wins||0)>=5) Ach.unlock('parable_5');
     // dna_balanced: 5+ in every axis
     const dna = State.data.brainDNA||{};
     if(['memory','speed','pattern','logic','word','faith'].every(k=>(dna[k]||0)>=5)) Ach.unlock('dna_balanced');
@@ -2322,6 +2377,8 @@ const GAME_INTROS = {
   'speed:numbertap':{rules:['Numbers 1-15 in random spots','Tap them IN ORDER (1, 2, 3...)','Wrong tap = no penalty, just wait'], win:'Clear under 20s', timer:'no limit', reward:'+50–300 🪙 · +4 🧠', dna:'speed'},
   'word:hangman':   {rules:['Guess letters one at a time','Wrong guess = lose a life · 6 lives','Solve before you run out'], win:'Solve the word', timer:'no timer', reward:'+60–150 🪙 · +3 🧠', dna:'word'},
   'mind:riddle':    {rules:['Read the riddle carefully','Pick the answer from 4 options','8 riddles · 90 sec'], win:'5+ correct', timer:'90 sec', reward:'+50–115 🪙 · +4 🧠', dna:'pattern'},
+  'logic:sudoku':   {rules:['4×4 grid · fill 1-4','No repeats in row, column, or 2×2 box','Pre-filled cells locked'], win:'Solve with ≤2 errors', timer:'no limit', reward:'+80–250 🪙 · +4 🧠', dna:'logic'},
+  'script:parable': {rules:['Parable name appears','Pick what it teaches from 4 options','8 random parables · 90 sec'], win:'5+ correct', timer:'90 sec', reward:'+60–125 🪙 · +5 ✝️', dna:'faith'},
   'daily:dotd':     {rules:['Today\'s spotlight game','Same rules as the original','2x rewards multiplier!'], win:'Per game rules', timer:'varies', reward:'2x base rewards 🔥', dna:'speed'},
 };
 
@@ -2393,11 +2450,13 @@ const ROOMS = {
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
     {id:'books',em:'📖',name:'Books Race',sub:'OT or NT? · 45 sec · 66 books',launch:()=>BooksGame.start()},
     {id:'trivia',em:'🧠',name:'Bible Trivia',sub:'10 random Qs · 30+ pool · 60 sec',launch:()=>TriviaGame.start()},
+    {id:'parable',em:'🕊️',name:'Parable Match',sub:'parable → meaning · 8 rounds',launch:()=>ParableGame.start()},
   ]},
   logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
     {id:'spot',em:'🔍',name:'Spot Different',sub:'find the odd one out · 45 sec',launch:()=>SpotGame.start()},
     {id:'hunt',em:'🔢',name:'Number Hunt',sub:'find the duplicate pair · 45 sec',launch:()=>HuntGame.start()},
+    {id:'sudoku',em:'🧩',name:'Sudoku Mini',sub:'4x4 grid · 3 difficulties',launch:()=>SudokuGame.start()},
   ]},
   speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
@@ -3100,6 +3159,70 @@ const App = {
       case 'fair_play': return {have:d.totals.wins, need:10};
     }
     return null;
+  },
+  openHallOfFame(){
+    Ach.unlock('hof_open');
+    document.getElementById('aux-title').innerHTML = '🏛️ Hall of Fame';
+    const d = State.data;
+    const prs = d.prRecords||{};
+    const allGames = [];
+    Object.entries(ROOMS).forEach(([rid,room])=>{
+      room.games.forEach(g=>{
+        if(g.id==='dotd') return;
+        const key = `${rid}:${g.id}`;
+        const stat = d.perGame[key]||{wins:0,plays:0};
+        const pr = prs[key];
+        allGames.push({rid,room,g,stat,pr,key});
+      });
+    });
+    // Sort by wins
+    allGames.sort((a,b)=>(b.stat.wins||0)-(a.stat.wins||0));
+    const top3 = allGames.slice(0,3);
+    let html = `<div class="lobby-banner" style="text-align:center">
+      <b style="color:var(--gold-bright);font-size:18px">🏛️ YOUR HALL OF FAME</b><br>
+      <span class="dim">${d.totals.wins} total wins · IQ ${d.iq} · ${Object.keys(prs).length} PRs</span>
+    </div>`;
+    if(top3.length && top3[0].stat.wins>0){
+      html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🏆 PODIUM (most wins)</h3>
+        <div style="display:flex;justify-content:center;align-items:flex-end;gap:6px;margin-bottom:14px">`;
+      const order = [1,0,2]; // visual: silver-gold-bronze
+      const heights = [60,80,50];
+      const medals = ['🥈','🥇','🥉'];
+      order.forEach((i,visIdx)=>{
+        const t = top3[i]; if(!t) return;
+        html += `<div style="text-align:center;flex:1;max-width:100px">
+          <div style="font-size:32px;margin-bottom:4px">${t.g.em}</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.85;height:24px;overflow:hidden">${t.g.name}</div>
+          <div style="background:linear-gradient(180deg,var(--gold-bright),var(--gold));height:${heights[visIdx]}px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;font-size:24px">${medals[visIdx]}</div>
+          <div style="background:rgba(0,0,0,.4);padding:4px;border-radius:0 0 8px 8px;font-size:11px;font-weight:800;color:var(--gold-bright)">${t.stat.wins}🏆</div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    // Per-game best
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">📜 ALL RECORDS</h3>
+      <div class="settings-list">`;
+    allGames.forEach(t=>{
+      const prScore = t.pr?.bestScore;
+      const prTime = t.pr?.bestTime;
+      const hasPR = prScore || prTime;
+      html += `<div class="setting-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">${t.g.em}</span>
+          <div>
+            <b style="display:block;font-size:13px">${t.g.name}</b>
+            <span style="font-size:11px;opacity:.75">${t.room.em} ${t.room.name}</span>
+          </div>
+        </div>
+        <div style="text-align:right;font-size:11px">
+          <div><b style="color:var(--gold-bright)">${t.stat.wins}🏆</b> · ${t.stat.plays} plays</div>
+          ${hasPR?`<div style="color:#c4b5fd">💎 PR ${prScore?prScore+'🪙':''}${prTime?(prScore?' · ':'')+prTime+'ms':''}</div>`:'<div class="dim">no PR yet</div>'}
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
   },
   openShop(){
     if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0};
@@ -5252,15 +5375,225 @@ const RiddleGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 23 · DAILY (rotating mini)
+// 🎮 GAME 23 · SUDOKU MINI 4x4 (Logic Lab)
+// ====================================================================
+const SudokuGame = {
+  start(){
+    State.gameInst=this;
+    // Generate a valid filled 4x4 sudoku then remove cells based on difficulty
+    this.solution = SudokuGame.generateSolved();
+    const diff = State.data._sudokuDiff || 'normal';
+    this.difficulty = diff;
+    const removeCount = diff==='easy'?6:diff==='hard'?11:8;
+    this.given = this.solution.map(r=>[...r]);
+    const positions = [];
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++) positions.push([r,c]);
+    positions.sort(()=>Math.random()-.5);
+    for(let i=0;i<removeCount;i++){
+      const [r,c] = positions[i];
+      this.given[r][c] = 0;
+    }
+    this.user = this.given.map(r=>[...r]);
+    this.selected = null;
+    this.startMs = Date.now();
+    this.errors = 0;
+    this.render();
+    UI.show('game');
+  },
+  generateSolved(){
+    // 4x4 sudoku: 4 numbers × 4 rows. 4 quadrants of 2x2.
+    // Latin-square-like construction
+    const base = [[1,2,3,4],[3,4,1,2],[2,1,4,3],[4,3,2,1]];
+    // Randomize: shuffle rows within bands, cols within stacks, swap digit values
+    const shuffleArr = a=>{const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;};
+    // Permute digits 1-4
+    const perm = shuffleArr([1,2,3,4]);
+    let g = base.map(row=>row.map(v=>perm[v-1]));
+    // Swap rows within bands
+    if(Math.random()<.5) [g[0],g[1]]=[g[1],g[0]];
+    if(Math.random()<.5) [g[2],g[3]]=[g[3],g[2]];
+    // Swap columns within stacks
+    if(Math.random()<.5) g.forEach(r=>[r[0],r[1]]=[r[1],r[0]]);
+    if(Math.random()<.5) g.forEach(r=>[r[2],r[3]]=[r[3],r[2]]);
+    return g;
+  },
+  select(r,c){
+    if(this.given[r][c]!==0) return; // can't select pre-filled cell
+    this.selected = [r,c];
+    this.render();
+  },
+  setNum(n){
+    if(!this.selected) return;
+    const [r,c] = this.selected;
+    this.user[r][c] = n;
+    SFX.tap(); haptic(5);
+    if(this.solution[r][c]!==n){ this.errors++; SFX.wrong(); haptic(15); }
+    this.checkWin();
+    this.render();
+  },
+  checkWin(){
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+      if(this.user[r][c]!==this.solution[r][c]) return;
+    }
+    // Win!
+    const time = ((Date.now()-this.startMs)/1000).toFixed(1);
+    const won = this.errors<=2;
+    const reward = won?{coin:80+Math.max(0,(20-this.errors*5)*5)+(this.difficulty==='hard'?50:this.difficulty==='easy'?10:30), brain:4}:{coin:30};
+    recordResult('logic','sudoku',true,reward);
+    setTimeout(()=>Modal.win({rewards:reward,title:`Solved in ${time}s · ${this.errors} errors`,emoji:'🧩',
+      retry:()=>SudokuGame.start(),lobby:()=>App.toLobby()}),400);
+    this.done = true;
+  },
+  cashOut(){
+    const filled = this.user.flat().filter(v=>v!==0).length - this.given.flat().filter(v=>v!==0).length;
+    if(filled<3) return null;
+    return {coin: filled*6};
+  },
+  render(){
+    const time = ((Date.now()-this.startMs)/1000).toFixed(1);
+    document.getElementById('g-stats').innerHTML = `<b>🧩 Sudoku Mini</b> · errors: <b>${this.errors}</b> · ⏱ <b>${time}s</b> · ${this.difficulty}`;
+    const area=document.getElementById('g-area');
+    area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','fill 1-4 · no repeats in row/col/box'));
+    // Grid
+    const grid = el('div','');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(4,60px);grid-template-rows:repeat(4,60px);gap:2px;background:rgba(255,255,255,.2);padding:2px;border-radius:10px;margin:14px 0';
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+      const isGiven = this.given[r][c]!==0;
+      const isSel = this.selected && this.selected[0]===r && this.selected[1]===c;
+      const v = this.user[r][c]||'';
+      const isWrong = !isGiven && v && v!==this.solution[r][c];
+      const cell = el('div','');
+      // Quadrant border thicker
+      const borderTop = (r%2===0 && r>0) ? '3px solid var(--gold)' : '0';
+      const borderLeft = (c%2===0 && c>0) ? '3px solid var(--gold)' : '0';
+      cell.style.cssText=`background:${isSel?'rgba(245,158,11,.3)':isGiven?'rgba(0,0,0,.3)':'rgba(255,255,255,.08)'};border:1px solid rgba(255,255,255,.1);border-top:${borderTop};border-left:${borderLeft};display:grid;place-items:center;font-size:24px;font-weight:800;font-family:'Cinzel',serif;cursor:${isGiven?'default':'pointer'};color:${isWrong?'#EF4444':isGiven?'var(--cream)':'var(--gold-bright)'}`;
+      cell.textContent = v;
+      if(!isGiven) cell.onclick=()=>this.select(r,c);
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    // Number pad
+    const pad = el('div','');
+    pad.style.cssText='display:flex;gap:8px;margin-top:8px';
+    [1,2,3,4].forEach(n=>{
+      const b = el('button','math-key', String(n));
+      b.style.cssText='width:54px;height:54px;font-size:22px;background:rgba(124,58,237,.25);border:1px solid rgba(124,58,237,.5);color:var(--cream);font-weight:800;border-radius:10px;cursor:pointer';
+      b.onclick=()=>this.setNum(n);
+      pad.appendChild(b);
+    });
+    const erase = el('button','math-key', '⌫');
+    erase.style.cssText='width:54px;height:54px;font-size:18px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.5);color:var(--cream);border-radius:10px;cursor:pointer';
+    erase.onclick=()=>this.setNum(0);
+    pad.appendChild(erase);
+    wrap.appendChild(pad);
+    // Difficulty selector (only at start)
+    if(this.user.flat().filter(v=>v!==0).length === this.given.flat().filter(v=>v!==0).length){
+      const diffRow = el('div','');
+      diffRow.style.cssText='display:flex;gap:6px;margin-top:10px';
+      ['easy','normal','hard'].forEach(d=>{
+        const b = el('button','av-tool-btn', d.toUpperCase());
+        if(d===this.difficulty) b.classList.add('active');
+        b.onclick=()=>{
+          State.data._sudokuDiff = d;
+          Save.write();
+          SudokuGame.start();
+        };
+        diffRow.appendChild(b);
+      });
+      wrap.appendChild(diffRow);
+    }
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 24 · PARABLE MATCH (Scripture)
+// ====================================================================
+const PARABLES = [
+  {n:'The Good Samaritan',m:'Show compassion to strangers in need',o:['Show compassion to strangers in need','Trust God for daily bread','Pray without ceasing','Forgive seventy times seven']},
+  {n:'The Prodigal Son',m:"The Father's love welcomes the lost home",o:['Be patient in suffering',"The Father's love welcomes the lost home",'Build on the Rock','Sow seeds of faith']},
+  {n:'The Lost Sheep',m:'God seeks the one who has wandered',o:['God seeks the one who has wandered','Beware false prophets','Trust without anxiety','Be a light to the world']},
+  {n:'The Mustard Seed',m:'Small faith grows into great works',o:['Resist temptation always','Small faith grows into great works','The Kingdom is within you','Love your enemies']},
+  {n:'The Sower',m:'Receive the Word with good soil hearts',o:['Wait on the Lord','Receive the Word with good soil hearts','Do unto others','Honor your father and mother']},
+  {n:'The Talents',m:'Use your gifts well · multiply them',o:['Pray in private','Use your gifts well · multiply them','Be still and know','Walk humbly with God']},
+  {n:'The Pearl of Great Price',m:'The Kingdom is worth everything',o:['The Kingdom is worth everything','Carry one another','Speak truth in love','Stay watchful and ready']},
+  {n:'The Wise & Foolish Builders',m:'Build your life on the Rock of Christ',o:['Build your life on the Rock of Christ','Take up your cross daily','Be like little children','Heal the broken-hearted']},
+  {n:'The Unforgiving Servant',m:'Forgive others as God forgives you',o:['Forgive others as God forgives you','Resist the devil','Comfort those who mourn','Pray for your enemies']},
+  {n:'The Wedding Feast',m:'Be ready for the Kingdom invitation',o:['Be ready for the Kingdom invitation','Bear good fruit','Carry your cross','Seek the lost coin']},
+  {n:'The Ten Virgins',m:'Stay watchful · keep your lamp lit',o:['Stay watchful · keep your lamp lit','Multiply your gifts','Render to Caesar','Fear not the body']},
+  {n:'The Lost Coin',m:'God rejoices over each soul found',o:['Bless those who curse you','God rejoices over each soul found','Eat and drink in moderation','Honor the sabbath']},
+  {n:'The Rich Fool',m:"Don't store up earthly treasures",o:["Don't store up earthly treasures",'Be the salt of the earth',"Carry one another's burdens",'Be quick to listen']},
+  {n:'The Vineyard Workers',m:"God's grace is generous beyond fairness",o:["God's grace is generous beyond fairness",'Pray in your closet','Lay up heavenly treasures','Anoint the sick']},
+  {n:'The Pharisee & Tax Collector',m:'Humble yourself before the Lord',o:['Humble yourself before the Lord','Take up your cross','Wear the armor of God','Sing a new song']},
+];
+const ParableGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.q=0;
+    this.questions = [...PARABLES].sort(()=>Math.random()-.5).slice(0,8);
+    startGameTimer(this, 90, ()=>this.render(), ()=>this.end());
+    this.next();
+    UI.show('game');
+  },
+  next(){
+    if(this.q>=this.questions.length){this.end();return;}
+    this.current = this.questions[this.q];
+    this.options = [...this.current.o].sort(()=>Math.random()-.5);
+    this.q++;
+    this.render();
+  },
+  pick(o){
+    if(o===this.current.m){ this.score++; SFX.correct(); haptic(8); }
+    else{ SFX.wrong(); haptic(20); }
+    this.next();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>✝️ Parable Match</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area');
+    area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','what does this parable teach?'));
+    const w = el('div','verse-card');
+    w.innerHTML = `<b style="color:var(--gold-bright);font-size:20px">${this.current.n}</b><br><span class="verse-ref">— Jesus</span>`;
+    wrap.appendChild(w);
+    const grid = el('div','verse-options');
+    this.options.forEach(o=>{
+      const b = el('button','verse-opt', o);
+      b.style.fontSize='12px';
+      b.style.fontFamily="'Inter',sans-serif";
+      b.style.padding='12px';
+      b.onclick=()=>this.pick(o);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    if(this.timer) clearInterval(this.timer);
+    const won = this.score>=5;
+    const rewards = won?{coin:60+this.score*8, faith:5, brain:2}:{coin:Math.max(15,this.score*5), faith:1};
+    recordResult('script','parable',won,rewards);
+    if(won) Modal.win({rewards,title:`${this.score}/8 · Parable Sage!`,emoji:'🙏',
+      retry:()=>ParableGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/8`,msg:'study the parables, saint!',
+      retry:()=>ParableGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 25 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
-    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame, TriviaGame, DefineGame, NumberTapGame, HangmanGame, RiddleGame];
+    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame, TriviaGame, DefineGame, NumberTapGame, HangmanGame, RiddleGame, SudokuGame, ParableGame];
     const pickIdx = day % games.length;
     const pick = games[pickIdx];
-    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color','🌟 Whack','🔑 Code','🧠 Trivia','📚 Define','🔢 Tap','🪢 Hangman','🦉 Riddle'];
+    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color','🌟 Whack','🔑 Code','🧠 Trivia','📚 Define','🔢 Tap','🪢 Hangman','🦉 Riddle','🧩 Sudoku','🕊️ Parable'];
     Toast.show(`🎲 today's spotlight: <b>${names[pickIdx]}</b> · 2x rewards!`);
     State._dailyMultiplier = 2;
     setTimeout(()=>pick.start(), 800);
@@ -5272,6 +5605,20 @@ const DailyGame = {
 // ====================================================================
 window.App = App; // expose for inline handlers
 VisibilityGuard.init();
+
+// v0.15 PWA service worker registration (only when served via http(s), not file://)
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW register failed:', err));
+  });
+}
+
+// v0.15 PWA install prompt capture
+window._deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  window._deferredPrompt = e;
+});
 
 // v0.13 ACTIVE TIME REFRESH — re-render splash greeting every 60s + on visibility
 setInterval(()=>{
