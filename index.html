@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.37.0 · FINISH STRONG · tutorial · 47 games · win sting · 🙏</div>
+  <div class="splash-foot">v0.38.0 · 54 games · push to 10 per room · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.37.0';
+const VERSION = '0.38.0';
 
 // ----- STATE -----
 const State = {
@@ -2647,6 +2647,14 @@ const ACHIEVEMENTS = [
   {id:'antonym_5',em:'🔄',t:'Opposite Saint',d:'Win 5 Antonym Sprint games'},
   {id:'fastadd_5',em:'⚡',t:'Adder Saint',d:'Win 5 Fast Add games'},
   {id:'disciple_5',em:'⚓',t:'Disciple Saint',d:'Win 5 Disciple Match games'},
+  // v0.38
+  {id:'imagerecall_5',em:'🖼️',t:'Visual Memory',d:'Win 5 Image Recall games'},
+  {id:'cardsort_5',em:'🃏',t:'Sorter',d:'Win 5 Card Sort games'},
+  {id:'roman_5',em:'🏛️',t:'Roman Saint',d:'Win 5 Roman Numeral games'},
+  {id:'ordersort_5',em:'📊',t:'Order Saint',d:'Win 5 Order Sort games'},
+  {id:'pyramid_5',em:'🔺',t:'Pyramid Saint',d:'Win 5 Pyramid Add games'},
+  {id:'spelling_5',em:'🐝',t:'Spell Saint',d:'Win 5 Spelling Bee games'},
+  {id:'prophecy_5',em:'🕊️',t:'Prophecy Saint',d:'Win 5 Prophecy Match games'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -3336,6 +3344,7 @@ const ROOMS = {
     {id:'synonym',em:'🔁',name:'Synonym Sprint',sub:'pick the synonym · 45 sec · 10 rounds',launch:()=>SynonymGame.start()},
     {id:'wordbuild',em:'🔨',name:'Word Build',sub:'build words from 7 random letters · 90s',launch:()=>WordBuildGame.start()},
     {id:'antonym',em:'🔄',name:'Antonym Sprint',sub:'pick the opposite · 45s · 10 rounds',launch:()=>AntonymGame.start()},
+    {id:'spelling',em:'🐝',name:'Spelling Bee',sub:'pick correct spelling · 45 sec',launch:()=>SpellingGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
@@ -3343,6 +3352,8 @@ const ROOMS = {
     {id:'nummemory',em:'🔢',name:'Number Memory',sub:'memorize 5 numbers · recall by position',launch:()=>NumberMemoryGame.start()},
     {id:'wildstack',em:'🃏',name:'Wild Stack',sub:'match color or number · go out first',launch:()=>WildStackGame.start()},
     {id:'pattern',em:'🟦',name:'Pattern Match',sub:'find the missing color · 45s · 10 rounds',launch:()=>PatternMatchGame.start()},
+    {id:'imagerecall',em:'🖼️',name:'Image Recall',sub:'memorize 5 emojis · pick the one shown',launch:()=>ImageRecallGame.start()},
+    {id:'cardsort',em:'🃏',name:'Card Sort',sub:'sort 4 numbers ascending · 8 rounds',launch:()=>CardSortGame.start()},
   ]},
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
@@ -3358,6 +3369,9 @@ const ROOMS = {
     {id:'sequence',em:'🧮',name:'Sequence Solve',sub:'find the next number · 60 sec',launch:()=>SequenceGame.start()},
     {id:'quicksum',em:'➗',name:'Quick Sum',sub:'2 numbers that sum to target · 45 sec',launch:()=>QuickSumGame.start()},
     {id:'fastadd',em:'⚡',name:'Fast Add',sub:'add 2-digit numbers · 30 sec',launch:()=>FastAddGame.start()},
+    {id:'roman',em:'🏛️',name:'Roman Numeral',sub:'pick the value · 10 rounds · 45 sec',launch:()=>RomanGame.start()},
+    {id:'ordersort',em:'📊',name:'Order Sort',sub:'sort 5 numbers ascending · 8 rounds',launch:()=>OrderSortGame.start()},
+    {id:'pyramid',em:'🔺',name:'Pyramid Add',sub:'top = sum of 2 below · find missing',launch:()=>PyramidGame.start()},
   ]},
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
@@ -3366,6 +3380,7 @@ const ROOMS = {
     {id:'parable',em:'🕊️',name:'Parable Match',sub:'parable → meaning · 8 rounds',launch:()=>ParableGame.start()},
     {id:'commandments',em:'📜',name:'10 Commandments',sub:'match number to commandment',launch:()=>CommandmentsGame.start()},
     {id:'disciple',em:'⚓',name:'Disciple Match',sub:'match disciple to their fact · 60 sec',launch:()=>DiscipleGame.start()},
+    {id:'prophecy',em:'🕊️',name:'Prophecy Match',sub:'OT prophecy → NT fulfillment',launch:()=>ProphecyGame.start()},
   ]},
   logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
@@ -9133,7 +9148,463 @@ const DiscipleGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 48 · DAILY (rotating mini)
+// 🎮 GAME 48 · IMAGE RECALL (Brain Gym)
+// ====================================================================
+const ImageRecallGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.round=0; this.maxRounds=6;
+    this.next();
+    UI.show('game');
+  },
+  next(){
+    if(this.round>=this.maxRounds){this.end();return;}
+    this.round++;
+    const pool=['🍎','🍌','🍇','🍓','🍑','🍒','🥝','🍍','🥭','🍉','🍊','🍋','🥥','🍐','🥑','🥦','🌽','🥕','🍅','🍆'];
+    pool.sort(()=>Math.random()-.5);
+    this.shown = pool.slice(0,5);
+    this.target = this.shown[Math.floor(Math.random()*5)];
+    // distractors
+    const distract=[];
+    while(distract.length<3){
+      const e=pool[Math.floor(Math.random()*pool.length)];
+      if(!this.shown.includes(e) && !distract.includes(e)) distract.push(e);
+    }
+    this.options = [this.target, ...distract].sort(()=>Math.random()-.5);
+    this.phase='show';
+    this.render();
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2000);
+  },
+  pick(o){if(this.phase!=='ask')return;
+    if(o===this.target){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),350);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🧠 Image Recall</b> · round <b>${this.round}/${this.maxRounds}</b> · score <b>${this.score}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    if(this.phase==='show'){
+      wrap.appendChild(el('div','dim','memorize all 5 · 2 sec'));
+      const row=el('div',''); row.style.cssText='display:flex;gap:14px;margin:14px 0;font-size:42px';
+      this.shown.forEach(s=>{ const sp=el('span','',s); row.appendChild(sp); });
+      wrap.appendChild(row);
+    }else{
+      wrap.appendChild(el('div','dim','which one was shown?'));
+      const grid=el('div','stroop-grid');
+      this.options.forEach(o=>{
+        const b=el('button','stroop-btn',o);
+        b.style.fontSize='32px';
+        b.style.background='rgba(124,58,237,.2)';
+        b.onclick=()=>this.pick(o);
+        grid.appendChild(b);
+      });
+      wrap.appendChild(grid);
+    }
+    area.appendChild(wrap);
+  },
+  end(){
+    const t=Coach.adjustThreshold('brain','imagerecall',4);
+    const won=this.score>=t;
+    const r=won?{coin:40+this.score*8,brain:4}:{coin:Math.max(15,this.score*5)};
+    recordResult('brain','imagerecall',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.maxRounds} recalled!`,emoji:'🧠',retry:()=>ImageRecallGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.maxRounds}`,msg:`aim for ${t}+!`,retry:()=>ImageRecallGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.showT) clearTimeout(this.showT);}
+};
+
+// ====================================================================
+// 🎮 GAME 49 · CARD SORT (Brain Gym) · order numbers ascending
+// ====================================================================
+const CardSortGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.round=0; this.maxRounds=8;
+    this.next();
+    UI.show('game');
+  },
+  next(){
+    if(this.round>=this.maxRounds){this.end();return;}
+    this.round++;
+    this.cards=[];
+    while(this.cards.length<4){
+      const n=Math.floor(Math.random()*99)+1;
+      if(!this.cards.includes(n)) this.cards.push(n);
+    }
+    this.placed=[];
+    this.startTime=Date.now();
+    this.render();
+  },
+  pick(n){
+    if(this.placed.includes(n))return;
+    // Must be ascending · check it's the smallest unplaced
+    const remaining = this.cards.filter(c=>!this.placed.includes(c));
+    const smallest = Math.min(...remaining);
+    if(n!==smallest){ SFX.wrong(); haptic(20); return; }
+    this.placed.push(n);
+    SFX.tap(); haptic(5);
+    if(this.placed.length===4){
+      this.score++; SFX.correct(); haptic(15);
+      setTimeout(()=>this.next(),400);
+    }else this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🧠 Card Sort</b> · round <b>${this.round}/${this.maxRounds}</b> · score <b>${this.score}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap cards in ASCENDING order'));
+    // Show placed
+    if(this.placed.length){
+      const placedRow=el('div',''); placedRow.style.cssText='display:flex;gap:6px;margin:10px 0';
+      this.placed.forEach(n=>{
+        const c=el('div',''); c.style.cssText='width:54px;height:80px;border-radius:10px;background:rgba(16,185,129,.4);border:2px solid #10B981;display:grid;place-items:center;font-size:22px;font-weight:800;font-family:"Cinzel",serif';
+        c.textContent=n; placedRow.appendChild(c);
+      });
+      wrap.appendChild(placedRow);
+    }
+    // Pickable
+    const grid=el('div',''); grid.style.cssText='display:flex;gap:10px;margin:14px 0';
+    this.cards.forEach(n=>{
+      const placed=this.placed.includes(n);
+      const c=el('div','');
+      c.style.cssText=`width:64px;height:96px;border-radius:12px;background:${placed?'rgba(255,255,255,.05)':'rgba(245,158,11,.25)'};border:2px solid ${placed?'rgba(255,255,255,.1)':'#FBBF24'};display:grid;place-items:center;font-size:28px;font-weight:800;font-family:'Cinzel',serif;cursor:${placed?'default':'pointer'};opacity:${placed?'.3':'1'}`;
+      c.textContent=n;
+      if(!placed) c.onclick=()=>this.pick(n);
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    const t=Coach.adjustThreshold('brain','cardsort',5);
+    const won=this.score>=t;
+    const r=won?{coin:30+this.score*6,brain:3}:{coin:Math.max(15,this.score*3)};
+    recordResult('brain','cardsort',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.maxRounds} sorted!`,emoji:'🃏',retry:()=>CardSortGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.maxRounds}`,msg:`aim for ${t}+!`,retry:()=>CardSortGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 50 · ROMAN NUMERAL (Number Crunch)
+// ====================================================================
+const ROMANS = [
+  {r:'III',v:3},{r:'IV',v:4},{r:'V',v:5},{r:'IX',v:9},{r:'X',v:10},
+  {r:'XIV',v:14},{r:'XIX',v:19},{r:'XX',v:20},{r:'XXV',v:25},{r:'XXX',v:30},
+  {r:'XL',v:40},{r:'L',v:50},{r:'LIV',v:54},{r:'LX',v:60},{r:'LXX',v:70},
+  {r:'XC',v:90},{r:'C',v:100},{r:'CV',v:105},{r:'CL',v:150},{r:'CC',v:200},
+  {r:'CD',v:400},{r:'D',v:500},{r:'CM',v:900},{r:'M',v:1000},
+];
+const RomanGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45; this.q=0;
+    this.questions=[...ROMANS].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    const distract=[];
+    while(distract.length<3){
+      const v=this.current.v + (Math.random()<.5?-1:1)*(Math.floor(Math.random()*9)+1);
+      if(v>0 && v!==this.current.v && !distract.includes(v)) distract.push(v);
+    }
+    this.options=[this.current.v,...distract].sort((a,b)=>a-b);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(v){if(this._answered)return; this._answered=true;
+    if(v===this.current.v){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🔢 Roman Numeral</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','what number is...'));
+    const w=el('div','math-q',this.current.r); w.style.color='var(--gold-bright)'; w.style.fontFamily='"Cinzel",serif'; w.style.fontSize='44px'; wrap.appendChild(w);
+    const grid=el('div','stroop-grid');
+    this.options.forEach(v=>{const b=el('button','stroop-btn',String(v)); b.style.background='linear-gradient(135deg,#0E7490,#0C4A6E)'; b.onclick=()=>this.pick(v); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('num','roman',7);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*5,brain:3}:{coin:Math.max(10,this.score*2)};
+    recordResult('num','roman',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🏛️',retry:()=>RomanGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>RomanGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 51 · ORDER SORT (Number Crunch) · ascending sort
+// ====================================================================
+const OrderSortGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.round=0; this.maxRounds=8;
+    this.next();
+    UI.show('game');
+  },
+  next(){
+    if(this.round>=this.maxRounds){this.end();return;}
+    this.round++;
+    this.cards=[];
+    while(this.cards.length<5){
+      const n=Math.floor(Math.random()*999)+1;
+      if(!this.cards.includes(n)) this.cards.push(n);
+    }
+    this.placed=[];
+    this.render();
+  },
+  pick(n){
+    if(this.placed.includes(n))return;
+    const remaining=this.cards.filter(c=>!this.placed.includes(c));
+    const smallest=Math.min(...remaining);
+    if(n!==smallest){SFX.wrong();haptic(20);return;}
+    this.placed.push(n);
+    SFX.tap();haptic(5);
+    if(this.placed.length===5){this.score++;SFX.correct();haptic(15);setTimeout(()=>this.next(),400);}
+    else this.render();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🔢 Order Sort</b> · round <b>${this.round}/${this.maxRounds}</b> · score <b>${this.score}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap 5 numbers in ASCENDING order'));
+    if(this.placed.length){
+      const row=el('div',''); row.style.cssText='display:flex;gap:6px;margin:10px 0';
+      this.placed.forEach(n=>{
+        const c=el('div',''); c.style.cssText='min-width:50px;padding:8px 12px;border-radius:8px;background:rgba(16,185,129,.4);border:2px solid #10B981;font-size:18px;font-weight:800;font-family:"Cinzel",serif;text-align:center';
+        c.textContent=n; row.appendChild(c);
+      });
+      wrap.appendChild(row);
+    }
+    const grid=el('div',''); grid.style.cssText='display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:14px 0;max-width:340px';
+    this.cards.forEach(n=>{
+      const placed=this.placed.includes(n);
+      const c=el('div',''); c.style.cssText=`min-width:64px;padding:14px 16px;border-radius:10px;background:${placed?'rgba(255,255,255,.05)':'rgba(0,194,168,.25)'};border:2px solid ${placed?'rgba(255,255,255,.1)':'#0E7490'};font-size:22px;font-weight:800;font-family:'Cinzel',serif;cursor:${placed?'default':'pointer'};opacity:${placed?'.3':'1'}`;
+      c.textContent=n;
+      if(!placed) c.onclick=()=>this.pick(n);
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    const t=Coach.adjustThreshold('num','ordersort',5);
+    const won=this.score>=t;
+    const r=won?{coin:30+this.score*6,brain:3}:{coin:Math.max(15,this.score*3)};
+    recordResult('num','ordersort',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.maxRounds} sorted!`,emoji:'📊',retry:()=>OrderSortGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.maxRounds}`,msg:`aim for ${t}+!`,retry:()=>OrderSortGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 52 · PYRAMID ADD (Number Crunch)
+// ====================================================================
+const PyramidGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=60; this.q=0;
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){
+    // Pyramid · 3 rows · top = sum of two below · base random · middle = sums
+    const a=Math.floor(Math.random()*9)+1;
+    const b=Math.floor(Math.random()*9)+1;
+    const c=Math.floor(Math.random()*9)+1;
+    const ab=a+b, bc=b+c;
+    const top=ab+bc;
+    // Show top, ab, b, c · ask for a (or some other slot)
+    const slots = [
+      {label:'top',val:top,reveal:false},
+      {label:'ab',val:ab,reveal:true},
+      {label:'bc',val:bc,reveal:true},
+      {label:'a',val:a,reveal:true},
+      {label:'b',val:b,reveal:false}, // hidden · user guesses
+      {label:'c',val:c,reveal:true},
+    ];
+    this.slots=slots;
+    this.answer=b;
+    // 4 multi-choice
+    const distract=[];
+    while(distract.length<3){
+      const v=b+(Math.random()<.5?-1:1)*(Math.floor(Math.random()*5)+1);
+      if(v>0 && v!==b && !distract.includes(v)) distract.push(v);
+    }
+    this.options=[b,...distract].sort((a,b)=>a-b);
+    this.q++; this._answered=false;
+    this.render();
+  },
+  pick(v){if(this._answered)return; this._answered=true;
+    if(v===this.answer){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),300);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🔢 Pyramid Add</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','top = sum of 2 below · find missing'));
+    // Render 3-row pyramid
+    const py=el('div',''); py.style.cssText='display:flex;flex-direction:column;align-items:center;gap:8px;margin:14px 0';
+    [['top'],['ab','bc'],['a','b','c']].forEach(rowKeys=>{
+      const row=el('div',''); row.style.cssText='display:flex;gap:8px';
+      rowKeys.forEach(k=>{
+        const slot=this.slots.find(s=>s.label===k);
+        const c=el('div','');
+        const showVal=slot.reveal?slot.val:'?';
+        c.style.cssText=`width:60px;height:60px;border-radius:10px;background:${slot.reveal?'rgba(0,194,168,.25)':'rgba(245,158,11,.3)'};border:2px solid ${slot.reveal?'#0E7490':'#FBBF24'};display:grid;place-items:center;font-size:22px;font-weight:800;font-family:'Cinzel',serif;color:${slot.reveal?'var(--cream)':'var(--gold-bright)'}`;
+        c.textContent=showVal;
+        row.appendChild(c);
+      });
+      py.appendChild(row);
+    });
+    wrap.appendChild(py);
+    const grid=el('div','stroop-grid');
+    this.options.forEach(v=>{const b=el('button','stroop-btn',String(v)); b.style.background='linear-gradient(135deg,#0E7490,#0C4A6E)'; b.onclick=()=>this.pick(v); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('num','pyramid',6);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*6,brain:3}:{coin:Math.max(15,this.score*3)};
+    recordResult('num','pyramid',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score} solved!`,emoji:'🔢',retry:()=>PyramidGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} solved`,msg:`aim for ${t}+!`,retry:()=>PyramidGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 53 · SPELLING BEE (Word Lab)
+// ====================================================================
+const SPELLING_BEE = [
+  {c:'NECESSARY',o:['NECESSARY','NECESSARRY','NECCESSARY','NECCESARY']},
+  {c:'BEAUTIFUL',o:['BEAUTIFUL','BEAUTIFULL','BEAUTYFULL','BEAUTYFUL']},
+  {c:'OCCURRENCE',o:['OCCURRENCE','OCURRENCE','OCCURENCE','OCCURRANCE']},
+  {c:'SEPARATE',o:['SEPARATE','SEPERATE','SEPPARATE','SEPRATE']},
+  {c:'DEFINITELY',o:['DEFINITELY','DEFINITLY','DEFFINITELY','DEFENATELY']},
+  {c:'ACCOMMODATE',o:['ACCOMMODATE','ACOMMODATE','ACCOMODATE','ACCOMADATE']},
+  {c:'EMBARRASS',o:['EMBARRASS','EMBARASS','EMBARRAS','EMBARRESS']},
+  {c:'RECOMMEND',o:['RECOMMEND','RECCOMEND','RECOMEND','RECCOMMEND']},
+  {c:'THOROUGH',o:['THOROUGH','THORO','THOROUGH','THUROUGH','THOROW']},
+  {c:'JUDGMENT',o:['JUDGMENT','JUDGEMENT','JUDDMENT','JUDGMENNT']},
+  {c:'ACQUIRE',o:['ACQUIRE','AQUIRE','ACUIRE','ACUIER']},
+  {c:'PRIVILEGE',o:['PRIVILEGE','PRIVELEGE','PRIVELAGE','PREVILAGE']},
+  {c:'CONSCIENCE',o:['CONSCIENCE','CONSCEINCE','CONCIENCE','CONSHENCE']},
+  {c:'RECEIVE',o:['RECEIVE','RECIEVE','REECEIVE','RECEIEVE']},
+  {c:'PERSEVERE',o:['PERSEVERE','PERSEVEER','PERSEVAR','PERSEVRE']},
+];
+const SpellingGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45; this.q=0;
+    this.questions=[...SPELLING_BEE].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.current.c){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>📖 Spelling Bee</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','pick the CORRECT spelling'));
+    const grid=el('div','verse-options');
+    grid.style.gridTemplateColumns='1fr';
+    this.options.forEach(o=>{
+      const b=el('button','verse-opt',o);
+      b.style.fontSize='15px';
+      b.onclick=()=>this.pick(o);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('word','spelling',7);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*5,brain:3}:{coin:Math.max(15,this.score*2)};
+    recordResult('word','spelling',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🐝',retry:()=>SpellingGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>SpellingGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 54 · PROPHECY MATCH (Scripture)
+// ====================================================================
+const PROPHECIES = [
+  {p:'Born of a virgin (Isaiah 7:14)',f:'Mary conceives Jesus by Holy Spirit',o:['Mary conceives Jesus by Holy Spirit','David is anointed king','Moses parts Red Sea','Jonah swallowed by fish']},
+  {p:'Born in Bethlehem (Micah 5:2)',f:'Jesus born in the city of David',o:['Jesus born in the city of David','Daniel taken to Babylon','Joseph sold to Egypt','Solomon builds temple']},
+  {p:'Riding on a donkey (Zechariah 9:9)',f:"Jesus' triumphal entry into Jerusalem",o:["Jesus' triumphal entry into Jerusalem",'Goliath defeated','Jordan crossed','Jericho falls']},
+  {p:'30 pieces of silver (Zechariah 11:12)',f:'Judas betrays Jesus for 30 silver',o:['Judas betrays Jesus for 30 silver','Joseph sold for 20','Israel taxed','David buys threshing floor']},
+  {p:'Pierced for our transgressions (Isaiah 53:5)',f:"Jesus' crucifixion atones for sin",o:["Jesus' crucifixion atones for sin",'Aaron offers sacrifice','David weeps','Stephen is stoned']},
+  {p:'Resurrection on the third day (Hosea 6:2)',f:'Jesus rises from the tomb',o:['Jesus rises from the tomb','Lazarus raised','Elijah taken to heaven','Jonah saved']},
+  {p:'New covenant (Jeremiah 31:31)',f:"Jesus' Last Supper · blood shed for many",o:["Jesus' Last Supper · blood shed for many",'Moses receives Law','Solomon dedicates temple','Promise to Abraham']},
+  {p:'Light to the Gentiles (Isaiah 49:6)',f:'Paul takes gospel to nations',o:['Paul takes gospel to nations','Jonah goes to Nineveh','Daniel interprets dreams','Ruth joins Israel']},
+];
+const ProphecyGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=60; this.q=0;
+    this.questions=[...PROPHECIES].sort(()=>Math.random()-.5).slice(0,6);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.current.f){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>✝️ Prophecy Match</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','what fulfilled this prophecy?'));
+    const w=el('div','verse-card'); w.innerHTML=`"${this.current.p}"`; w.style.fontSize='14px'; wrap.appendChild(w);
+    const grid=el('div','verse-options');
+    this.options.forEach(o=>{
+      const b=el('button','verse-opt',o); b.style.fontFamily="'Inter',sans-serif"; b.style.fontSize='12px'; b.style.padding='10px';
+      b.onclick=()=>this.pick(o); grid.appendChild(b);
+    });
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('script','prophecy',4);
+    const won=this.score>=t;
+    const r=won?{coin:50+this.score*8,faith:5}:{coin:Math.max(15,this.score*4),faith:1};
+    recordResult('script','prophecy',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🕊️',retry:()=>ProphecyGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`study the prophets!`,retry:()=>ProphecyGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 55 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
