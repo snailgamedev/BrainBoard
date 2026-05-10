@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.36.0 · 43 games · Twenty Q · Wild Stack · Mini Golf · 🙏</div>
+  <div class="splash-foot">v0.37.0 · FINISH STRONG · tutorial · 47 games · win sting · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.36.0';
+const VERSION = '0.37.0';
 
 // ----- STATE -----
 const State = {
@@ -1451,6 +1451,7 @@ const DEFAULT_SAVE = {
   appTheme:'cobalt', // cobalt/sepia/neon/forest/galaxy/crimson
   cinematicSeen:false, // first-launch cinematic
   weeklyReportLastShown:null, // ISO date
+  tutorialSeen:false, // v0.37 one-time tutorial
   // v0.8 power-ups inventory
   powerups:{hint:0,skip:0,double:0,freeze:0,undo:0,fire:0},
   // v0.17 account + security
@@ -2640,6 +2641,12 @@ const ACHIEVEMENTS = [
   {id:'wildstack_5',em:'🃏',t:'Stack Master',d:'Win 5 Wild Stack'},
   {id:'minigolf_ace',em:'⛳',t:'Hole-in-One',d:'Sink Mini Golf in 1 shot'},
   {id:'avatar_max',em:'👤',t:'Style Connoisseur',d:'Try 50+ avatar items'},
+  // v0.37
+  {id:'tutorial_done',em:'🎓',t:'Initiated',d:'Complete the one-time tutorial'},
+  {id:'pattern_5',em:'🟦',t:'Pattern Eye',d:'Win 5 Pattern Match games'},
+  {id:'antonym_5',em:'🔄',t:'Opposite Saint',d:'Win 5 Antonym Sprint games'},
+  {id:'fastadd_5',em:'⚡',t:'Adder Saint',d:'Win 5 Fast Add games'},
+  {id:'disciple_5',em:'⚓',t:'Disciple Saint',d:'Win 5 Disciple Match games'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -3147,6 +3154,12 @@ const Modal = {
         <button class="btn-primary" onclick="App._modalRetry()">🔁 again</button>
       </div>`);
     confetti();
+    // v0.37 win modal music sting · 4-note ascending flourish
+    if(typeof Music !== 'undefined' && State.data?.settings?.music){
+      [523,659,784,1046].forEach((f,i)=>{
+        setTimeout(()=>SFX.tap(),i*70);
+      });
+    }
     State._modalCallbacks = {retry,lobby};
   },
   lose({title='try again',emoji='💪',msg,answer,retry,lobby}){
@@ -3322,12 +3335,14 @@ const ROOMS = {
     {id:'hangman',em:'🪢',name:'Hangman',sub:'guess the word · 6 wrong = hung',launch:()=>HangmanGame.start()},
     {id:'synonym',em:'🔁',name:'Synonym Sprint',sub:'pick the synonym · 45 sec · 10 rounds',launch:()=>SynonymGame.start()},
     {id:'wordbuild',em:'🔨',name:'Word Build',sub:'build words from 7 random letters · 90s',launch:()=>WordBuildGame.start()},
+    {id:'antonym',em:'🔄',name:'Antonym Sprint',sub:'pick the opposite · 45s · 10 rounds',launch:()=>AntonymGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
     {id:'simon',em:'🎼',name:'Simon Says',sub:'repeat the sequence · gets longer',launch:()=>SimonGame.start()},
     {id:'nummemory',em:'🔢',name:'Number Memory',sub:'memorize 5 numbers · recall by position',launch:()=>NumberMemoryGame.start()},
     {id:'wildstack',em:'🃏',name:'Wild Stack',sub:'match color or number · go out first',launch:()=>WildStackGame.start()},
+    {id:'pattern',em:'🟦',name:'Pattern Match',sub:'find the missing color · 45s · 10 rounds',launch:()=>PatternMatchGame.start()},
   ]},
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
@@ -3342,6 +3357,7 @@ const ROOMS = {
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
     {id:'sequence',em:'🧮',name:'Sequence Solve',sub:'find the next number · 60 sec',launch:()=>SequenceGame.start()},
     {id:'quicksum',em:'➗',name:'Quick Sum',sub:'2 numbers that sum to target · 45 sec',launch:()=>QuickSumGame.start()},
+    {id:'fastadd',em:'⚡',name:'Fast Add',sub:'add 2-digit numbers · 30 sec',launch:()=>FastAddGame.start()},
   ]},
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
@@ -3349,6 +3365,7 @@ const ROOMS = {
     {id:'trivia',em:'🧠',name:'Bible Trivia',sub:'10 random Qs · 30+ pool · 60 sec',launch:()=>TriviaGame.start()},
     {id:'parable',em:'🕊️',name:'Parable Match',sub:'parable → meaning · 8 rounds',launch:()=>ParableGame.start()},
     {id:'commandments',em:'📜',name:'10 Commandments',sub:'match number to commandment',launch:()=>CommandmentsGame.start()},
+    {id:'disciple',em:'⚓',name:'Disciple Match',sub:'match disciple to their fact · 60 sec',launch:()=>DiscipleGame.start()},
   ]},
   logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
@@ -3559,6 +3576,38 @@ const App = {
       <p style="margin-top:12px;font-size:13px">⭐ favorite: <b style="color:var(--gold-bright)">${favName}</b></p>
       <p class="dim" style="font-size:11px;margin:10px 0">💡 ${Coach.tip()}</p>
       <button class="btn-primary" onclick="Modal.close()">🙏 amen</button>`);
+    SFX.holy(); confetti();
+  },
+  showTutorial(){
+    if(State.data.tutorialSeen) return;
+    // Don't override another modal · retry later
+    if(document.getElementById('modal')?.classList.contains('active')){
+      setTimeout(()=>App.showTutorial(), 2000);
+      return;
+    }
+    // Don't override game screen
+    if(document.getElementById('game')?.classList.contains('active')) return;
+    State.data.tutorialSeen = true;
+    Save.write();
+    Ach.unlock('tutorial_done');
+    Modal.show(`<div style="text-align:center;padding:6px">
+      <div style="font-size:54px">🎓</div>
+      <h3 style="margin:8px 0">welcome to BrainBoard</h3>
+      <div style="background:rgba(245,158,11,.08);padding:14px 16px;border-radius:10px;border-left:3px solid var(--gold);text-align:left;font-size:12px;line-height:1.7">
+        <b>📍 8 ROOMS</b> · tap any door · pick a game<br>
+        <b>👤 YOUR NAME (top-left)</b> · tap to redesign your saint<br>
+        <b>⚙️ SETTINGS (top-right gear)</b> · difficulty · music · accessibility · account<br>
+        <b>🛒 SHOP</b> · power-ups · bundles · daily deal · exchange<br>
+        <b>🏆 STATS</b> · brain rank · DNA radar · per-game · history<br>
+        <b>🎫 PASS</b> · monthly battle pass w/ rewards<br>
+        <b>🤝 FRIENDS</b> · 6-char codes · chat<br>
+        <b>📋 QUESTS</b> · 3 daily · auto reset midnight<br>
+        <b>🎵 MUSIC</b> · procedural per-screen · volume in Settings<br>
+        <b>🌅 SPLASH</b> · returns each launch · personalized greeting<br>
+      </div>
+      <p class="dim text-center" style="font-size:11px;margin-top:10px">that's it · go play 🧠⚡</p>
+      <button class="btn-primary" style="margin-top:8px;width:100%" onclick="Modal.close()">▶ LET'S GO</button>
+    </div>`);
     SFX.holy(); confetti();
   },
   splashJump(roomId){
@@ -3813,6 +3862,8 @@ const App = {
       State.data.onboarded = true;
       Activity.log('first','✨','Joined BrainBoard · welcome, '+State.data.name+'!');
       Ach.unlock('first_step');
+      // v0.37 trigger one-time tutorial after onboarding complete
+      State.data._showTutorialNext = true;
       // detect custom emoji used in onboarding
       const usedCustom = Object.entries(App._obData.avatar).some(([slot,id])=>{
         const list = AVATAR_ITEMS[slot]; if(!list) return false;
@@ -3825,6 +3876,8 @@ const App = {
       App.checkDaily();
       App.renderLobbyExtras();
       Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · craft more anytime in your profile`);
+      // v0.37 fire tutorial after a short delay
+      if(!State.data.tutorialSeen){ setTimeout(()=>App.showTutorial(), 1800); }
     }
   },
 
@@ -8839,7 +8892,248 @@ const MiniGolfGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 44 · DAILY (rotating mini)
+// 🎮 GAME 44 · PATTERN MATCH (Brain Gym)
+// ====================================================================
+const PatternMatchGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45; this.q=0;
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){
+    const shapes=['🔴','🔵','🟢','🟡','🟣','🟠'];
+    this.sequence=[];
+    for(let i=0;i<5;i++) this.sequence.push(shapes[Math.floor(Math.random()*shapes.length)]);
+    // remove one and shuffle remaining for the question
+    this.missingIdx = Math.floor(Math.random()*5);
+    this.missing = this.sequence[this.missingIdx];
+    // 4 options · correct + 3 distractors
+    const distract=[];
+    while(distract.length<3){
+      const s = shapes[Math.floor(Math.random()*shapes.length)];
+      if(s!==this.missing && !distract.includes(s)) distract.push(s);
+    }
+    this.options=[this.missing,...distract].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false;
+    this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.missing){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🧠 Pattern Match</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','which color is MISSING from the sequence?'));
+    // Show sequence with the missing slot blanked
+    const seq=el('div',''); seq.style.cssText='display:flex;gap:8px;margin:14px 0;font-size:36px';
+    this.sequence.forEach((s,i)=>{
+      const sp=el('span','', i===this.missingIdx?'❓':s);
+      if(i===this.missingIdx) sp.style.color='var(--gold-bright)';
+      seq.appendChild(sp);
+    });
+    wrap.appendChild(seq);
+    const grid=el('div','stroop-grid');
+    this.options.forEach(o=>{
+      const b=el('button','stroop-btn',o);
+      b.style.fontSize='28px';
+      b.style.background='rgba(255,255,255,.1)';
+      b.onclick=()=>this.pick(o);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('brain','pattern',7);
+    const won=this.score>=t;
+    const r=won?{coin:30+this.score*5,brain:3}:{coin:Math.max(10,this.score*2)};
+    recordResult('brain','pattern',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score} matched!`,emoji:'🧠',retry:()=>PatternMatchGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} matched`,msg:`aim for ${t}+!`,retry:()=>PatternMatchGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 45 · ANTONYM SPRINT (Word Lab)
+// ====================================================================
+const ANTONYMS = [
+  {w:'happy',a:'sad',o:['sad','glad','joyful','warm']},
+  {w:'big',a:'small',o:['small','huge','wide','tall']},
+  {w:'fast',a:'slow',o:['slow','quick','rapid','sharp']},
+  {w:'hot',a:'cold',o:['cold','warm','damp','dry']},
+  {w:'kind',a:'cruel',o:['cruel','gentle','soft','meek']},
+  {w:'rich',a:'poor',o:['poor','wealthy','vast','full']},
+  {w:'brave',a:'cowardly',o:['cowardly','bold','strong','mighty']},
+  {w:'wise',a:'foolish',o:['foolish','sage','clever','smart']},
+  {w:'light',a:'dark',o:['dark','bright','clear','plain']},
+  {w:'strong',a:'weak',o:['weak','mighty','firm','solid']},
+  {w:'pure',a:'dirty',o:['dirty','clean','sacred','holy']},
+  {w:'noble',a:'lowly',o:['lowly','grand','proud','royal']},
+  {w:'truth',a:'lie',o:['lie','word','fact','proof']},
+  {w:'love',a:'hate',o:['hate','like','need','wish']},
+  {w:'rise',a:'fall',o:['fall','climb','soar','grow']},
+  {w:'open',a:'closed',o:['closed','wide','free','bare']},
+  {w:'full',a:'empty',o:['empty','filled','crowded','dense']},
+  {w:'safe',a:'dangerous',o:['dangerous','secure','sound','calm']},
+  {w:'humble',a:'proud',o:['proud','meek','quiet','low']},
+  {w:'bright',a:'dim',o:['dim','vivid','sharp','clear']},
+];
+const AntonymGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=45; this.q=0;
+    this.questions=[...ANTONYMS].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.current.a){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>📖 Antonym Sprint</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','opposite of...'));
+    const w=el('div','math-q',this.current.w.toUpperCase()); w.style.color='var(--gold-bright)'; wrap.appendChild(w);
+    const grid=el('div','verse-options');
+    this.options.forEach(o=>{const b=el('button','verse-opt',o); b.onclick=()=>this.pick(o); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('word','antonym',7);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*5,brain:3}:{coin:Math.max(10,this.score*2)};
+    recordResult('word','antonym',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'📖',retry:()=>AntonymGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>AntonymGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 46 · FAST ADD (Number Crunch)
+// ====================================================================
+const FastAddGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=30; this.input='';
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){
+    const a=Math.floor(Math.random()*89)+10;
+    const b=Math.floor(Math.random()*89)+10;
+    this.q=`${a} + ${b}`;
+    this.answer=a+b;
+    this.input='';
+    this.render();
+  },
+  press(n){if(this.input.length>=4)return; this.input+=n; SFX.tap(); haptic(4); this.render();},
+  delPress(){this.input=this.input.slice(0,-1); haptic(4); this.render();},
+  submit(){
+    if(!this.input) return;
+    if(parseInt(this.input)===this.answer){this.score++;SFX.correct();haptic(10);}else{SFX.wrong();haptic(20);}
+    this.next();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🔢 Fast Add</b> · score: <b>${this.score}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','add 2-digit numbers · type fast'));
+    wrap.appendChild(el('div','math-q', this.q + ' = ?'));
+    wrap.appendChild(el('div','math-input', this.input || '_'));
+    const pad=el('div','math-pad');
+    ['1','2','3','4','5','6','7','8','9'].forEach(n=>{const b=el('button','math-key',n); b.onclick=()=>this.press(n); pad.appendChild(b);});
+    const del=el('button','math-key del','⌫'); del.onclick=()=>this.delPress(); pad.appendChild(del);
+    const z=el('button','math-key','0'); z.onclick=()=>this.press('0'); pad.appendChild(z);
+    const go=el('button','math-key go','GO'); go.onclick=()=>this.submit(); pad.appendChild(go);
+    wrap.appendChild(pad);
+    area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('num','fastadd',8);
+    const won=this.score>=t;
+    const r=won?{coin:30+this.score*5,brain:3}:{coin:Math.max(10,this.score*3)};
+    recordResult('num','fastadd',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score} solved!`,emoji:'🧮',retry:()=>FastAddGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} solved`,msg:`aim for ${t}+!`,retry:()=>FastAddGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 47 · DISCIPLE MATCH (Scripture)
+// ====================================================================
+const DISCIPLES = [
+  {n:'Peter',f:'denied Jesus 3 times · "rock" of the church',o:['denied Jesus 3 times · "rock" of the church','wrote Revelation','was a tax collector','betrayed Jesus']},
+  {n:'John',f:'wrote Revelation · "beloved disciple"',o:['wrote Revelation · "beloved disciple"','denied Jesus','first martyr','was a tax collector']},
+  {n:'Matthew',f:'was a tax collector · wrote 1st gospel',o:['was a tax collector · wrote 1st gospel','wrote Revelation','denied Jesus','wrote Romans']},
+  {n:'Judas Iscariot',f:'betrayed Jesus for 30 silver',o:['betrayed Jesus for 30 silver','wrote Hebrews','denied Jesus','was a fisherman']},
+  {n:'Thomas',f:'doubted until he saw the wounds',o:['doubted until he saw the wounds','was a tax collector','wrote Revelation','denied Jesus']},
+  {n:'James (son of Zebedee)',f:'first apostle martyred',o:['first apostle martyred','wrote 1 John','denied Jesus','was a doctor']},
+  {n:'Andrew',f:"Peter's brother · brought him to Jesus",o:["Peter's brother · brought him to Jesus",'denied Jesus','was a tax collector','wrote a gospel']},
+  {n:'Philip',f:'told Nathanael "come and see"',o:['told Nathanael "come and see"','was a tax collector','denied Jesus','wrote Acts']},
+  {n:'Bartholomew',f:'also called Nathanael · "no guile"',o:['also called Nathanael · "no guile"','denied Jesus','wrote a gospel','betrayed Jesus']},
+  {n:'Paul',f:'apostle to Gentiles · wrote most of NT',o:['apostle to Gentiles · wrote most of NT','denied Jesus','was a tax collector','first martyr']},
+];
+const DiscipleGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=60; this.q=0;
+    this.questions=[...DISCIPLES].sort(()=>Math.random()-.5).slice(0,8);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  },
+  next(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  },
+  pick(o){if(this._answered)return; this._answered=true;
+    if(o===this.current.f){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>✝️ Disciple Match</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','which fact matches the disciple?'));
+    const w=el('div','math-q',this.current.n); w.style.color='var(--gold-bright)'; w.style.fontFamily="'Cinzel',serif"; wrap.appendChild(w);
+    const grid=el('div','verse-options');
+    this.options.forEach(o=>{
+      const b=el('button','verse-opt',o);
+      b.style.fontFamily="'Inter',sans-serif"; b.style.fontSize='12px'; b.style.padding='10px';
+      b.onclick=()=>this.pick(o); grid.appendChild(b);
+    });
+    wrap.appendChild(grid); area.appendChild(wrap);
+  },
+  end(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('script','disciple',5);
+    const won=this.score>=t;
+    const r=won?{coin:50+this.score*7,faith:5}:{coin:Math.max(15,this.score*4),faith:1};
+    recordResult('script','disciple',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🙏',retry:()=>DiscipleGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`study the apostles!`,retry:()=>DiscipleGame.start(),lobby:()=>App.toLobby()});
+  },
+  cleanup(){if(this.timer) clearInterval(this.timer);}
+};
+
+// ====================================================================
+// 🎮 GAME 48 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
