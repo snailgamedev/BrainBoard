@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.54.0 · 🧠 LivingCoach engine · personal facts · topic memory · sentiment · Coach has its own goals · 🙏</div>
+  <div class="splash-foot">v0.55.0 · button merges · streaming · vocab learn · thoughts · challenges · mood drift · proactive DMs · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.54.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.55.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.54.0';
+const VERSION = '0.55.0';
 
 // ----- STATE -----
 const State = {
@@ -1548,6 +1548,13 @@ const DEFAULT_SAVE = {
   coachTopics:{}, // {topicKey: count} · topics you bring up often
   coachGoal:null, // {kind, target, progress} · Coach's current micro-goal
   coachSeenRevealsIdx:0, // index into the "reveals" pool
+  // v0.55 realism stack
+  coachVocab:[], // words user uses · Coach recycles
+  coachActiveChallenges:[], // [{id, gameKey, target, reward, expires}]
+  coachMoodLog:[], // [{ts, mood}] · drift history
+  coachThoughtsLast:0, // ts of last proactive thought DM
+  coachStreamingEnabled:true, // word-by-word typing in chat
+  coachLastSeen:0, // ts of last interaction · drives "miss you" DMs
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -5707,6 +5714,8 @@ const CoachAI = {
     } else {
       // v0.54 · LivingCoach engine when no API key
       reply = LivingCoach.reply(userText);
+      // v0.55 · learn user's vocabulary · splice it back into replies sometimes
+      try{ CoachVocab.extract(userText); reply = CoachVocab.splice(reply); }catch(e){}
       if(Math.random() < 0.2){
         const mem = CoachMemory.recall();
         if(mem) reply = `${this.pick([
@@ -5718,6 +5727,7 @@ const CoachAI = {
       }
       State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
     }
+    State.data.coachLastSeen = Date.now();
     if(State.data.coachChat.length>200) State.data.coachChat = State.data.coachChat.slice(-200);
     Save.write();
     try{ CoachVoice.say(reply); }catch(e){}
@@ -6022,6 +6032,190 @@ const CoachPlan = {
       html += `<div class="dim" style="font-size:11px;text-align:center;margin-top:8px">play ${p.axis} games to progress · each day target decreases</div>`;
       html += `<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="CoachPlan.startPlan();App.openCoachPlan()">↺ restart plan</button>`;
     }
+    return html;
+  }
+};
+
+// ====================================================================
+// 🧬 v0.55 · COACH VOCAB · learn user's words · recycle into replies
+// ====================================================================
+const CoachVocab = {
+  COMMON: new Set('a about all also an and any are as at be been being but by can do does for from get had has have he her hers him his how i if in into is it its just like me might more most my no not now of on or other our out over she so some such than that the their them then there these they this those to too us was we were what when where which who why will with would you your yours'.split(' ')),
+  extract(text){
+    const words = text.toLowerCase().match(/[a-z']{4,15}/g) || [];
+    const vocab = State.data.coachVocab = State.data.coachVocab || [];
+    words.forEach(w=>{
+      if(this.COMMON.has(w)) return;
+      if(!vocab.includes(w)) vocab.push(w);
+    });
+    if(vocab.length>60) State.data.coachVocab = vocab.slice(-60);
+  },
+  pick(){
+    const v = State.data.coachVocab || [];
+    if(!v.length) return null;
+    return v[Math.floor(Math.random()*v.length)];
+  },
+  splice(reply){
+    // 18% chance to inject a user word back · gives "I remember how you talk" feel
+    if(Math.random()>0.18) return reply;
+    const w = this.pick();
+    if(!w) return reply;
+    return `${reply} · ${w} hits btw`;
+  }
+};
+
+// ====================================================================
+// ⏳ v0.55 · COACH STREAMING · word-by-word typed display
+// ====================================================================
+const CoachStream = {
+  type(elId, text, doneCb){
+    if(!State.data?.coachStreamingEnabled){
+      const el=document.getElementById(elId); if(el) el.textContent=text;
+      if(doneCb) doneCb();
+      return;
+    }
+    const el = document.getElementById(elId);
+    if(!el){ if(doneCb) doneCb(); return; }
+    el.textContent = '';
+    const words = text.split(' ');
+    let i=0;
+    const tick=()=>{
+      if(i>=words.length){ if(doneCb) doneCb(); return; }
+      el.textContent += (i>0?' ':'')+words[i];
+      i++;
+      // jitter timing so it feels human · 35-110ms
+      setTimeout(tick, 35+Math.random()*75);
+    };
+    tick();
+  }
+};
+
+// ====================================================================
+// 💭 v0.55 · COACH PROACTIVE THOUGHTS · pushed to DMs occasionally
+// ====================================================================
+const CoachThoughts = {
+  THOUGHTS: [
+    text=>`i was thinking about ${text.userName} · ${text.weakAxis} run today?`,
+    text=>`random thought · ${text.userName} you up?`,
+    text=>`watching the time · ${text.timeWindow} is YOUR window`,
+    text=>`stat check · ${text.totalPlays} games in · proud honestly`,
+    text=>`fyi ${text.userName} · today's spotlight: ${text.spotlightName}`,
+    text=>`prayer thought · ${text.scripture}`,
+    text=>`real talk · we're at IQ ${text.iq} · keep this energy`,
+    text=>`drift alert · ${text.userName}'s last login was ${text.hoursSince}h ago`,
+    text=>`brain check · ${text.strongAxis} fire · ${text.weakAxis} needs love`,
+    text=>`feeling ${text.mood} today · what's the move`,
+  ],
+  maybePush(){
+    // 6+ hour cooldown
+    if(Date.now() - (State.data.coachThoughtsLast||0) < 6*3600000) return;
+    // only when onboarded
+    if(!State.data.onboarded) return;
+    const b = Coach.brain();
+    if(!b) return;
+    const t = Coach.tier();
+    const lastSeen = State.data.coachLastSeen || State.data.joinedAt || Date.now();
+    const ctx = {
+      userName: State.data.name || 'saint',
+      weakAxis: b.weakest || 'memory',
+      strongAxis: b.strongest || 'pattern',
+      timeWindow: LivingCoach.timeAware(),
+      totalPlays: b.totalPlays,
+      spotlightName: Frenzy.spotlight()?.name || 'Math Burst',
+      scripture: LivingCoach.pick(['"Be still" — Ps 46','"Trust" — Pr 3','"Fear not" — Isa 41']),
+      iq: Coach.iq(),
+      hoursSince: Math.floor((Date.now()-lastSeen)/3600000),
+      mood: t.name.toLowerCase(),
+    };
+    const thoughtFn = this.THOUGHTS[Math.floor(Math.random()*this.THOUGHTS.length)];
+    const text = thoughtFn(ctx);
+    State.data.coachDms = State.data.coachDms || [];
+    State.data.coachDms.unshift({ts:Date.now(), em:t.em, text, read:false, kind:'thought'});
+    if(State.data.coachDms.length>20) State.data.coachDms = State.data.coachDms.slice(0,20);
+    State.data.coachThoughtsLast = Date.now();
+    Save.write();
+  }
+};
+
+// ====================================================================
+// 🎯 v0.55 · COACH CHALLENGES · Coach bets on you
+// ====================================================================
+const CoachChallenge = {
+  active(){
+    return (State.data.coachActiveChallenges||[]).filter(c=>c.expires>Date.now());
+  },
+  pickRandom(){
+    // pick a game · target = bronze threshold
+    const all = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
+    const pick = all[Math.floor(Math.random()*all.length)];
+    const tk = `${pick.rid}:${pick.g.id}`;
+    const threshold = Medals.thresholds(pick.rid, pick.g.id);
+    return {
+      id:'ch'+Date.now(),
+      gameKey:tk, rid:pick.rid, gid:pick.g.id,
+      gameName:pick.g.name, em:pick.g.em,
+      target: threshold.bronze,
+      reward:{coin:80, gem:1, brain:2},
+      expires: Date.now() + 24*3600000,
+      created: Date.now()
+    };
+  },
+  issue(){
+    const name = State.data.coachName || 'Bud';
+    if(this.active().length>=2){ Toast.show(`${name}: u already got 2 challenges open`); return; }
+    const ch = this.pickRandom();
+    State.data.coachActiveChallenges = State.data.coachActiveChallenges || [];
+    State.data.coachActiveChallenges.push(ch);
+    Save.write();
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:54px">🎯</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">${name}'s CHALLENGE</h3>
+      <p style="font-size:13px;margin:6px 0">bet u can't get a ${ch.target}+ score in</p>
+      <div style="font-size:24px;margin:8px 0">${ch.em} <b>${ch.gameName}</b></div>
+      <p class="dim" style="font-size:11px">expires in 24h · reward: 80🪙 +1💎 +2🧠</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">CHALLENGE ACCEPTED</button>
+    </div>`);
+  },
+  checkResult(roomId, gameId, score){
+    const list = State.data.coachActiveChallenges || [];
+    const ch = list.find(c=>c.rid===roomId && c.gid===gameId && c.expires>Date.now());
+    if(!ch) return;
+    if(score >= ch.target){
+      Wallet.add(ch.reward);
+      Coach.bumpXp(20);
+      State.data.coachActiveChallenges = list.filter(c=>c.id!==ch.id);
+      Save.write();
+      setTimeout(()=>Modal.show(`<div style="text-align:center;padding:8px">
+        <div style="font-size:54px">🏆</div>
+        <h3 style="margin:8px 0;color:var(--gold-bright)">CHALLENGE BEATEN</h3>
+        <p style="font-size:13px">${ch.em} ${ch.gameName} · ${score}≥${ch.target}</p>
+        <p style="font-size:12px">+80🪙 +1💎 +2🧠 · Coach +20XP</p>
+        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      </div>`), 800);
+    }
+  },
+  renderHub(){
+    const name = State.data.coachName || 'Bud';
+    const act = this.active();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(220,38,38,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">🎯</div>
+      <b style="color:var(--gold-bright);font-size:16px">${name}'s Challenges</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">Coach bets on your run · beat threshold to claim</div>
+    </div>`;
+    if(act.length){
+      html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">⚡ ACTIVE</h3>`;
+      act.forEach(c=>{
+        const hours = Math.floor((c.expires-Date.now())/3600000);
+        html += `<div style="background:rgba(0,0,0,.18);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:10px;margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between"><span><b>${c.em} ${c.gameName}</b></span><span class="dim" style="font-size:10px">${hours}h left</span></div>
+          <div style="font-size:11px;margin-top:4px">score ≥ <b>${c.target}</b> · earn 80🪙 +1💎 +2🧠</div>
+          <button class="btn-primary" style="margin-top:6px;padding:6px 10px;font-size:11px" onclick="App.playCoachChallenge('${c.rid}','${c.gid}')">▶ play now</button>
+        </div>`;
+      });
+    } else {
+      html += `<div class="dim" style="padding:14px;text-align:center;font-size:12px">no active challenges</div>`;
+    }
+    html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:12px" onclick="CoachChallenge.issue()">🎯 GET NEW CHALLENGE</button>`;
     return html;
   }
 };
@@ -8577,6 +8771,8 @@ const App = {
     // v0.50 · Coach birthday + friend-online checks
     try{ CoachBirthday.check(); }catch(e){}
     try{ FriendOnlineDM.check(); }catch(e){}
+    // v0.55 · proactive Coach thoughts (6h cooldown)
+    try{ CoachThoughts.maybePush(); }catch(e){}
     // v0.41 · help pulse · until user taps it once
     const pulse = document.getElementById('help-pulse');
     if(pulse) pulse.style.display = State.data.helpHubSeen ? 'none' : 'block';
@@ -9886,21 +10082,14 @@ const App = {
       ${SkillTarget.renderCard()}
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🧠 MORE WITH ${State.data.coachName||'BUD'}</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachDms()">💬 DMs${CoachDM.unreadCount()?` · <span style="color:#FBBF24">${CoachDM.unreadCount()} new</span>`:''}</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLessons()">🎓 Lessons · ${(State.data.coachLessonsDone||[]).length}/${CoachLessons.LESSONS.length}</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLB()">🏆 LB</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachFusion()">🌀 Fusion${State.data.coachFusion?.em?' '+State.data.coachFusion.em:''}</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachQuiz()">🎭 Personality · ${(State.data.coachTraits||[]).length}/5</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachAnalytics()">📊 Analytics</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachChat()">🤖 CHAT with ${State.data.coachName||'Bud'}</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachJournal()">📔 Journal · ${(State.data.coachJournal||[]).length}</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachSkins()">🛍️ Skins · ${(State.data.coachSkinsOwned||['default']).length}</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachPlan()">🎯 7-day plan</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.startCoachCoplay()">🎮 co-play Frenzy</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.replayCoachIntro()">🎬 replay intro</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachMural()">🎨 mural · ${(State.data.coachSkinsOwned||['default']).length} skins</button>
-        <button class="btn-secondary" style="padding:12px" onclick="App.claimCoachPhoto()">📸 daily photo${CoachPhoto.canClaim()?' · ready':''}</button>
-        <button class="btn-secondary" style="padding:12px;grid-column:span 2;background:linear-gradient(135deg,rgba(16,185,129,.25),rgba(245,158,11,.2));border-color:#10B981" onclick="App.coachAssist()">🤝 ask ${State.data.coachName||'Bud'} for a hint · 5-min cooldown</button>
+        <button class="btn-secondary" style="padding:14px;background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(34,211,238,.15))" onclick="App.openCoachChat()">🤖 CHAT · ${(State.data.coachChat||[]).length}</button>
+        <button class="btn-secondary" style="padding:14px;background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(220,38,38,.15))" onclick="App.openCoachChallenges()">🎯 Challenges · ${CoachChallenge.active().length}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachTalk()">💬 Talk Hub${CoachDM.unreadCount()?` · <span style="color:#FBBF24">${CoachDM.unreadCount()} new</span>`:''}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLearn()">🎓 Learn Hub</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachCosmetic()">🎨 Style Hub · ${(State.data.coachSkinsOwned||['default']).length} skins</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachCompete()">🏆 Compete Hub</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachTune()">⚙️ Tune Hub</button>
+        <button class="btn-secondary" style="padding:12px;background:linear-gradient(135deg,rgba(16,185,129,.25),rgba(245,158,11,.2));border-color:#10B981" onclick="App.coachAssist()">🤝 Assist (5-min CD)</button>
       </div>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🌙 TONIGHT'S BEST</h3>
       ${CoachPredict.renderCard()}
@@ -10162,6 +10351,109 @@ const App = {
   sendQuickReact(text){
     CoachAI.send(text);
     App.openCoachChat();
+  },
+  // v0.55 grouped Coach hubs (button merge)
+  openCoachTalk(){
+    document.getElementById('aux-title').innerHTML = '💬 Talk Hub';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
+        <div style="font-size:42px">💬</div>
+        <b style="color:var(--gold-bright);font-size:16px">Talk with ${State.data.coachName||'Bud'}</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">chat · DMs · journal · all in one place</div>
+      </div>
+      <button class="btn-primary" style="margin-top:14px;width:100%;padding:14px" onclick="App.openCoachChat()">🤖 OPEN CHAT</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachDms()">📥 DMs ${CoachDM.unreadCount()?` · ${CoachDM.unreadCount()} new`:''}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachJournal()">📔 Journal · ${(State.data.coachJournal||[]).length}</button>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button>
+    </div>`;
+    UI.show('aux');
+  },
+  openCoachLearn(){
+    document.getElementById('aux-title').innerHTML = '🎓 Learn Hub';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(34,211,238,.18))">
+        <div style="font-size:42px">🎓</div>
+        <b style="color:var(--gold-bright);font-size:16px">Learn with ${State.data.coachName||'Bud'}</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">lessons · 7-day plan · analytics</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:14px">
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLessons()">🎓 Lessons · ${(State.data.coachLessonsDone||[]).length}/${CoachLessons.LESSONS.length}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachPlan()">🎯 7-day Plan</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachAnalytics()">📊 Analytics</button>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button>
+    </div>`;
+    UI.show('aux');
+  },
+  openCoachCosmetic(){
+    document.getElementById('aux-title').innerHTML = '🎨 Style Hub';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(245,158,11,.18))">
+        <div style="font-size:42px">🎨</div>
+        <b style="color:var(--gold-bright);font-size:16px">Coach Style</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">skins · fusion · mural · photo</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px">
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachSkins()">🛍️ Skins · ${(State.data.coachSkinsOwned||['default']).length}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachFusion()">🌀 Fusion${State.data.coachFusion?.em?' '+State.data.coachFusion.em:''}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachMural()">🖼️ Mural</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.claimCoachPhoto()">📸 Photo${CoachPhoto.canClaim()?' · ready':''}</button>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button>
+    </div>`;
+    UI.show('aux');
+  },
+  openCoachCompete(){
+    document.getElementById('aux-title').innerHTML = '🏆 Compete Hub';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(220,38,38,.18))">
+        <div style="font-size:42px">🏆</div>
+        <b style="color:var(--gold-bright);font-size:16px">Compete</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">leaderboard · co-play · challenges</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px">
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLB()">🏆 LB</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.startCoachCoplay()">🎮 Co-play Frenzy</button>
+        <button class="btn-secondary" style="padding:12px;grid-column:span 2;background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(220,38,38,.2))" onclick="App.openCoachChallenges()">🎯 Coach Challenges · ${CoachChallenge.active().length}</button>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button>
+    </div>`;
+    UI.show('aux');
+  },
+  openCoachTune(){
+    document.getElementById('aux-title').innerHTML = '⚙️ Tune Hub';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(34,211,238,.22),rgba(124,58,237,.18))">
+        <div style="font-size:42px">⚙️</div>
+        <b style="color:var(--gold-bright);font-size:16px">Tune Coach</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">personality · name · intro · streaming</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px">
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachQuiz()">🎭 Personality · ${(State.data.coachTraits||[]).length}/5</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.renameCoach()">✎ Rename · ${State.data.coachName||'Bud'}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.toggleStreaming()">⏳ Streaming · ${State.data.coachStreamingEnabled?'ON':'OFF'}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.replayCoachIntro()">🎬 Replay Intro</button>
+      </div>
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button>
+    </div>`;
+    UI.show('aux');
+  },
+  openCoachChallenges(){
+    document.getElementById('aux-title').innerHTML = '🎯 Challenges';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachChallenge.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back</button></div>`;
+    UI.show('aux');
+  },
+  playCoachChallenge(rid, gid){
+    const game = ROOMS[rid]?.games.find(g=>g.id===gid);
+    if(game) GameIntro.show(rid, game);
+  },
+  toggleStreaming(){
+    State.data.coachStreamingEnabled = !State.data.coachStreamingEnabled;
+    Save.write();
+    Toast.show(State.data.coachStreamingEnabled?'⏳ streaming ON':'⏳ streaming OFF');
+    App.openCoachTune();
   },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
@@ -10693,6 +10985,8 @@ function recordResult(roomId, gameId, won, rewards={}){
       try{ Ghost.record(roomId, gameId, lbScore); }catch(e){}
       // v0.46 · 10% mystery drop chance on win
       try{ if(Math.random()<0.1) setTimeout(()=>Mystery.roll(), 1400); }catch(e){}
+      // v0.55 · Coach challenge check
+      try{ CoachChallenge.checkResult(roomId, gameId, lbScore); }catch(e){}
       // v0.48 · Coach grows with you · +10 XP per win · +20 if comboMult>1
       try{ Coach.bumpXp(10 + (comboMult>1?10:0)); }catch(e){}
       // v0.48 · Skill target progress
