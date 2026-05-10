@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.57.0 · PROFILE merge · 🛍️ shop tabs · ⚙️ in-game settings · 🌍 Friends Hub · 🎯 Coach predicts · 🐐 COACH foot btn · 🙏</div>
+  <div class="splash-foot">v0.58.0 · pivoted for real players · Coach UI scratched · ⚡ QUICK PLAY foot btn · cleaner settings · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.57.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.58.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1367,7 +1367,7 @@ button{
       <button class="foot-btn" onclick="App.openHallOfFame()"><span class="em">🏛️</span>HOF</button>
       <button class="foot-btn" onclick="App.openFriendsHub()"><span class="em">🤝</span>FRIENDS</button>
       <button class="foot-btn" onclick="App.openFrenzy()"><span class="em">🔥</span>FRENZY</button>
-      <button class="foot-btn" onclick="App.openCoach()"><span class="em">🐐</span>COACH</button>
+      <button class="foot-btn" onclick="App.quickPlay()"><span class="em">⚡</span>QUICK PLAY</button>
     </div>
   </div>
 </section>
@@ -1422,7 +1422,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.57.0';
+const VERSION = '0.58.0';
 
 // ----- STATE -----
 const State = {
@@ -8836,27 +8836,7 @@ const App = {
         <span style="font-size:11px;opacity:.85;display:block">3 timed mini-rounds · combo XP · tap to play</span>
       </div>`;
     }
-    // v0.48 · Coach card · shows tier · tip · skill target progress
-    const b = Coach.brain();
-    if(b && b.totalPlays>=3){
-      const tier = Coach.tier();
-      const name = State.data.coachName||'Bud';
-      // skill target progress mini
-      try{ SkillTarget.ensure(); }catch(e){}
-      const st = State.data.skillTarget;
-      const pct = st ? Math.min(100, Math.round((st.progress/st.target)*100)) : 0;
-      exHtml += `<div class="lobby-banner" onclick="App.openCoach()" style="cursor:pointer;background:linear-gradient(135deg,rgba(124,58,237,.22),${tier.color}26);border-color:${tier.color}66;margin-bottom:8px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:34px">${tier.em}</div>
-          <div style="flex:1;text-align:left;min-width:0">
-            <b style="color:${tier.color}">${name} · ${tier.name}</b> ${Coach.mood()}
-            <div style="font-size:11px;opacity:.85;margin-top:2px;font-style:italic">"${Coach.tipForTier()}"</div>
-            ${st && !st.claimed?`<div style="margin-top:4px;font-size:10px"><span class="dim">🎯 target ${st.progress}/${st.target}</span><div style="background:rgba(255,255,255,.1);height:3px;border-radius:99px;margin-top:2px;overflow:hidden"><div style="background:${tier.color};height:100%;width:${pct}%"></div></div></div>`:''}
-          </div>
-          <div style="font-size:18px">→</div>
-        </div>
-      </div>`;
-    }
+    // v0.58 · Coach lobby card removed · pivoted for real players
     // v0.47 · favorites quick-launch shelf
     try{ exHtml = Favorites.renderShelf() + exHtml; }catch(e){}
     extras.innerHTML = exHtml;
@@ -9417,21 +9397,6 @@ const App = {
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           ${Object.entries(APP_THEMES).map(([id,t])=>`<button class="av-tool-btn ${(d.appTheme||'cobalt')===id?'active':''}" onclick="App.setAppTheme('${id}')">${t.name}</button>`).join('')}
         </div>
-        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🔌 REAL AI COACH (BYOK)</h3>
-        <p class="dim" style="font-size:11px;margin-bottom:6px">paste an Anthropic (sk-ant-...) or OpenAI (sk-...) key · stored only on this device · Coach replies become real AI</p>
-        <div style="background:rgba(0,0,0,.18);border:1px solid ${State.data.aiEnabled?'#10B981':'rgba(255,255,255,.1)'};border-radius:10px;padding:10px">
-          <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input id="aikey-input" type="password" placeholder="sk-ant-... or sk-..." value="${State.data.aiKey||''}" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;font-family:monospace">
-            <button class="btn-primary" style="padding:8px 12px;font-size:11px;width:auto" onclick="App.saveAiKey()">save</button>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn-secondary" style="padding:6px 10px;font-size:10px;width:auto" onclick="App.testAi()">▶ TEST</button>
-            <button class="btn-secondary" style="padding:6px 10px;font-size:10px;width:auto" onclick="App.toggleAi()">${State.data.aiEnabled?'🟢 ON':'⚪ OFF'}</button>
-            <button class="btn-secondary" style="padding:6px 10px;font-size:10px;width:auto;background:rgba(239,68,68,.15)" onclick="App.clearAiKey()">🗑 clear</button>
-            <span class="dim" style="font-size:10px;margin-left:auto">${State.data.aiKey?RealCoach.detectProvider():'no key'}</span>
-          </div>
-          <div class="dim" style="font-size:9px;margin-top:6px;line-height:1.4">⚠️ key is in YOUR localStorage only · never sent to me · API costs are on your account · clear before sharing device</div>
-        </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎬 CINEMATIC INTROS</h3>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           <button class="av-tool-btn ${(d.cinematicPref||'on')==='on'?'active':''}" onclick="App.setCinematicPref('on')">🎬 FULL</button>
@@ -9462,20 +9427,15 @@ const App = {
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
           <button class="btn-secondary" onclick="App.openCabinet()">🏆 medal cabinet</button>
           <button class="btn-secondary" onclick="App.openWeeklyTourney()">📅 weekly tournament</button>
-          <button class="btn-secondary" onclick="App.openCoach()">🧠 coach AI</button>
           <button class="btn-secondary" onclick="App.openMedalHunt()">🥇 medal hunt</button>
           <button class="btn-secondary" onclick="App.openCalendar()">📅 30-day calendar</button>
           <button class="btn-secondary" onclick="App.openBracket()">🏟️ tournament bracket</button>
-          <button class="btn-secondary" onclick="App.openCustomMusic()">🌈 custom music</button>
-          <button class="btn-secondary" onclick="App.toggleVoice()">🎙️ voice commands · ${State.data.voiceEnabled?'ON':'OFF'}</button>
           <button class="btn-secondary" onclick="App.startTour()">🎯 replay tour</button>
-          <button class="btn-secondary" onclick="App.startKaraoke()">🎤 karaoke verse</button>
           <button class="btn-secondary" onclick="App.startCarnival()">🎪 carnival mode</button>
-          <button class="btn-secondary" onclick="App.rollMystery()">🎁 roll mystery (free)</button>
-          <button class="btn-secondary" onclick="App.buyShield()">🛡️ buy streak shield (5💎) · have ${State.data.streakShield||0}</button>
+          <button class="btn-secondary" onclick="App.startWave()">🌊 wave mode (endless)</button>
           <button class="btn-secondary" onclick="App.openCardPack()">🃏 daily card pack</button>
           <button class="btn-secondary" onclick="App.openTrader()">💸 currency trader</button>
-          <button class="btn-secondary" onclick="App.startWave()">🌊 wave mode (endless)</button>
+          <button class="btn-secondary" onclick="App.rollMystery()">🎁 roll mystery (free)</button>
           <button class="btn-secondary" style="background:rgba(245,158,11,.2);border-color:#FBBF24" onclick="App.forceUpdate()">🔄 FORCE UPDATE · clear cache + reload</button>
         </div>
         <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
@@ -10524,6 +10484,22 @@ const App = {
       document.addEventListener('click', dismiss);
     }, 200);
   },
+  // v0.58 · QUICK PLAY · jump straight into a random game · prioritizes unwon games
+  quickPlay(){
+    const all = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
+    // weight: prefer games user has fewer wins on (replay value)
+    const weighted = all.map(x=>{
+      const stats = State.data.perGame[`${x.rid}:${x.g.id}`] || {wins:0,plays:0};
+      const weight = Math.max(1, 5 - Math.min(5, stats.wins));
+      return {x, weight};
+    });
+    const total = weighted.reduce((a,b)=>a+b.weight,0);
+    let r = Math.random()*total;
+    let pick = weighted[0].x;
+    for(const w of weighted){ r -= w.weight; if(r<=0){ pick = w.x; break; } }
+    Toast.show(`⚡ Quick Play · ${pick.g.em} ${pick.g.name}`);
+    GameIntro.show(pick.rid, pick.g);
+  },
   // v0.57 Friends Hub merge
   openFriendsHub(){
     document.getElementById('aux-title').innerHTML = '🌍 Friends Hub';
@@ -10561,8 +10537,7 @@ const App = {
       {em:'🛒',t:'Shop & Recommendations',d:'Power-ups · bundles · daily deal (30% off rotates daily) · ✨ RECOMMENDED section reads your play history.',cta:{label:'🛒 Open Shop',fn:'openShop'}},
       {em:'🎒',t:'Avatar Designer',d:'Tap your name in the lobby. 46+ items across 6 slots · hue/size/scene/frame/anim · save loadouts.',cta:{label:'🎨 Avatar',fn:'openAvatar'}},
       {em:'🎫',t:'Battle Pass',d:'Monthly seasonal rotation · earn XP from every game · 10 tiers of rewards. Resets first day each month.',cta:{label:'🎫 Open Pass',fn:'openBP'}},
-      {em:'🧠',t:'Coach AI',d:'Your personal brain analyst · live tips · adaptive thresholds · weak-axis recommendations. Activates after 3 games.',cta:{label:'🧠 Open Coach',fn:'openCoach'}},
-      {em:'🧬',t:'Brain DNA',d:'STATS shows your radar of strengths (memory/speed/pattern/logic/word/faith) · grows as you win.',cta:{label:'📊 Stats',fn:'openStats'}},
+      {em:'🧬',t:'Brain DNA',d:'PROFILE shows your radar of strengths (memory/speed/pattern/logic/word/faith) · grows as you win.',cta:{label:'👤 Profile',fn:'openProfile'}},
       {em:'🌐',t:'Language',d:'Toggle EN/ES in Settings. 20 verses are bilingual. Auto-detects from browser on first launch.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
       {em:'🤝',t:'Friends',d:'Add by code · message · gift gems · cheer · MVP of week. Required for non-CPU duels.',cta:{label:'🤝 Friends',fn:'openFriends'}},
       {em:'🏆',t:'Medal Cabinet',d:'Every game you have medals in · bronze 🥉 silver 🥈 gold 🥇 based on your leaderboard rank.',cta:{label:'🏆 Open Cabinet',fn:'openCabinet'}},
