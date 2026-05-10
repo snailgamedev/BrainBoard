@@ -66,7 +66,7 @@ body.color-blind .word-cell.yellow{background:#FFC107 !important}
 
 /* v0.23 PRO POLISH · consistent micro-anims · mobile-tight */
 @media (max-width:540px){
-  .lobby-foot{ grid-template-columns:repeat(3,1fr) !important; }
+  .lobby-foot{ grid-template-columns:repeat(4,1fr) !important; }
   .lobby-foot .foot-btn{ font-size:10px; padding:10px 4px; }
   .lobby-foot .foot-btn .em{ font-size:18px; }
   .hud{ padding:8px 10px; }
@@ -89,7 +89,7 @@ body.color-blind .word-cell.yellow{background:#FFC107 !important}
   .splash-cta{ padding:14px 28px; font-size:15px; }
 }
 @media (max-width:380px){
-  .lobby-foot{ grid-template-columns:repeat(3,1fr) !important; }
+  .lobby-foot{ grid-template-columns:repeat(4,1fr) !important; }
   .room-door{ min-height:88px; }
   .splash-title{ font-size:36px !important; }
   .splash-emoji{ font-size:54px !important; }
@@ -361,7 +361,7 @@ button{
 .room-speed{background:linear-gradient(135deg,#DC2626 0%,#7C2D12 100%)}
 .room-daily{background:linear-gradient(135deg,#10B981 0%,#064E3B 100%)}
 .lobby-foot{
-  display:grid;grid-template-columns:repeat(6,1fr);gap:5px;
+  display:grid;grid-template-columns:repeat(7,1fr);gap:5px;
   margin-top:8px;
 }
 .foot-btn{font-size:10px}
@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.39.0 · 66 games · ALL rooms 10+ · 🙏</div>
+  <div class="splash-foot">v0.40.0 · 66 games · leaderboards · cinematic · duels · frenzy · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1356,6 +1356,7 @@ button{
       <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
       <button class="foot-btn" onclick="App.openHallOfFame()"><span class="em">🏛️</span>HOF</button>
       <button class="foot-btn" onclick="App.openFriends()"><span class="em">🤝</span>FRIENDS</button>
+      <button class="foot-btn" onclick="App.openFrenzy()"><span class="em">🔥</span>FRENZY</button>
     </div>
   </div>
 </section>
@@ -1408,7 +1409,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.39.0';
+const VERSION = '0.40.0';
 
 // ----- STATE -----
 const State = {
@@ -1462,6 +1463,13 @@ const DEFAULT_SAVE = {
   quests:{date:'',list:[],claimed:[]},
   combo:{count:0,lastWinTs:0},
   prRecords:{}, // {gameKey: {bestScore, bestTime, when}}
+  // v0.40 ALL THE THINGS
+  leaderboards:{}, // {gameKey: {daily:[{name,score,ts}], weekly:[...], allTime:[...]}}
+  duels:{outgoing:[], incoming:[], history:[]}, // 1v1 async challenges
+  frenzy:{lastPlayed:0, bestStreak:0, totalRuns:0, totalScore:0},
+  lang:'en', // i18n · en/es
+  cinematicPref:'on', // on/short/off
+  recsHistory:{}, // {gameKey: playCount} drives shop recommendations
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -1769,28 +1777,36 @@ function renderAvatarBig(av, opts){
 
 // ----- VERSES -----
 const VERSES = [
-  {t:"I can do all things through Christ who strengthens me.", r:"Philippians 4:13"},
-  {t:"For God has not given us a spirit of fear, but of power and of love and of a sound mind.", r:"2 Timothy 1:7"},
-  {t:"The fear of the Lord is the beginning of wisdom.", r:"Proverbs 9:10"},
-  {t:"Trust in the Lord with all your heart, and lean not on your own understanding.", r:"Proverbs 3:5"},
-  {t:"Be strong and of good courage; do not be afraid.", r:"Joshua 1:9"},
-  {t:"For with God nothing will be impossible.", r:"Luke 1:37"},
-  {t:"He gives wisdom to the wise, and knowledge to those who have understanding.", r:"Daniel 2:21"},
-  {t:"Let all that you do be done with love.", r:"1 Corinthians 16:14"},
-  {t:"The joy of the Lord is your strength.", r:"Nehemiah 8:10"},
-  {t:"Greater is He that is in you, than he that is in the world.", r:"1 John 4:4"},
-  {t:"My grace is sufficient for you, for My strength is made perfect in weakness.", r:"2 Corinthians 12:9"},
-  {t:"Blessed are the pure in heart, for they shall see God.", r:"Matthew 5:8"},
-  {t:"In Him we live and move and have our being.", r:"Acts 17:28"},
-  {t:"Wait on the Lord; be of good courage, and He shall strengthen your heart.", r:"Psalm 27:14"},
-  {t:"The Lord is my shepherd; I shall not want.", r:"Psalm 23:1"},
-  {t:"Faith is the substance of things hoped for, the evidence of things not seen.", r:"Hebrews 11:1"},
-  {t:"You will keep him in perfect peace, whose mind is stayed on You.", r:"Isaiah 26:3"},
-  {t:"Whatsoever things are pure... think on these things.", r:"Philippians 4:8"},
-  {t:"He has made everything beautiful in its time.", r:"Ecclesiastes 3:11"},
-  {t:"The Lord shall fight for you, and you shall hold your peace.", r:"Exodus 14:14"},
+  {t:"I can do all things through Christ who strengthens me.", r:"Philippians 4:13", es:"Todo lo puedo en Cristo que me fortalece."},
+  {t:"For God has not given us a spirit of fear, but of power and of love and of a sound mind.", r:"2 Timothy 1:7", es:"Porque no nos ha dado Dios espíritu de cobardía, sino de poder, de amor y de dominio propio."},
+  {t:"The fear of the Lord is the beginning of wisdom.", r:"Proverbs 9:10", es:"El temor del Señor es el principio de la sabiduría."},
+  {t:"Trust in the Lord with all your heart, and lean not on your own understanding.", r:"Proverbs 3:5", es:"Confía en Jehová con todo tu corazón y no te apoyes en tu propio entendimiento."},
+  {t:"Be strong and of good courage; do not be afraid.", r:"Joshua 1:9", es:"Esfuérzate y sé valiente; no temas."},
+  {t:"For with God nothing will be impossible.", r:"Luke 1:37", es:"Porque para Dios no hay nada imposible."},
+  {t:"He gives wisdom to the wise, and knowledge to those who have understanding.", r:"Daniel 2:21", es:"Él da la sabiduría a los sabios y el conocimiento a los entendidos."},
+  {t:"Let all that you do be done with love.", r:"1 Corinthians 16:14", es:"Hagan todo con amor."},
+  {t:"The joy of the Lord is your strength.", r:"Nehemiah 8:10", es:"El gozo del Señor es vuestra fuerza."},
+  {t:"Greater is He that is in you, than he that is in the world.", r:"1 John 4:4", es:"Mayor es el que está en vosotros, que el que está en el mundo."},
+  {t:"My grace is sufficient for you, for My strength is made perfect in weakness.", r:"2 Corinthians 12:9", es:"Mi gracia te basta, porque mi poder se perfecciona en la debilidad."},
+  {t:"Blessed are the pure in heart, for they shall see God.", r:"Matthew 5:8", es:"Bienaventurados los de limpio corazón, porque ellos verán a Dios."},
+  {t:"In Him we live and move and have our being.", r:"Acts 17:28", es:"Porque en él vivimos, nos movemos y existimos."},
+  {t:"Wait on the Lord; be of good courage, and He shall strengthen your heart.", r:"Psalm 27:14", es:"Espera en el Señor; esfuérzate, y aliéntese tu corazón."},
+  {t:"The Lord is my shepherd; I shall not want.", r:"Psalm 23:1", es:"El Señor es mi pastor; nada me faltará."},
+  {t:"Faith is the substance of things hoped for, the evidence of things not seen.", r:"Hebrews 11:1", es:"La fe es la certeza de lo que se espera, la convicción de lo que no se ve."},
+  {t:"You will keep him in perfect peace, whose mind is stayed on You.", r:"Isaiah 26:3", es:"Tú guardarás en completa paz a aquel cuyo pensamiento en ti persevera."},
+  {t:"Whatsoever things are pure... think on these things.", r:"Philippians 4:8", es:"Todo lo que es puro... en esto pensad."},
+  {t:"He has made everything beautiful in its time.", r:"Ecclesiastes 3:11", es:"Todo lo hizo hermoso en su tiempo."},
+  {t:"The Lord shall fight for you, and you shall hold your peace.", r:"Exodus 14:14", es:"El Señor peleará por vosotros, y vosotros estaréis tranquilos."},
 ];
 function randomVerse(){return VERSES[Math.floor(Math.random()*VERSES.length)]}
+function renderVerse(v){
+  // v0.40 · bilingual rendering when Spanish active
+  if(Lang.current()==='es' && v.es){
+    Ach.unlock('lang_bilingual');
+    return `<div style="font-style:italic">"${v.es}"</div><div class="dim" style="font-size:10px;margin-top:4px">${v.r} · ES</div>`;
+  }
+  return `<div style="font-style:italic">"${v.t}"</div><div class="dim" style="font-size:10px;margin-top:4px">${v.r}</div>`;
+}
 
 // ===== v0.9 SECULAR ENCOURAGEMENTS (mix in to keep faith natural) =====
 const ENCOURAGEMENTS = [
@@ -2685,7 +2701,635 @@ const ACHIEVEMENTS = [
   {id:'lights4_clear',em:'💡',t:'Master Electrician',d:'Clear Lights 4×4'},
   {id:'wordquiz',em:'📚',t:'Grammar Sage',d:'Win Word Quiz'},
   {id:'all_rooms_10',em:'🏆',t:'Full House',d:'Every room hosts 10+ games'},
+  // v0.40 ALL THE THINGS achievements
+  {id:'lb_top3_daily',em:'🥉',t:'Top 3 Daily',d:'Finish daily leaderboard top 3'},
+  {id:'lb_top1_daily',em:'🥇',t:'Daily Champion',d:'Reach #1 on a daily leaderboard'},
+  {id:'lb_top3_weekly',em:'📅',t:'Week Warrior',d:'Top 3 on a weekly leaderboard'},
+  {id:'cinematic_seen',em:'🎬',t:'Cinematic',d:'Watch a per-game cinematic intro'},
+  {id:'cinematic_lover',em:'🎞️',t:'Director',d:'Watch 50 cinematic intros'},
+  {id:'shop_rec_buy',em:'🛒',t:'Recommended',d:'Buy a Recommended item'},
+  {id:'lang_es',em:'🌐',t:'¡Hola!',d:'Switch app language to Spanish'},
+  {id:'lang_bilingual',em:'📖',t:'Bilingual Saint',d:'Read a verse in two languages'},
+  {id:'frenzy_first',em:'🔥',t:'Frenzy Initiate',d:'Complete a Daily Frenzy run'},
+  {id:'frenzy_10',em:'🌋',t:'Frenzy Faithful',d:'10 Frenzy runs'},
+  {id:'frenzy_score_500',em:'🚀',t:'Frenzy 500',d:'Score 500+ in a single Frenzy'},
+  {id:'frenzy_score_1000',em:'☄️',t:'Frenzy Comet',d:'Score 1000+ in a single Frenzy'},
+  {id:'duel_send',em:'⚔️',t:'Challenger',d:'Send a duel challenge'},
+  {id:'duel_win',em:'🏆',t:'Duelist',d:'Win a duel'},
+  {id:'duel_10wins',em:'👑',t:'Duel Lord',d:'Win 10 duels'},
 ];
+
+// ====================================================================
+// 🌐 v0.40 · i18n MODULE · EN / ES
+// ====================================================================
+const Lang = {
+  STRINGS: {
+    en: {
+      WELCOME:'welcome', SHOP:'SHOP', STATS:'STATS', ACH:'ACH', PASS:'PASS', HOF:'HOF', FRIENDS:'FRIENDS', FRENZY:'FRENZY',
+      RULES:'RULES', WIN:'WIN', TIMER:'TIMER', REWARD:'REWARD', WINS:'WINS', PLAYS:'PLAYS',
+      START:'START', BACK:'back', PLAY:'play', RETRY:'retry', NEXT:'next',
+      DAILY:'DAILY', WEEKLY:'WEEKLY', ALL_TIME:'ALL TIME',
+      NEW_HIGH:'new high!', GOOD_JOB:'good job',
+      CHALLENGE:'challenge', SEND:'send', DUEL:'duel',
+    },
+    es: {
+      WELCOME:'bienvenido', SHOP:'TIENDA', STATS:'STATS', ACH:'LOGROS', PASS:'PASE', HOF:'HOF', FRIENDS:'AMIGOS', FRENZY:'FRENESÍ',
+      RULES:'REGLAS', WIN:'GANAR', TIMER:'TIEMPO', REWARD:'RECOMPENSA', WINS:'GANADAS', PLAYS:'JUGADAS',
+      START:'EMPEZAR', BACK:'atrás', PLAY:'jugar', RETRY:'reintentar', NEXT:'siguiente',
+      DAILY:'DIARIO', WEEKLY:'SEMANAL', ALL_TIME:'HISTÓRICO',
+      NEW_HIGH:'¡nuevo récord!', GOOD_JOB:'buen trabajo',
+      CHALLENGE:'desafío', SEND:'enviar', DUEL:'duelo',
+    }
+  },
+  current(){ return State.data?.lang || 'en'; },
+  autoDetect(){
+    // first-load: try navigator.language
+    if(State.data._langDetected) return;
+    State.data._langDetected = true;
+    try{
+      const n=(navigator.language||'').toLowerCase();
+      if(n.startsWith('es')) State.data.lang='es';
+    }catch(e){}
+    Save.write();
+  },
+  set(code){
+    if(!['en','es'].includes(code)) return;
+    State.data.lang = code;
+    if(code==='es') Ach.unlock('lang_es');
+    Save.write();
+    Toast.show(code==='es'?'🌐 Idioma: Español':'🌐 Language: English');
+  },
+  t(en, es){
+    return this.current()==='es' ? (es||en) : en;
+  },
+  s(key){
+    const tbl = this.STRINGS[this.current()] || this.STRINGS.en;
+    return tbl[key] || this.STRINGS.en[key] || key;
+  },
+  verseBilingual(refEn, textEn, textEs){
+    if(textEs) Ach.unlock('lang_bilingual');
+    return this.current()==='es' && textEs
+      ? `<div style="font-style:italic">"${textEs}"</div><div class="dim" style="font-size:10px;margin-top:4px">${refEn} · ES</div>`
+      : `<div style="font-style:italic">"${textEn}"</div><div class="dim" style="font-size:10px;margin-top:4px">${refEn}</div>`;
+  }
+};
+
+// ====================================================================
+// 🏅 v0.40 LAYER 2 · MEDAL THRESHOLDS · bronze / silver / gold per game
+// ====================================================================
+const Medals = {
+  thresholds(roomId, gameId){
+    // Computed from leaderboard top entries · falls back to defaults
+    const lb = State.data.leaderboards?.[`${roomId}:${gameId}`];
+    if(lb && lb.allTime && lb.allTime.length>=3){
+      const sorted=[...lb.allTime].sort((a,b)=>b.score-a.score);
+      return {
+        gold: sorted[0].score,
+        silver: sorted[Math.floor(sorted.length*0.25)]?.score || sorted[0].score*0.7,
+        bronze: sorted[Math.floor(sorted.length*0.5)]?.score || sorted[0].score*0.4,
+      };
+    }
+    return {gold:200,silver:120,bronze:60};
+  },
+  earned(roomId, gameId, score){
+    const t = this.thresholds(roomId, gameId);
+    if(score>=t.gold) return {em:'🥇',name:'gold',v:t.gold};
+    if(score>=t.silver) return {em:'🥈',name:'silver',v:t.silver};
+    if(score>=t.bronze) return {em:'🥉',name:'bronze',v:t.bronze};
+    return null;
+  },
+  renderHtml(roomId, gameId){
+    const t = this.thresholds(roomId, gameId);
+    return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px">
+      <div style="background:rgba(205,127,50,.15);padding:6px;border-radius:8px;text-align:center;border:1px solid rgba(205,127,50,.4)"><div style="font-size:20px">🥉</div><b>${t.bronze}</b></div>
+      <div style="background:rgba(192,192,192,.15);padding:6px;border-radius:8px;text-align:center;border:1px solid rgba(192,192,192,.4)"><div style="font-size:20px">🥈</div><b>${t.silver}</b></div>
+      <div style="background:rgba(245,158,11,.18);padding:6px;border-radius:8px;text-align:center;border:1px solid rgba(245,158,11,.5)"><div style="font-size:20px">🥇</div><b>${t.gold}</b></div>
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 📈 v0.40 · LEADERBOARDS MODULE · daily / weekly / all-time per game
+// ====================================================================
+const Leaderboards = {
+  _key(gameId){ return `${gameId}`; },
+  _todayKey(){ const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; },
+  _weekKey(){ const d=new Date(); const wk=Math.floor((d-new Date(d.getFullYear(),0,1))/(7*86400000)); return `${d.getFullYear()}-W${wk}`; },
+  record(roomId, gameId, score){
+    if(!State.data.leaderboards) State.data.leaderboards = {};
+    const k = `${roomId}:${gameId}`;
+    if(!State.data.leaderboards[k]) State.data.leaderboards[k] = {daily:{}, weekly:{}, allTime:[]};
+    const lb = State.data.leaderboards[k];
+    const today=this._todayKey(), week=this._weekKey();
+    if(!lb.daily[today]) lb.daily[today]=[];
+    if(!lb.weekly[week]) lb.weekly[week]=[];
+    const name = State.data.name||'You';
+    const entry = {name, score, ts:Date.now(), me:true};
+    lb.daily[today].push(entry);
+    lb.weekly[week].push(entry);
+    lb.allTime.push(entry);
+    // seed bots to make leaderboards feel populated
+    if(lb.daily[today].length<5){
+      const bots = ['Aaron','Mary','David','Ruth','John','Esther','Paul','Lydia','Daniel','Sarah'];
+      for(let i=lb.daily[today].length;i<5;i++){
+        const bot=bots[Math.floor(Math.random()*bots.length)];
+        const variance=0.7+Math.random()*0.6; // 0.7-1.3x of player score
+        lb.daily[today].push({name:bot,score:Math.max(1,Math.round(score*variance)),ts:Date.now()-Math.floor(Math.random()*3600000),me:false});
+      }
+    }
+    // sort + trim
+    lb.daily[today].sort((a,b)=>b.score-a.score);
+    lb.weekly[week].sort((a,b)=>b.score-a.score);
+    lb.allTime.sort((a,b)=>b.score-a.score);
+    lb.daily[today]=lb.daily[today].slice(0,20);
+    lb.weekly[week]=lb.weekly[week].slice(0,30);
+    lb.allTime=lb.allTime.slice(0,50);
+    // check rank + award
+    const dailyRank = lb.daily[today].findIndex(e=>e.me && e.score===score && e.ts===entry.ts);
+    if(dailyRank===0){ Ach.unlock('lb_top1_daily'); Wallet.add({gem:3}); Toast.show('🥇 #1 Daily · +3 gems!'); }
+    else if(dailyRank>=0 && dailyRank<3){ Ach.unlock('lb_top3_daily'); Wallet.add({gem:1}); Toast.show('🏅 Top 3 Daily · +1 gem!'); }
+    const weeklyRank = lb.weekly[week].findIndex(e=>e.me && e.score===score && e.ts===entry.ts);
+    if(weeklyRank>=0 && weeklyRank<3){ Ach.unlock('lb_top3_weekly'); }
+    return {dailyRank: dailyRank+1, weeklyRank: weeklyRank+1};
+  },
+  getTop(roomId, gameId, period){
+    const k = `${roomId}:${gameId}`;
+    const lb = State.data.leaderboards?.[k];
+    if(!lb) return [];
+    if(period==='daily'){ const t=this._todayKey(); return lb.daily[t]||[]; }
+    if(period==='weekly'){ const w=this._weekKey(); return lb.weekly[w]||[]; }
+    return lb.allTime || [];
+  },
+  renderHtml(roomId, gameId, period='daily'){
+    const top = this.getTop(roomId,gameId,period);
+    if(!top.length) return `<div class="dim" style="font-size:11px;text-align:center;padding:8px">no scores yet · be the first!</div>`;
+    return `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:8px 10px;font-size:11px">
+      ${top.slice(0,5).map((e,i)=>{
+        const medal=['🥇','🥈','🥉','4.','5.'][i];
+        const bg = e.me?'background:rgba(245,158,11,.25);border-radius:6px;padding:3px 6px':'padding:3px 6px';
+        return `<div style="display:flex;justify-content:space-between;${bg}"><span>${medal} ${e.name}${e.me?' (you)':''}</span><b>${e.score}</b></div>`;
+      }).join('')}
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 🎬 v0.40 · CINEMATIC PER-GAME INTROS
+// ====================================================================
+const Cinematic = {
+  show(roomId, game, onDone){
+    if(!State.data.cinematicPref) State.data.cinematicPref='on';
+    if(State.data.cinematicPref==='off' || State.data.settings.skipGameIntro){ onDone(); return; }
+    const room = ROOMS[roomId] || {em:'🎮',name:'Game'};
+    const palettes = {
+      word:['#7C3AED','#A78BFA'], brain:['#10B981','#34D399'],
+      mind:['#F59E0B','#FBBF24'], num:['#0E7490','#0891B2'],
+      script:['#DC2626','#F87171'], logic:['#581C87','#7C3AED'],
+      speed:['#DC2626','#FB923C'], daily:['#10B981','#6EE7B7']
+    };
+    const pal = palettes[roomId] || ['#7C3AED','#A78BFA'];
+    Ach.unlock('cinematic_seen');
+    State.data._cinematicCount = (State.data._cinematicCount||0)+1;
+    if(State.data._cinematicCount>=50) Ach.unlock('cinematic_lover');
+    const overlay = document.createElement('div');
+    overlay.id = 'cinematic';
+    overlay.style.cssText=`position:fixed;inset:0;background:linear-gradient(135deg,${pal[0]} 0%,${pal[1]} 100%);z-index:9999;display:grid;place-items:center;color:#fff;font-family:'Cinzel',serif;cursor:pointer;animation:cineFade .25s ease-out;overflow:hidden`;
+    overlay.innerHTML = `
+      <style>
+        @keyframes cineFade{from{opacity:0}to{opacity:1}}
+        @keyframes cineExit{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.2)}}
+        @keyframes cineLogoZoom{0%{transform:scale(.4);opacity:0}40%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:1}}
+        @keyframes cinePulse{0%,100%{opacity:.6}50%{opacity:1}}
+        @keyframes cineSweep{0%{transform:translateX(-100%) skewX(-12deg)}100%{transform:translateX(200%) skewX(-12deg)}}
+        @keyframes cineCount{0%{transform:scale(1.6);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(.6);opacity:0}}
+        .cine-sweep{position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:cineSweep 1.4s ease-in-out infinite}
+        .cine-count{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:140px;font-weight:900;text-shadow:0 0 40px rgba(0,0,0,.4)}
+      </style>
+      <div class="cine-sweep"></div>
+      <div id="cine-stage" style="text-align:center;animation:cineLogoZoom .9s cubic-bezier(.2,1.4,.5,1);position:relative;z-index:2">
+        <div style="font-size:88px;margin-bottom:6px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))">${game.em}</div>
+        <div style="font-size:34px;font-weight:900;letter-spacing:.04em;text-shadow:0 2px 12px rgba(0,0,0,.35)">${game.name}</div>
+        <div style="font-size:13px;opacity:.85;margin-top:4px;letter-spacing:.18em;text-transform:uppercase">${room.em} ${room.name}</div>
+        <div style="font-size:11px;opacity:.7;margin-top:18px;animation:cinePulse 1s ease-in-out infinite">tap to skip · auto-start in 2s</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    let done=false;
+    const finish=()=>{
+      if(done) return; done=true;
+      overlay.style.animation='cineExit .35s ease-in forwards';
+      setTimeout(()=>{ overlay.remove(); onDone(); },340);
+    };
+    overlay.onclick = finish;
+    // short pref skips countdown
+    if(State.data.cinematicPref==='short'){ setTimeout(finish, 800); return; }
+    // full: logo (1.0s) → 3-2-1 (0.4s each) → start
+    setTimeout(()=>{
+      const stage=document.getElementById('cine-stage');
+      if(!stage) return;
+      let n=3;
+      const tick=()=>{
+        if(done || !document.getElementById('cinematic')) return;
+        if(n===0){ finish(); return; }
+        const overlay2 = document.getElementById('cinematic');
+        if(!overlay2) return;
+        const old = overlay2.querySelector('.cine-count'); if(old) old.remove();
+        const c = document.createElement('div');
+        c.className='cine-count'; c.textContent=n>0?n:'GO!';
+        c.style.animation='cineCount .42s ease-out forwards';
+        overlay2.appendChild(c);
+        n--; setTimeout(tick, 420);
+      };
+      tick();
+    }, 1100);
+  }
+};
+
+// ====================================================================
+// ⚔️ v0.40 · ASYNC 1v1 DUELS · same-seed challenges
+// ====================================================================
+const Duels = {
+  send(friendCode, gameId, roomId){
+    if(!State.data.duels) State.data.duels={outgoing:[],incoming:[],history:[]};
+    const seed = Math.floor(Math.random()*1000000);
+    const duel = {id:'d'+Date.now(),friendCode,gameId,roomId,seed,myScore:null,theirScore:null,sentAt:Date.now(),status:'pending'};
+    State.data.duels.outgoing.push(duel);
+    Ach.unlock('duel_send');
+    Save.write();
+    Toast.show(`⚔️ duel sent · seed ${seed}`);
+    return duel;
+  },
+  accept(duelId){
+    const d = State.data.duels.incoming.find(x=>x.id===duelId);
+    if(!d) return;
+    d.status='accepted';
+    Toast.show(`✓ accepted · play seed ${d.seed}`);
+    Save.write();
+  },
+  submitScore(duelId, score){
+    let d = State.data.duels.outgoing.find(x=>x.id===duelId) || State.data.duels.incoming.find(x=>x.id===duelId);
+    if(!d) return;
+    if(State.data.duels.outgoing.includes(d)) d.myScore=score;
+    else d.myScore=score;
+    // simulate opponent — random score around player's range
+    if(d.theirScore===null){
+      const variance = 0.6+Math.random()*0.8;
+      d.theirScore = Math.max(1, Math.round(score*variance));
+    }
+    d.resolvedAt = Date.now();
+    d.status = d.myScore > d.theirScore ? 'won' : (d.myScore===d.theirScore?'tie':'lost');
+    if(d.status==='won'){
+      Wallet.add({gem:5,coin:50});
+      State.data.duels._wins = (State.data.duels._wins||0)+1;
+      Ach.unlock('duel_win');
+      if(State.data.duels._wins>=10) Ach.unlock('duel_10wins');
+      Toast.show('🏆 duel won · +5 gems +50 coins');
+    } else if(d.status==='tie'){
+      Wallet.add({gem:1});
+      Toast.show('🤝 tie · +1 gem');
+    } else {
+      Toast.show('💪 duel lost · play again');
+    }
+    State.data.duels.history.push({...d});
+    State.data.duels.outgoing = State.data.duels.outgoing.filter(x=>x.id!==d.id);
+    State.data.duels.incoming = State.data.duels.incoming.filter(x=>x.id!==d.id);
+    Save.write();
+  },
+  renderHub(){
+    const d = State.data.duels || {outgoing:[],incoming:[],history:[]};
+    const friends = State.data.friends || [];
+    let html = `<div class="big">⚔️</div><h3>Duels</h3><div class="dim" style="font-size:12px">async 1v1 · same seed · highest score wins gems</div>`;
+    html += `<button class="btn-primary" style="margin:14px 0 6px;width:100%;padding:14px;font-size:14px;background:linear-gradient(135deg,#7C3AED,#A78BFA)" onclick="App.duelQuickMatch()">⚡ QUICK MATCH vs CPU</button>`;
+    html += `<div class="dim" style="font-size:10px;text-align:center;margin-bottom:8px">no friends needed · auto-paired bot</div>`;
+    html += `<div style="margin:14px 0"><b style="font-size:12px;color:var(--gold-bright)">⚡ NEW DUEL</b></div>`;
+    if(friends.length===0){
+      html += `<div class="dim" style="padding:14px;background:rgba(255,255,255,.05);border-radius:10px;font-size:12px">add friends first to challenge them · open FRIENDS</div>`;
+    } else {
+      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;text-align:left">`;
+      friends.slice(0,5).forEach(f=>{
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+          <span style="font-size:12px">${f.name||'friend'} <span class="dim" style="font-size:10px">· ${f.code}</span></span>
+          <button onclick="App.openDuelPickGame('${f.code}')" class="btn-primary" style="padding:4px 12px;font-size:11px">⚔️ duel</button>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    if(d.outgoing.length){
+      html += `<div style="margin:14px 0 6px"><b style="font-size:12px;color:var(--gold-bright)">📤 SENT (${d.outgoing.length})</b></div>`;
+      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;text-align:left">`;
+      d.outgoing.forEach(x=>{
+        const gameName = ROOMS[x.roomId]?.games.find(g=>g.id===x.gameId)?.name || x.gameId;
+        html += `<div style="padding:6px 0;font-size:12px">⚔️ ${gameName} · vs ${x.friendCode.slice(0,6)}... · seed ${x.seed} <button onclick="App.playDuel('${x.id}')" class="btn-primary" style="padding:3px 10px;font-size:10px;margin-left:6px">▶ play</button></div>`;
+      });
+      html += `</div>`;
+    }
+    if(d.history.length){
+      html += `<div style="margin:14px 0 6px"><b style="font-size:12px;color:var(--gold-bright)">📜 HISTORY (${d.history.length})</b></div>`;
+      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;text-align:left;max-height:240px;overflow-y:auto">`;
+      d.history.slice(-10).reverse().forEach(x=>{
+        const icon = x.status==='won'?'🏆':x.status==='tie'?'🤝':'💪';
+        const gameName = ROOMS[x.roomId]?.games.find(g=>g.id===x.gameId)?.name || x.gameId;
+        html += `<div style="padding:5px 0;font-size:11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06)">
+          <span>${icon} ${gameName} · ${x.myScore} vs ${x.theirScore} · <b>${x.status.toUpperCase()}</b></span>
+          <button class="btn-primary" style="padding:2px 8px;font-size:10px" onclick="App.duelRematch('${x.friendCode}','${x.roomId}','${x.gameId}')">↻ rematch</button>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    return html;
+  }
+};
+
+// ====================================================================
+// 🔥 v0.40 · DAILY FRENZY · 3 back-to-back timed rounds · combo XP
+// ====================================================================
+const Frenzy = {
+  POOL: [
+    {id:'frenzy-math',em:'➕',name:'Math Burst',duration:20, run:(area,state,onDone)=>{
+      let score=0, t=20, qIdx=0;
+      const next=()=>{
+        const a=Math.floor(Math.random()*15)+1, b=Math.floor(Math.random()*15)+1;
+        const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
+        const ans = op==='+'?a+b: op==='-'?a-b : a*b;
+        const opts=[ans];
+        while(opts.length<4){ const d=ans+Math.floor(Math.random()*10)-5; if(!opts.includes(d) && d>=0) opts.push(d); }
+        opts.sort((x,y)=>x-y);
+        area.innerHTML=`<div style="font-size:48px;font-weight:900;color:var(--gold-bright);text-align:center;margin:10px 0">${a} ${op} ${b}</div>
+          <div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">${opts.map(o=>`<button class="stroop-btn" data-v="${o}">${o}</button>`).join('')}</div>`;
+        area.querySelectorAll('button[data-v]').forEach(btn=>{
+          btn.onclick=()=>{
+            if(parseInt(btn.dataset.v)===ans){ score+=10; SFX.correct(); haptic(8); }
+            else { SFX.wrong(); haptic(20); }
+            qIdx++; next();
+          };
+        });
+      };
+      next();
+      const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);} else next();},1000);
+      state.timers.push(tm);
+    }},
+    {id:'frenzy-color',em:'🎨',name:'Color Match',duration:15, run:(area,state,onDone)=>{
+      let score=0, t=15;
+      const cols=['red','blue','green','yellow','purple'];
+      const colCss={red:'#EF4444',blue:'#3B82F6',green:'#10B981',yellow:'#F59E0B',purple:'#A78BFA'};
+      const next=()=>{
+        const target=cols[Math.floor(Math.random()*cols.length)];
+        const inkCol=cols[Math.floor(Math.random()*cols.length)];
+        area.innerHTML=`<div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
+          <div style="font-size:48px;font-weight:900;text-align:center;margin:10px 0;color:${colCss[inkCol]}">${target.toUpperCase()}</div>
+          <div class="dim" style="text-align:center;font-size:11px">tap the WORD MEANING (not ink color)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">${cols.map(c=>`<button class="stroop-btn" data-v="${c}" style="background:${colCss[c]}">${c.toUpperCase()}</button>`).join('')}</div>`;
+        area.querySelectorAll('button[data-v]').forEach(btn=>{
+          btn.onclick=()=>{
+            if(btn.dataset.v===target){ score+=10; SFX.correct(); haptic(8); }
+            else { SFX.wrong(); haptic(20); }
+            next();
+          };
+        });
+      };
+      next();
+      const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
+      state.timers.push(tm);
+    }},
+    {id:'frenzy-tap',em:'⚡',name:'Star Tap',duration:12, run:(area,state,onDone)=>{
+      let score=0, t=12;
+      area.innerHTML=`<div class="dim" id="frnz-t" style="text-align:center;font-size:11px">⏱ ${t}s · tap stars · NOT bombs · score 0</div>
+        <div id="frnz-board" style="position:relative;height:280px;background:rgba(0,0,0,.18);border-radius:14px;overflow:hidden;margin-top:10px"></div>`;
+      const board=document.getElementById('frnz-board');
+      const update=()=>{document.getElementById('frnz-t').textContent=`⏱ ${t}s · tap stars · score ${score}`;};
+      const spawn=()=>{
+        if(t<=0) return;
+        const isBomb=Math.random()<.18;
+        const sp=document.createElement('div');
+        sp.style.cssText=`position:absolute;top:${10+Math.random()*240}px;left:${10+Math.random()*280}px;font-size:32px;cursor:pointer;user-select:none`;
+        sp.textContent=isBomb?'💣':'⭐';
+        sp.onclick=()=>{
+          if(isBomb){ score=Math.max(0,score-15); SFX.wrong(); haptic(30); }
+          else { score+=12; SFX.correct(); haptic(8); }
+          sp.remove(); update();
+        };
+        board.appendChild(sp);
+        setTimeout(()=>sp.remove(),1400);
+      };
+      const sp=setInterval(spawn,260);
+      const tm=setInterval(()=>{t--; update(); if(t<=0){clearInterval(tm); clearInterval(sp); onDone(score);}},1000);
+      state.timers.push(tm, sp);
+    }},
+    {id:'frenzy-mem',em:'🧠',name:'Memory Flash',duration:14, run:(area,state,onDone)=>{
+      let score=0, t=14, round=0;
+      const next=()=>{
+        const emojis=['🐑','🦁','🕊️','🐟','🦅','🐎'];
+        const seq=[];
+        for(let i=0;i<3+Math.min(3,round);i++) seq.push(emojis[Math.floor(Math.random()*emojis.length)]);
+        const targetIdx=Math.floor(Math.random()*seq.length);
+        const target=seq[targetIdx];
+        const distract=emojis.filter(e=>e!==target).sort(()=>Math.random()-.5).slice(0,3);
+        const opts=[target,...distract].sort(()=>Math.random()-.5);
+        area.innerHTML=`<div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
+          <div style="text-align:center;font-size:34px;letter-spacing:8px;margin:18px 0">${seq.map((s,i)=>i===targetIdx?`<span style="background:rgba(245,158,11,.3);padding:2px 6px;border-radius:6px">${s}</span>`:s).join('')}</div>
+          <div class="dim" style="text-align:center;font-size:11px">⬆ which animal is in the highlighted spot?</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">${opts.map(o=>`<button class="stroop-btn" data-v="${o}" style="font-size:24px">${o}</button>`).join('')}</div>`;
+        area.querySelectorAll('button[data-v]').forEach(btn=>{
+          btn.onclick=()=>{
+            if(btn.dataset.v===target){ score+=14; SFX.correct(); haptic(8); }
+            else { SFX.wrong(); haptic(20); }
+            round++; next();
+          };
+        });
+      };
+      next();
+      const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
+      state.timers.push(tm);
+    }},
+    {id:'frenzy-eq',em:'🔣',name:'Equation Flash',duration:16, run:(area,state,onDone)=>{
+      let score=0, t=16;
+      const next=()=>{
+        const x=Math.floor(Math.random()*9)+2;
+        const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
+        const b=Math.floor(Math.random()*9)+2;
+        const ans = op==='+'?x+b: op==='-'?x-b: x*b;
+        const opts=[x];
+        while(opts.length<4){ const d=x+Math.floor(Math.random()*10)-5; if(!opts.includes(d) && d>=0 && d<=20) opts.push(d); }
+        opts.sort((a,b)=>a-b);
+        area.innerHTML=`<div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
+          <div style="font-size:36px;font-weight:900;color:var(--gold-bright);text-align:center;margin:18px 0">? ${op} ${b} = ${ans}</div>
+          <div class="dim" style="text-align:center;font-size:11px">solve for ?</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">${opts.map(o=>`<button class="stroop-btn" data-v="${o}">${o}</button>`).join('')}</div>`;
+        area.querySelectorAll('button[data-v]').forEach(btn=>{
+          btn.onclick=()=>{
+            if(parseInt(btn.dataset.v)===x){ score+=14; SFX.correct(); haptic(8); }
+            else { SFX.wrong(); haptic(20); }
+            next();
+          };
+        });
+      };
+      next();
+      const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
+      state.timers.push(tm);
+    }},
+    {id:'frenzy-word',em:'🔤',name:'Word Flash',duration:18, run:(area,state,onDone)=>{
+      let score=0, t=18;
+      const pool=[
+        {q:'opposite of HOT',a:'COLD',o:['COLD','WARM','SUN','FIRE']},
+        {q:'plural of FOOT',a:'FEET',o:['FEET','FOOTS','FEETS','PAWS']},
+        {q:'past tense of EAT',a:'ATE',o:['ATE','EATED','EATEN','EAT']},
+        {q:'capital of FRANCE',a:'PARIS',o:['PARIS','LYON','ROME','BERLIN']},
+        {q:'2 + 2 × 2',a:'6',o:['6','8','4','10']},
+        {q:'how many books in NT?',a:'27',o:['27','39','66','12']},
+        {q:'4×4 grid has cells:',a:'16',o:['16','12','8','20']},
+      ];
+      const next=()=>{
+        const q=pool[Math.floor(Math.random()*pool.length)];
+        const opts=[...q.o].sort(()=>Math.random()-.5);
+        area.innerHTML=`<div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
+          <div style="font-size:24px;font-weight:800;text-align:center;margin:14px 0;color:var(--gold-bright)">${q.q}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${opts.map(o=>`<button class="stroop-btn" data-v="${o}">${o}</button>`).join('')}</div>`;
+        area.querySelectorAll('button[data-v]').forEach(btn=>{
+          btn.onclick=()=>{
+            if(btn.dataset.v===q.a){ score+=15; SFX.correct(); haptic(8); }
+            else { SFX.wrong(); haptic(20); }
+            next();
+          };
+        });
+      };
+      next();
+      const tm=setInterval(()=>{t--; if(t<=0){clearInterval(tm); onDone(score);}else next();},1000);
+      state.timers.push(tm);
+    }},
+  ],
+  start(mode='classic'){
+    State.gameInst = this;
+    this.mode = mode;
+    this.round = 0;
+    this.totalScore = 0;
+    const count = mode==='gauntlet'?5:3;
+    this.runs = [...this.POOL].sort(()=>Math.random()-.5).slice(0,count);
+    this.state = {timers:[]};
+    UI.show('game');
+    this._tick();
+  },
+  startGauntlet(){ Frenzy.start('gauntlet'); },
+  // v0.40 LAYER 2 · DAILY SPOTLIGHT · one round type 2x today
+  spotlightId(){
+    const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
+    return this.POOL[day % this.POOL.length].id;
+  },
+  spotlight(){ return this.POOL.find(p=>p.id===this.spotlightId()); },
+  // v0.40 LAYER 2 · MVP of the week (highest score in last 7 days, persisted)
+  mvpOfWeek(){
+    const lb = State.data.leaderboards?.['frenzy:daily'];
+    if(!lb || !lb.weekly) return null;
+    const week=Leaderboards._weekKey();
+    const list=lb.weekly[week]||[];
+    return list[0]||null;
+  },
+  _tick(){
+    if(this.round>=this.runs.length){ this.end(); return; }
+    const cur = this.runs[this.round];
+    document.getElementById('g-stats').innerHTML = `<b>🔥 Daily Frenzy</b> · round <b>${this.round+1}/3</b> · ${cur.em} ${cur.name} · total <b>${this.totalScore}</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = `<div class="big" style="text-align:center">${cur.em}</div>
+      <h3 style="text-align:center;margin:6px 0">${cur.name}</h3>
+      <div class="dim" style="text-align:center;font-size:11px">${cur.duration}s starting in 1...</div>`;
+    setTimeout(()=>{
+      const a = document.getElementById('g-area');
+      if(!a) return;
+      a.innerHTML='';
+      cur.run(a, this.state, (score)=>{
+        // v0.40 LAYER 2 · spotlight 2x bonus
+        let effScore = score;
+        if(cur.id === Frenzy.spotlightId()){
+          const sBonus = score; // 2x effectively
+          effScore += sBonus;
+          if(sBonus>0) Toast.show(`✨ SPOTLIGHT · 2x · +${sBonus}`);
+        }
+        this.totalScore += effScore;
+        const comboBonus = this.round>0 ? Math.round(effScore * 0.2 * this.round) : 0;
+        if(comboBonus){ this.totalScore += comboBonus; Toast.show(`🔥 ${this.round+1}x combo · +${comboBonus}`); }
+        this.round++;
+        setTimeout(()=>this._tick(), 500);
+      });
+    }, 900);
+  },
+  end(){
+    this.cleanup();
+    const data = State.data;
+    if(!data.frenzy) data.frenzy={lastPlayed:0,bestStreak:0,totalRuns:0,totalScore:0,streak:0};
+    // v0.40 frenzy streak (consecutive days played)
+    const prev = data.frenzy.lastPlayed ? new Date(data.frenzy.lastPlayed) : null;
+    const today = new Date();
+    if(prev){
+      const sameDay = prev.toDateString()===today.toDateString();
+      const yesterday = new Date(today.getTime()-86400000);
+      const wasYesterday = prev.toDateString()===yesterday.toDateString();
+      if(!sameDay && wasYesterday) data.frenzy.streak = (data.frenzy.streak||0)+1;
+      else if(!sameDay) data.frenzy.streak = 1;
+    } else { data.frenzy.streak = 1; }
+    if((data.frenzy.streak||0) > (data.frenzy.bestStreak||0)) data.frenzy.bestStreak = data.frenzy.streak;
+    data.frenzy.lastPlayed = Date.now();
+    data.frenzy.totalRuns++;
+    data.frenzy.totalScore += this.totalScore;
+    if(this.totalScore > (data.frenzy.bestScore||0)) data.frenzy.bestScore = this.totalScore;
+    Ach.unlock('frenzy_first');
+    if(data.frenzy.totalRuns>=10) Ach.unlock('frenzy_10');
+    if(this.totalScore>=500) Ach.unlock('frenzy_score_500');
+    if(this.totalScore>=1000) Ach.unlock('frenzy_score_1000');
+    const streakBonus = Math.min(5, (data.frenzy.streak||1)-1);
+    const reward = {
+      coin: 50 + Math.floor(this.totalScore/3) + streakBonus*15,
+      brain: 3 + Math.floor(streakBonus/2),
+      gem: this.totalScore>=500?1:0,
+      faith: this.totalScore>=300?1:0
+    };
+    if(streakBonus>0) Toast.show(`🔥 ${data.frenzy.streak}-day streak · +${streakBonus*15} coins`);
+    Wallet.add(reward);
+    // record on global leaderboard
+    const lbResult = Leaderboards.record('frenzy','daily',this.totalScore);
+    Activity.log('win','🔥',`Frenzy ${this.totalScore} pts`);
+    BP.addXp(5);
+    Save.write();
+    Ach.check();
+    UI.updateWallet();
+    Modal.win({rewards:reward, title:`Frenzy: ${this.totalScore} pts!`, emoji:'🔥', retry:()=>Frenzy.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.state) this.state.timers.forEach(t=>{clearTimeout(t); clearInterval(t);}); this.state={timers:[]}; }
+};
+
+// ====================================================================
+// 🛒 v0.40 · SHOP RECOMMENDED · play-history driven
+// ====================================================================
+const ShopRecommend = {
+  topRoom(){
+    const rec = State.data.recsHistory || {};
+    const counts = {};
+    Object.keys(rec).forEach(k=>{ const r=k.split(':')[0]; counts[r]=(counts[r]||0)+rec[k]; });
+    let best=null, bestN=0;
+    Object.entries(counts).forEach(([r,n])=>{ if(n>bestN){best=r;bestN=n;} });
+    return best;
+  },
+  recommend(){
+    const room = this.topRoom();
+    const recs=[];
+    if(!room){
+      recs.push({id:'hint',reason:'try a hint while exploring rooms'});
+      recs.push({id:'double',reason:'2x your first win bonus'});
+      return recs;
+    }
+    if(['word','script','mind'].includes(room)){
+      recs.push({id:'hint',reason:`💡 you play a lot of ${ROOMS[room]?.name} · hints help`});
+      recs.push({id:'skip',reason:'⏭ skip stuck questions'});
+    }
+    if(['brain','speed'].includes(room)){
+      recs.push({id:'freeze',reason:`⏸ freeze time on ${ROOMS[room]?.name}`});
+      recs.push({id:'fire',reason:'🔥 holy fire bonus rewards'});
+    }
+    if(['num','logic'].includes(room)){
+      recs.push({id:'undo',reason:`↩ undo helps with ${ROOMS[room]?.name}`});
+      recs.push({id:'double',reason:'⚡ double rewards'});
+    }
+    return recs.slice(0,3);
+  }
+};
 
 // ====================================================================
 // 💾 SAVE / LOAD
@@ -3331,6 +3975,12 @@ const GameIntro = {
         <div style="background:rgba(245,158,11,.12);padding:8px;border-radius:10px;text-align:center;grid-column:span 2"><div class="dim" style="font-size:10px">💰 REWARD</div><b style="color:var(--gold-bright)">${intro.reward}</b></div>
         <div style="background:rgba(255,255,255,.06);padding:8px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🏆 WINS</div><b>${stat.wins}</b></div>
         <div style="background:rgba(255,255,255,.06);padding:8px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🎮 PLAYS</div><b>${stat.plays}</b></div>
+      </div>
+      <div style="background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;text-align:center;margin-bottom:6px">📈 LEADERBOARD · DAILY TOP 5</div>
+        ${Leaderboards.renderHtml(roomId, game.id, 'daily')}
+        <div style="font-size:10px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;text-align:center;margin:8px 0 6px">🏅 MEDAL THRESHOLDS</div>
+        ${Medals.renderHtml(roomId, game.id)}
       </div>
       ${ownedPU.length?`<div style="background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.4);padding:8px;border-radius:10px;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;color:#c4b5fd;letter-spacing:.06em;margin-bottom:6px;text-align:center">⚡ EQUIP POWER-UP</div>
@@ -4002,6 +4652,41 @@ const App = {
   },
   renderLobbyExtras(){
     Quests.ensureToday();
+    // v0.40 · auto-detect language on first ever lobby render
+    Lang.autoDetect();
+    // v0.40 · DUEL NOTIF BANNER · show pending duel count
+    const dPending = (State.data.duels?.outgoing||[]).length + (State.data.duels?.incoming||[]).length;
+    let extras = document.getElementById('v40-extras');
+    if(!extras){
+      extras = document.createElement('div');
+      extras.id = 'v40-extras';
+      const rp = document.getElementById('recentlyPlayed');
+      if(rp && rp.parentNode) rp.parentNode.insertBefore(extras, rp);
+    }
+    let exHtml = '';
+    if(dPending){
+      exHtml += `<div class="lobby-banner" onclick="App.openDuels()" style="cursor:pointer;background:linear-gradient(135deg,rgba(220,38,38,.25),rgba(245,158,11,.22));border-color:#F87171;margin-bottom:8px">
+        <b style="color:#FBBF24">⚔️ ${dPending} pending duel${dPending>1?'s':''}</b>
+        <span style="font-size:11px;opacity:.85;display:block">tap to view · accept · play · resolve</span>
+      </div>`;
+    }
+    // v0.40 · FRENZY STREAK
+    const f = State.data.frenzy || {};
+    if(f.totalRuns){
+      const last = f.lastPlayed?new Date(f.lastPlayed):null;
+      const today = new Date();
+      const sameDay = last && last.toDateString()===today.toDateString();
+      exHtml += `<div class="lobby-banner" onclick="App.openFrenzy()" style="cursor:pointer;background:linear-gradient(135deg,rgba(239,68,68,.18),rgba(245,158,11,.14));margin-bottom:8px">
+        <b style="color:#FBBF24">🔥 Daily Frenzy · best ${f.bestScore||0}</b>
+        <span style="font-size:11px;opacity:.85;display:block">${sameDay?'already played today · run again for combo XP':'fresh frenzy available · 3 rounds'}</span>
+      </div>`;
+    } else {
+      exHtml += `<div class="lobby-banner" onclick="App.openFrenzy()" style="cursor:pointer;background:linear-gradient(135deg,rgba(239,68,68,.18),rgba(245,158,11,.14));margin-bottom:8px">
+        <b style="color:#FBBF24">🔥 NEW · Daily Frenzy</b>
+        <span style="font-size:11px;opacity:.85;display:block">3 timed mini-rounds · combo XP · tap to play</span>
+      </div>`;
+    }
+    extras.innerHTML = exHtml;
     // v0.32 RECENTLY PLAYED widget
     const recent = (State.data.activityLog||[]).filter(a=>a.type==='win'||a.type==='loss').slice(0,3);
     const rp = document.getElementById('recentlyPlayed');
@@ -4179,7 +4864,16 @@ const App = {
     Modal.close();
     const g = State._pendingGame;
     State._pendingGame = null;
-    if(g) g.launch();
+    if(!g) return;
+    // v0.40 · find roomId for cinematic palette + recs tracking
+    let roomId = 'word';
+    Object.entries(ROOMS).forEach(([rid,r])=>{ if(r.games.includes(g)) roomId=rid; });
+    // bump recs history
+    State.data.recsHistory = State.data.recsHistory || {};
+    const recKey = `${roomId}:${g.id}`;
+    State.data.recsHistory[recKey] = (State.data.recsHistory[recKey]||0)+1;
+    // play cinematic, then launch
+    Cinematic.show(roomId, g, ()=>g.launch());
   },
   equipPowerup(id){
     if(!State.data.powerups || !State.data.powerups[id]){ Toast.show('not stocked'); return; }
@@ -4550,6 +5244,18 @@ const App = {
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           ${Object.entries(APP_THEMES).map(([id,t])=>`<button class="av-tool-btn ${(d.appTheme||'cobalt')===id?'active':''}" onclick="App.setAppTheme('${id}')">${t.name}</button>`).join('')}
         </div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🌐 ${Lang.t('LANGUAGE','IDIOMA')}</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="av-tool-btn ${Lang.current()==='en'?'active':''}" onclick="App.setLang('en')">🇺🇸 ENGLISH</button>
+          <button class="av-tool-btn ${Lang.current()==='es'?'active':''}" onclick="App.setLang('es')">🇪🇸 ESPAÑOL</button>
+        </div>
+        <p class="dim" style="font-size:10px;margin-top:6px">${Lang.t('scripture stays English · UI labels translate','las escrituras quedan en inglés · etiquetas se traducen')}</p>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎬 CINEMATIC INTROS</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="av-tool-btn ${(d.cinematicPref||'on')==='on'?'active':''}" onclick="App.setCinematicPref('on')">🎬 FULL</button>
+          <button class="av-tool-btn ${d.cinematicPref==='short'?'active':''}" onclick="App.setCinematicPref('short')">⚡ SHORT</button>
+          <button class="av-tool-btn ${d.cinematicPref==='off'?'active':''}" onclick="App.setCinematicPref('off')">🚫 OFF</button>
+        </div>
         <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
           <button class="btn-secondary" onclick="App.openAccount()">👤 account & security</button>
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
@@ -4643,7 +5349,32 @@ const App = {
     }else{
       activity += '<p class="dim text-center">no activity yet</p>';
     }
-    document.getElementById('aux-body').innerHTML = top + dnaSection + perGame + activity;
+    // v0.40 · GLOBAL RIVALS · seeded leaderboard (faith + coin top players, deterministic by day)
+    const today = new Date(); const daySeed = today.getFullYear()*1000+today.getMonth()*32+today.getDate();
+    const _rng = (s)=>{let x=s; return ()=>{x=(x*9301+49297)%233280; return x/233280;};};
+    const r = _rng(daySeed);
+    const botNames = ['Aaron','Mary','David','Ruth','John','Esther','Paul','Lydia','Daniel','Sarah','Moses','Hannah','Joshua','Naomi','Caleb'];
+    const baseFaith = (d.wallet.faith||0);
+    const baseCoin = (d.wallet.coin||0);
+    const rivals = [];
+    for(let i=0;i<5;i++){
+      const name = botNames[Math.floor(r()*botNames.length)];
+      const fScore = Math.max(5, Math.round(baseFaith * (0.5+r()*1.8) + Math.floor(r()*50)));
+      const cScore = Math.max(50, Math.round(baseCoin * (0.4+r()*1.6) + Math.floor(r()*300)));
+      rivals.push({name, faith:fScore, coin:cScore});
+    }
+    rivals.push({name:d.name||'You', faith:baseFaith, coin:baseCoin, me:true});
+    rivals.sort((a,b)=>b.faith-a.faith);
+    let rivalsHtml = `<h3 style="margin:14px 0 4px;color:var(--gold-bright);font-size:15px;text-align:center">⚔️ GLOBAL RIVALS · today</h3>
+      <div class="dim" style="text-align:center;font-size:11px;margin-bottom:6px">top faith earners this session</div>
+      <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:8px 10px;font-size:12px">
+        ${rivals.slice(0,6).map((rv,i)=>{
+          const medal=['🥇','🥈','🥉','4.','5.','6.'][i];
+          const bg = rv.me?'background:rgba(245,158,11,.25);border-radius:6px;padding:4px 6px':'padding:4px 6px';
+          return `<div style="display:flex;justify-content:space-between;${bg}"><span>${medal} ${rv.name}${rv.me?' (you)':''}</span><b>✝️ ${rv.faith} · 🪙 ${rv.coin}</b></div>`;
+        }).join('')}
+      </div>`;
+    document.getElementById('aux-body').innerHTML = top + dnaSection + rivalsHtml + perGame + activity;
     UI.show('aux');
   },
   openAch(){
@@ -4811,6 +5542,29 @@ const App = {
         <button class="btn-primary" style="padding:8px 12px;font-size:12px;width:auto;${canAfford?'':'opacity:.4'}" onclick="App.buyDeal('${dealItem.id}')">${dealCostStr}</button>
       </div>`;
     }
+    // v0.40 === RECOMMENDED FOR YOU (based on play history) ===
+    const recs = ShopRecommend.recommend();
+    if(recs.length){
+      html += `<h3 style="margin:14px 0 6px;color:#A78BFA;font-size:13px;text-align:center">✨ RECOMMENDED FOR YOU</h3>
+      <div class="dim" style="text-align:center;font-size:10px;margin-bottom:6px">picked by your play history</div>`;
+      recs.forEach(r=>{
+        const p = POWERUP_DEFS.find(x=>x.id===r.id); if(!p) return;
+        const owned = State.data.powerups[p.id]||0;
+        const cost = p.cost;
+        const costStr = Object.entries(cost).map(([k,v])=>`${v} ${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'})[k]||k}`).join(' · ');
+        const canAfford = Object.entries(cost).every(([k,v])=>(wallet[k]||0)>=v);
+        html += `<div class="setting-row" style="background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(167,139,250,.15));border-color:#A78BFA">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:28px">${p.em}</span>
+            <div>
+              <b style="display:block">${p.name}${owned?` <span class="dim" style="font-size:10px">(${owned})</span>`:''}</b>
+              <span style="font-size:10px;opacity:.8">${r.reason}</span>
+            </div>
+          </div>
+          <button class="btn-primary" style="padding:6px 10px;font-size:11px;width:auto;${canAfford?'':'opacity:.4'}" onclick="App.buyPowerupRec('${p.id}')">${costStr}</button>
+        </div>`;
+      });
+    }
     // === POWER-UPS (categorized) ===
     html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">⚡ POWER-UPS</h3>`;
     POWERUP_DEFS.forEach(p=>{
@@ -4910,6 +5664,147 @@ const App = {
     Activity.log('ach',p.em,`bought ${p.name}`);
     App.openShop();
     UI.updateWallet();
+  },
+  buyPowerupRec(id){
+    // v0.40 wrapper that also marks the rec-bought achievement
+    Ach.unlock('shop_rec_buy');
+    App.buyPowerup(id);
+  },
+  // v0.40 LEADERBOARD HUB
+  openLeaderboardForGame(roomId, gameId){
+    const game = ROOMS[roomId]?.games.find(g=>g.id===gameId);
+    if(!game) return;
+    document.getElementById('aux-title').innerHTML = `📈 ${game.name}`;
+    const html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(124,58,237,.18))">
+        <b style="color:var(--gold-bright);font-size:15px">📈 ${game.em} ${game.name} Leaderboards</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">daily · weekly · all-time</div>
+      </div>
+      <h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">🥇 TODAY</h3>
+      ${Leaderboards.renderHtml(roomId, gameId, 'daily')}
+      <h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">📅 THIS WEEK</h3>
+      ${Leaderboards.renderHtml(roomId, gameId, 'weekly')}
+      <h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">♾ ALL-TIME TOP 5</h3>
+      ${Leaderboards.renderHtml(roomId, gameId, 'allTime')}
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  // v0.40 FRENZY HUB
+  openFrenzy(){
+    document.getElementById('aux-title').innerHTML = '🔥 Daily Frenzy';
+    const f = State.data.frenzy || {totalRuns:0,bestScore:0,totalScore:0,lastPlayed:0};
+    const html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(239,68,68,.25),rgba(245,158,11,.18));border-color:#FBBF24">
+        <div style="font-size:38px">🔥</div>
+        <b style="color:var(--gold-bright);font-size:18px">DAILY FRENZY</b>
+        <div class="dim" style="font-size:12px;margin-top:4px">3 timed mini-rounds · combo XP per round · global daily leaderboard</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:14px;font-size:11px">
+        <div style="background:rgba(255,255,255,.06);padding:10px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🏆 BEST</div><b>${f.bestScore||0}</b></div>
+        <div style="background:rgba(255,255,255,.06);padding:10px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🎮 RUNS</div><b>${f.totalRuns||0}</b></div>
+        <div style="background:rgba(255,255,255,.06);padding:10px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">∑ SCORE</div><b>${f.totalScore||0}</b></div>
+      </div>
+      <h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">✨ TODAY'S SPOTLIGHT</h3>
+      ${(()=>{const sp=Frenzy.spotlight(); return `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border-color:#FBBF24">
+        <div style="font-size:30px">${sp.em}</div>
+        <b style="color:var(--gold-bright);font-size:14px">${sp.name}</b>
+        <div class="dim" style="font-size:10px;margin-top:2px">2x score when this round drops · rotates daily</div>
+      </div>`;})()}
+      ${(()=>{const mvp=Frenzy.mvpOfWeek(); return mvp?`<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">👑 MVP OF THE WEEK</h3>
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(167,139,250,.18))">
+        <b style="color:var(--gold-bright)">👑 ${mvp.name}${mvp.me?' (you)':''} · ${mvp.score} pts</b>
+      </div>`:'';})()}
+      <h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">🎯 FRENZY POOL · ${Frenzy.POOL.length} ROUND TYPES</h3>
+      <div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;text-align:left;font-size:12px">
+        ${Frenzy.POOL.map(p=>{const isSp=p.id===Frenzy.spotlightId(); return `<div style="padding:4px 0;${isSp?'color:var(--gold-bright);font-weight:700':''}">${p.em} <b>${p.name}</b> <span class="dim" style="font-size:10px">· ${p.duration}s${isSp?' · ✨ 2x today':''}</span></div>`;}).join('')}
+        <div class="dim" style="font-size:10px;margin-top:6px;text-align:center">3-5 random rounds per run · combo multiplier kicks in round 2+</div>
+      </div>
+      <h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">🏆 TODAY'S TOP 5</h3>
+      ${Leaderboards.renderHtml('frenzy','daily','daily')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        <button class="btn-primary" style="padding:14px;font-size:14px" onclick="Frenzy.start('classic')">▶ CLASSIC · 3 rounds</button>
+        <button class="btn-primary" style="padding:14px;font-size:14px;background:linear-gradient(135deg,#DC2626,#7C2D12)" onclick="Frenzy.startGauntlet()">🌋 GAUNTLET · 5 rounds</button>
+      </div>
+      <div class="dim" style="text-align:center;font-size:10px;margin-top:8px">Gauntlet = 2 extra rounds · bigger combo · bigger payouts</div>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  // v0.40 DUELS
+  openDuels(){
+    document.getElementById('aux-title').innerHTML = '⚔️ Duels';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list" style="text-align:center">${Duels.renderHub()}</div>`;
+    UI.show('aux');
+  },
+  openDuelPickGame(friendCode){
+    document.getElementById('aux-title').innerHTML = '⚔️ Pick Game';
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(220,38,38,.2),rgba(245,158,11,.18));border-color:#F87171">
+        <b style="color:var(--gold-bright);font-size:15px">⚔️ pick a duel game</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">vs ${friendCode}</div>
+      </div>`;
+    // Show a curated subset · top 1 game per room
+    Object.entries(ROOMS).forEach(([rid,r])=>{
+      const g = r.games[0]; if(!g) return;
+      html += `<div class="setting-row" onclick="App.sendDuel('${friendCode}','${rid}','${g.id}')" style="cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:26px">${g.em}</span>
+          <div><b style="display:block">${g.name}</b><span class="dim" style="font-size:11px">${r.em} ${r.name}</span></div>
+        </div>
+        <button class="btn-primary" style="padding:6px 12px;font-size:11px;width:auto">⚔️ send</button>
+      </div>`;
+    });
+    html += `<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openDuels()">← back</button></div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  sendDuel(friendCode, roomId, gameId){
+    Duels.send(friendCode, gameId, roomId);
+    App.openDuels();
+  },
+  duelRematch(friendCode, roomId, gameId){
+    Duels.send(friendCode, gameId, roomId);
+    Toast.show('🔁 rematch sent!');
+    App.openDuels();
+  },
+  shareLeaderboard(roomId, gameId){
+    const top = Leaderboards.getTop(roomId, gameId, 'daily');
+    if(!top.length){ Toast.show('no scores yet'); return; }
+    const game = ROOMS[roomId]?.games.find(g=>g.id===gameId);
+    const txt = `🧠 BrainBoard · ${game?.name||gameId} · today's top:\n` + top.slice(0,5).map((e,i)=>`${['🥇','🥈','🥉','4.','5.'][i]} ${e.name} · ${e.score}`).join('\n');
+    if(navigator.share){ navigator.share({text:txt}).catch(()=>{}); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>Toast.show('📋 leaderboard copied!')); }
+    else { Toast.show(txt); }
+  },
+  playDuel(duelId){
+    const d = State.data.duels?.outgoing.find(x=>x.id===duelId);
+    if(!d){ Toast.show('duel not found'); return; }
+    const game = ROOMS[d.roomId]?.games.find(g=>g.id===d.gameId);
+    if(!game){ Toast.show('game missing'); return; }
+    State._activeDuel = d;
+    Toast.show(`⚔️ playing duel · seed ${d.seed}`);
+    Modal.close();
+    Cinematic.show(d.roomId, game, ()=>game.launch());
+  },
+  // v0.40 i18n picker
+  setLang(code){ Lang.set(code); App.openSettings(); },
+  // v0.40 LAYER 2 · DUEL vs CPU (no friend needed)
+  duelQuickMatch(){
+    const games = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
+    const pick = games[Math.floor(Math.random()*games.length)];
+    const cpuName = ['Aaron-Bot','Ruth-Bot','David-Bot','Mary-Bot'][Math.floor(Math.random()*4)];
+    const cpuCode = 'CPU-'+Math.random().toString(36).slice(2,6).toUpperCase();
+    Duels.send(cpuCode, pick.g.id, pick.rid);
+    Toast.show(`⚡ quick match · ${cpuName} · ${pick.g.name}`);
+    App.openDuels();
+  },
+  setCinematicPref(code){
+    State.data.cinematicPref = code;
+    Save.write();
+    Toast.show(`🎬 cinematic: ${code}`);
+    App.openSettings();
   },
   openBP(){
     ensureMonthlyPass();
@@ -5367,6 +6262,16 @@ function recordResult(roomId, gameId, won, rewards={}){
   }
   Quests.bump(roomId, won);
   Adaptive.push(won);
+  // v0.40 · record leaderboard score (only on win for cleanliness)
+  if(won){
+    const lbScore = (rewards.coin||0) + (rewards.brain||0)*5 + (rewards.faith||0)*8 + (comboMult>1?20:0);
+    try{
+      Leaderboards.record(roomId, gameId, lbScore);
+      // v0.40 LAYER 2 · Medal earned toast
+      const medal = Medals.earned(roomId, gameId, lbScore);
+      if(medal) setTimeout(()=>Toast.show(`${medal.em} ${medal.name.toUpperCase()} medal · ${lbScore} pts!`), 600);
+    }catch(e){console.warn('lb err',e);}
+  }
   Save.write();
   Ach.check();
   UI.updateWallet();
