@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.29.0 · scroll-everywhere · monthly pass · resume · 🙏</div>
+  <div class="splash-foot">v0.30.0 · ambient music · TTS · kid-safe · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1407,7 +1407,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.29.0';
+const VERSION = '0.30.0';
 
 // ----- STATE -----
 const State = {
@@ -1425,7 +1425,7 @@ const DEFAULT_SAVE = {
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
-  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true,skipGameIntro:false,difficulty:'normal',largeText:false,colorBlindSafe:false},
+  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true,skipGameIntro:false,difficulty:'normal',largeText:false,colorBlindSafe:false,music:true,musicVolume:0.35},
   // v0.3 additions
   avatar:{character:'monk',hat:'none',face:'none',aura:'none',pet:'none',outfit:'plain'},
   activityLog:[], // recent events {ts, type, msg}
@@ -2579,6 +2579,11 @@ const ACHIEVEMENTS = [
   {id:'double_used',em:'⚡',t:'Doubler',d:'Win with 2x Rewards equipped'},
   {id:'fire_used',em:'🔥',t:'Fire Brand',d:'Win with Holy Fire equipped'},
   {id:'equipped_first',em:'🛠️',t:'Equipped',d:'Equip your first power-up'},
+  // v0.30 music + tts + kid-safe
+  {id:'music_on',em:'🎵',t:'Score-Listener',d:'Toggle ambient music on'},
+  {id:'tts_on',em:'🎙️',t:'Echo Saint',d:'Enable TTS voice'},
+  {id:'kid_safe',em:'🧒',t:'Kid Mode',d:'Enable Kid-Safe filter'},
+  {id:'volume_tuned',em:'🔊',t:'Audio Engineer',d:'Adjust music volume'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -2824,6 +2829,144 @@ const Ach = {
 };
 
 // ====================================================================
+// 🎵 v0.30 MUSIC ENGINE · procedural ambient per-screen
+// ====================================================================
+const Music = (()=>{
+  let ctx=null, master=null, schedT=null, currentTrack=null;
+  const scales = {
+    phrygian:    [0,1,3,5,7,8,10], // dark · holy
+    phrygianDom: [0,1,4,5,7,8,10], // exotic · sacred
+    mixolydian:  [0,2,4,5,7,9,10], // bright · welcoming
+    dorian:      [0,2,3,5,7,9,10], // parchment · medieval
+    aeolian:     [0,2,3,5,7,8,10], // melancholy · mysterious
+    lydian:      [0,2,4,6,7,9,11], // dreamy · airy
+    major:       [0,2,4,5,7,9,11], // bright · precise
+  };
+  // Each track: bpm · scale · root MIDI · chord progression (degrees) · vibe
+  const TRACKS = {
+    splash:  {bpm:75, scale:'phrygianDom', root:53, chords:[0,3,5,0], pad:'sine',  arp:'triangle'},
+    onboard: {bpm:80, scale:'mixolydian',  root:48, chords:[0,4,5,0], pad:'sine',  arp:'sine'},
+    lobby:   {bpm:90, scale:'mixolydian',  root:48, chords:[0,3,4,0], pad:'sine',  arp:'triangle'},
+    aux:     {bpm:85, scale:'dorian',      root:50, chords:[0,3,5,0], pad:'sine',  arp:'sine'},
+    word:    {bpm:95, scale:'dorian',      root:50, chords:[0,3,4,5], pad:'sine',  arp:'triangle'},
+    brain:   {bpm:110,scale:'mixolydian',  root:45, chords:[0,4,5,3], pad:'sawtooth',arp:'sine'},
+    mind:    {bpm:80, scale:'aeolian',     root:52, chords:[0,5,3,4], pad:'sine',  arp:'triangle'},
+    num:     {bpm:115,scale:'major',       root:43, chords:[0,4,5,0], pad:'sine',  arp:'square'},
+    script:  {bpm:70, scale:'phrygianDom', root:50, chords:[0,3,5,0], pad:'sine',  arp:'sine'},
+    logic:   {bpm:90, scale:'aeolian',     root:48, chords:[0,3,4,5], pad:'sine',  arp:'triangle'},
+    speed:   {bpm:130,scale:'mixolydian',  root:52, chords:[0,4,5,0], pad:'sawtooth',arp:'square'},
+    daily:   {bpm:105,scale:'lydian',      root:53, chords:[0,4,5,3], pad:'sine',  arp:'triangle'},
+    game:    {bpm:100,scale:'dorian',      root:48, chords:[0,3,4,5], pad:'sine',  arp:'sine'},
+  };
+  function ac(){
+    if(!ctx){
+      ctx = new(window.AudioContext||window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = State.data?.settings?.musicVolume ?? 0.35;
+      master.connect(ctx.destination);
+    }
+    return ctx;
+  }
+  function midiToFreq(m){ return 440 * Math.pow(2,(m-69)/12); }
+  function envNote(freq, dur, type='sine', vol=0.05){
+    const c=ac(); if(!c) return;
+    const o=c.createOscillator(); const g=c.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,c.currentTime);
+    g.gain.linearRampToValueAtTime(vol, c.currentTime+0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+dur);
+    o.connect(g); g.connect(master);
+    o.start(); o.stop(c.currentTime+dur+0.05);
+  }
+  function playChord(track, chordIdx){
+    if(!State.data?.settings?.music) return;
+    const c=ac(); if(!c) return;
+    const sc = scales[track.scale];
+    const base = track.root + sc[chordIdx % sc.length];
+    // Pad: root + 5th + 8th (octave)
+    const beatSec = 60/track.bpm;
+    envNote(midiToFreq(base),       beatSec*4*1.0, track.pad, 0.04);
+    envNote(midiToFreq(base+sc[2]), beatSec*4*1.0, track.pad, 0.03);
+    envNote(midiToFreq(base+sc[4]), beatSec*4*1.0, track.pad, 0.02);
+    // Arp: 4 quick notes per beat
+    for(let i=0;i<4;i++){
+      const noteIdx = [0,2,4,2][i % 4];
+      const noteMidi = base + sc[noteIdx];
+      setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, track.arp, 0.025), i*beatSec*1000);
+    }
+  }
+  function loop(track){
+    if(!currentTrack) return;
+    let chordIdx = 0;
+    const beatSec = 60/track.bpm;
+    function step(){
+      if(!currentTrack || currentTrack!==track) return;
+      playChord(track, track.chords[chordIdx % track.chords.length]);
+      chordIdx++;
+      schedT = setTimeout(step, beatSec*4*1000);
+    }
+    step();
+  }
+  return {
+    play(trackId){
+      if(!State.data?.settings?.music) return;
+      const track = TRACKS[trackId];
+      if(!track){ Music.stop(); return; }
+      if(currentTrack === track) return;
+      Music.stop();
+      currentTrack = track;
+      // Slight delay so screen transitions don't audio-glitch
+      setTimeout(()=>{ if(currentTrack===track) loop(track); }, 200);
+    },
+    stop(){
+      currentTrack = null;
+      if(schedT){ clearTimeout(schedT); schedT=null; }
+      if(master){
+        try{
+          master.gain.cancelScheduledValues(ac().currentTime);
+          master.gain.linearRampToValueAtTime(0, ac().currentTime+0.5);
+          setTimeout(()=>{
+            if(master) master.gain.value = State.data?.settings?.musicVolume ?? 0.35;
+          }, 600);
+        }catch{}
+      }
+    },
+    setVolume(v){
+      if(master) master.gain.value = v;
+    },
+    toggle(){
+      State.data.settings.music = !State.data.settings.music;
+      Save.write();
+      if(!State.data.settings.music) Music.stop();
+    },
+  };
+})();
+
+// v0.30 TTS · speak game prompts when toggle on
+function speak(text){
+  if(!State.data?.settings?.tts) return;
+  if(!window.speechSynthesis) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95; u.pitch = 1.0; u.volume = 0.85;
+    window.speechSynthesis.speak(u);
+  }catch{}
+}
+
+// v0.30 KID-SAFE content filter · removes adult-context entries from trivia/TF/define
+const KID_UNSAFE_KEYWORDS = ['murder','kill','adultery','death','died','drown','sword','wife','blood','hell','curse','devil'];
+function isKidSafe(text){
+  if(!text) return true;
+  const lower = text.toLowerCase();
+  return !KID_UNSAFE_KEYWORDS.some(k=>lower.includes(k));
+}
+function filterKidSafe(arr, getText){
+  if(!State.data?.settings?.kidSafe) return arr;
+  return arr.filter(item => isKidSafe(getText(item)));
+}
+
+// ====================================================================
 // 🔊 SFX (procedural via WebAudio)
 // ====================================================================
 const SFX = (()=>{
@@ -2945,9 +3088,13 @@ const UI = {
     const target = document.getElementById(id);
     if(target){ target.classList.add('active'); }
     window.scrollTo(0,0);
-    // v0.28 refresh power-up bar on game screen show
     if(id==='game') setTimeout(renderPowerupBar, 50);
     else { const bar=document.getElementById('g-powerups'); if(bar) bar.innerHTML=''; }
+    // v0.30 play music for this screen · uses room-id-mapped track if game
+    let trackId = id;
+    if(id==='game' && State.currentRoom) trackId = State.currentRoom;
+    if(id==='room' && State.currentRoom) trackId = State.currentRoom;
+    Music.play(trackId);
   },
   updateWallet(){
     const w = State.data?.wallet||{};
@@ -3879,6 +4026,14 @@ const App = {
       </div>`;
     UI.show('aux');
   },
+  setMusicVol(v){
+    const n = parseInt(v)/100;
+    State.data.settings.musicVolume = n;
+    Music.setVolume(n);
+    Save.write();
+    const lbl = document.getElementById('vol-label');
+    if(lbl) lbl.textContent = v+'%';
+  },
   setDifficulty(d){
     if(!State.data.settings) State.data.settings = {};
     State.data.settings.difficulty = d;
@@ -4128,6 +4283,11 @@ const App = {
         <div class="setting-row">🚀 skip game intros <div class="toggle ${s.skipGameIntro?'on':''}" data-set="skipGameIntro"></div></div>
         <div class="setting-row">🔠 large text <div class="toggle ${s.largeText?'on':''}" data-set="largeText"></div></div>
         <div class="setting-row">🎨 color-blind safe <div class="toggle ${s.colorBlindSafe?'on':''}" data-set="colorBlindSafe"></div></div>
+        <div class="setting-row">🎵 ambient music <div class="toggle ${s.music!==false?'on':''}" data-set="music"></div></div>
+        <div class="setting-row" style="display:block">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span>🔊 music volume</span><span class="dim" id="vol-label">${Math.round((s.musicVolume??0.35)*100)}%</span></div>
+          <input type="range" min="0" max="100" value="${Math.round((s.musicVolume??0.35)*100)}" style="width:100%;margin-top:6px" oninput="App.setMusicVol(this.value)">
+        </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎮 DIFFICULTY</h3>
         <p class="dim" style="font-size:11px;margin-bottom:6px">tunes Brain Rank gain/loss · doesn't change game mechanics</p>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
@@ -4163,9 +4323,13 @@ const App = {
       t.classList.toggle('on');
       Save.write();
       haptic(8);
-      // v0.20 apply body classes for accessibility toggles
       document.body.classList.toggle('large-text', !!State.data.settings.largeText);
       document.body.classList.toggle('color-blind', !!State.data.settings.colorBlindSafe);
+      // v0.30 music toggle live
+      if(k==='music'){
+        if(State.data.settings.music) Music.play('aux');
+        else Music.stop();
+      }
     });
     UI.show('aux');
   },
@@ -6451,7 +6615,8 @@ const TriviaGame = {
   start(){
     State.gameInst=this;
     this.score=0; this.timeLeft=60; this.q=0;
-    this.questions = [...BIBLE_TRIVIA].sort(()=>Math.random()-.5).slice(0,10);
+    // v0.30 kid-safe filter
+    this.questions = filterKidSafe([...BIBLE_TRIVIA].sort(()=>Math.random()-.5), x=>x.q).slice(0,10);
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
