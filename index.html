@@ -1204,7 +1204,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.20.0 · TIER SUPREMACY · adaptive · accessible · 🙏</div>
+  <div class="splash-foot">v0.21.0 · PIN-FREE · adaptive difficulty · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1354,7 +1354,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.20.0';
+const VERSION = '0.21.0';
 
 // ----- STATE -----
 const State = {
@@ -1942,6 +1942,36 @@ function rankBadge(rank){
   const t = getRankTier(rank||1000);
   return `<span style="color:${t.color};font-weight:700">${t.em} ${t.name}</span>`;
 }
+
+// v0.21 ADAPTIVE GAME DIFFICULTY · rolling 8-game window · gentle auto-tune
+// Reads recent perf · returns multiplier 0.85 (winning streak → harder) to 1.15 (losing streak → easier)
+const Adaptive = {
+  push(won){
+    const d = State.data;
+    if(!d._recentResults) d._recentResults = [];
+    d._recentResults.push(won?1:0);
+    if(d._recentResults.length>8) d._recentResults.shift();
+    Save.write();
+  },
+  multiplier(){
+    const r = State.data?._recentResults||[];
+    if(r.length<3) return 1.0;
+    const winRate = r.reduce((a,b)=>a+b,0)/r.length;
+    // winRate 0 → 1.15 (easier · 15% more lenient)
+    // winRate .5 → 1.0 (no adjustment)
+    // winRate 1 → 0.85 (harder · 15% stricter)
+    const mult = 1.15 - (winRate * 0.30);
+    return Math.max(0.85, Math.min(1.15, mult));
+  },
+  // For win-threshold games: easier multiplier means LOWER threshold (you need fewer)
+  threshold(base){
+    return Math.max(1, Math.round(base * (2 - Adaptive.multiplier())));
+  },
+  // For time-based games: easier means MORE time
+  timer(base){
+    return Math.round(base * Adaptive.multiplier());
+  }
+};
 
 // v0.20 ADAPTIVE BRAIN RANK · feels good at every level
 // Newbies climb fast w/ tiny losses · veterans face real challenge
@@ -2764,7 +2794,15 @@ const App = {
       // v0.20 apply persistent accessibility settings
       document.body.classList.toggle('large-text', !!State.data.settings?.largeText);
       document.body.classList.toggle('color-blind', !!State.data.settings?.colorBlindSafe);
-      // v0.17/0.20 lock check — only when explicitly opt'd-in
+      // v0.21 ONE-TIME MIGRATION: prior versions auto-enabled lock-on-open
+      // if user hasn't explicitly opt'd in via the new flow, disable it
+      if(State.data.account && State.data.account.lockEnabled && !State.data.account.explicitlyEnabledLock){
+        State.data.account.lockEnabled = false;
+        Save.write();
+        // toast a one-time notice so user knows
+        setTimeout(()=>Toast.show('🔓 lock-on-open disabled · re-enable in Settings if wanted'), 1200);
+      }
+      // Lock check — only when explicitly opt'd-in
       if(Account.isLocked()){
         App.showLockScreen();
         return;
@@ -3428,6 +3466,8 @@ const App = {
   toggleLock(){
     if(!State.data.account?.pinHash){ Toast.show('set a PIN first'); return; }
     State.data.account.lockEnabled = !State.data.account.lockEnabled;
+    // v0.21 mark as explicitly user-flipped so migration doesn't undo it
+    State.data.account.explicitlyEnabledLock = !!State.data.account.lockEnabled;
     Save.write();
     haptic(15); SFX.tap();
     App.openAccount();
@@ -4282,6 +4322,7 @@ function recordResult(roomId, gameId, won, rewards={}){
     State._lastCombo = 1;
   }
   Quests.bump(roomId, won);
+  Adaptive.push(won);
   Save.write();
   Ach.check();
   UI.updateWallet();
@@ -4555,12 +4596,13 @@ const StroopGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=10;
+    const threshold = Adaptive.threshold(10); // adaptive: 8-12 based on recent perf
+    const won = this.score>=threshold;
     const rewards = won ? {coin:20+this.score*4, brain:3} : {coin:Math.max(10,this.score*2)};
     recordResult('mind','stroop',won,rewards);
     if(won) Modal.win({rewards, title:`Score: ${this.score}!`, emoji:'🎉',
       retry:()=>StroopGame.start(), lobby:()=>App.toLobby()});
-    else Modal.lose({title:`Score: ${this.score}`,msg:'aim for 10+ for the win!',
+    else Modal.lose({title:`Score: ${this.score}`,msg:`aim for ${threshold}+ for the win!`,
       retry:()=>StroopGame.start(), lobby:()=>App.toLobby()});
   },
   cleanup(){ if(this.timer) clearInterval(this.timer); }
@@ -4645,12 +4687,13 @@ const MathGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=8;
+    const threshold = Adaptive.threshold(8);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:25+this.score*5, brain:3} : {coin:Math.max(10,this.score*3)};
     recordResult('num','math',won,rewards);
     if(won) Modal.win({rewards, title:`Solved ${this.score}!`, emoji:'🧮',
       retry:()=>MathGame.start(), lobby:()=>App.toLobby()});
-    else Modal.lose({title:`Solved ${this.score}`,msg:'aim for 8+ correct!',
+    else Modal.lose({title:`Solved ${this.score}`,msg:`aim for ${threshold}+ correct!`,
       retry:()=>MathGame.start(), lobby:()=>App.toLobby()});
   },
   cleanup(){ if(this.timer) clearInterval(this.timer); }
