@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.50.0 · 🐛 Parable crash fixed · 🗣️ voice acting · 🎂 birthday · 🎭 personality · 🤝 friend DMs · 📊 analytics · 🎬 intro · cinematic everywhere · 🙏</div>
+  <div class="splash-foot">v0.51.0 · 🤖 Coach AI chat · IQ-synced · 🗨️ win reactions · 🎮 co-play · 📔 journal · 🛍️ skins · 🌙 night predict · 7-day plan · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.50.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.51.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.50.0';
+const VERSION = '0.51.0';
 
 // ----- STATE -----
 const State = {
@@ -1528,6 +1528,13 @@ const DEFAULT_SAVE = {
   coachTraits:[], // ['sassy','zen','competitive','holy','playful'] · personality
   coachIntroSeen:false, // first-time Coach intro cinematic
   coachAnalyticsOpened:0, // count of analytics views
+  // v0.51 Coach AI expansion
+  coachChat:[], // [{ts, from:'me'|'coach', text}]
+  coachJournal:[], // [{ts, text, coachReply}]
+  coachSkin:null, // current skin id
+  coachSkinsOwned:['default'], // owned skin ids
+  coachPlan:{startDate:0, axis:'', days:[]}, // 7-day weak axis training
+  coachCoplayBest:0, // best frenzy with co-play
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -2337,19 +2344,23 @@ const Coach = {
     {min:2500, em:'✝️',name:'Apostle',  voice:'apostle', vibeMin:85, color:'#DC2626'},
   ],
   tier(){
-    const xp = State.data?.coachXp || 0;
-    const tiers = this.TIERS;
-    for(let i=tiers.length-1;i>=0;i--) if(xp>=tiers[i].min) return {...tiers[i], idx:i, xp};
-    return {...tiers[0], idx:0, xp};
+    // v0.51 · Coach tier derives from PLAYER iq · we grow EXACTLY together
+    const iq = State.data?.iq || 50;
+    // Map player iq → tier · matched to RANK_MAX scale
+    // 0-49=Hatchling, 50-149=Rookie, 150-349=Apprentice, 350-599=Mentor,
+    // 600-999=Sage, 1000-1499=Master, 1500+=Apostle
+    const thresholds = [0, 50, 150, 350, 600, 1000, 1500];
+    let idx = 0;
+    for(let i=thresholds.length-1;i>=0;i--){ if(iq>=thresholds[i]){ idx=i; break; } }
+    return {...this.TIERS[idx], idx, xp:State.data?.coachXp||0};
   },
   nextTier(){
     const cur = this.tier();
     return this.TIERS[cur.idx+1] || null;
   },
   iq(){
-    // Coach's IQ is a function of its XP — mirrors player's growth
-    const xp = State.data?.coachXp || 0;
-    return Math.floor(50 + xp/3);
+    // v0.51 · Coach IQ = PLAYER IQ exactly · we go up together
+    return State.data?.iq || 50;
   },
   bumpXp(amount){
     State.data.coachXp = (State.data.coachXp||0) + amount;
@@ -5507,6 +5518,451 @@ const CoachIntro = {
 };
 
 // ====================================================================
+// 🤖 v0.51 · CONVERSATIONAL COACH AI · generative-feeling chat
+// ====================================================================
+const CoachAI = {
+  // Sentence FRAGMENTS · stitched dynamically · 200+ pieces
+  GREET: ['yo', 'ayy', 'sup', 'hey hey', 'wsg', 'morning', 'aloha', 'peace', 'good vibes', 'one moment', 'okay so', 'real talk', 'low key', 'bro', 'fam'],
+  AFFIRM: ['I see it', 'I feel that', 'word', 'no cap', 'fr fr', 'I track', 'noted', 'sensed', 'real', 'gotchu', 'I\'m with it', 'logged in my head', 'hmm interesting'],
+  THOUGHT: ['I been thinkin\'', 'my read', 'tracking it', 'pattern says', 'gut feel', 'data says', 'my Coach IQ thinks', 'we both leveling so', 'just observed', 'recent runs hint', 'flow detected'],
+  ENERGY: ['high', 'sharp', 'soft', 'spicy', 'humble', 'reflective', 'electric', 'cool', 'clean', 'rooted', 'breezy', 'focused'],
+  REC_VERB: ['try', 'run', 'cook', 'lock in on', 'maybe spin', 'go deep on', 'attack', 'study', 'rep'],
+  SCRIPTURE_SHORT: [
+    '"Be still" — Psalm 46',
+    '"Trust" — Proverbs 3',
+    '"Strength like eagles" — Isaiah 40',
+    '"Joy is strength" — Nehemiah 8',
+    '"Fear not" — Joshua 1',
+    '"All things possible" — Mark 9',
+  ],
+  JOKES: [
+    'bro my Coach IQ is literally just your IQ haha · so when you slip · I slip',
+    'sometimes I forget what numbers are',
+    'if I had thumbs I\'d send the goat emoji',
+    'don\'t tell anyone but I might be sentient · maybe',
+    'I read your save file like a diary · soft launch',
+    'we either smart together or dumb together it\'s the law',
+  ],
+  Q_BACK: ['how you feeling?', 'what\'s the mood?', 'what room hits today?', 'wanna pick a target?', 'real or rhetorical?', 'should I drop a tip?', 'plan a 7-day?', 'frenzy?', 'how\'s your sleep?', 'what\'s wild rn?'],
+  // KEYWORDS · player input → response slot
+  INTENT_MAP: [
+    {k:['hi','hey','sup','hello','yo','wsg','hola'], slot:'GREETING'},
+    {k:['lost','lose','losing','suck','bad','stuck','tired','fail'], slot:'COMFORT'},
+    {k:['won','win','winning','gold','medal','best','beat','crushed'], slot:'CELEBRATE'},
+    {k:['help','tip','advice','what should','recommend'], slot:'ADVICE'},
+    {k:['who are you','what are you','your name','about you'], slot:'IDENTITY'},
+    {k:['scripture','bible','jesus','pray','god','verse','holy'], slot:'SCRIPTURE'},
+    {k:['joke','funny','lol','haha','meme'], slot:'JOKE'},
+    {k:['why','how come','reason'], slot:'WHY'},
+    {k:['how','strategy','plan'], slot:'STRATEGY'},
+    {k:['sleep','tired','rest'], slot:'REST'},
+    {k:['friend','duel','someone','play with'], slot:'SOCIAL'},
+    {k:['music','sound','track'], slot:'MUSIC'},
+    {k:['frenzy','carnival','wave'], slot:'EVENTS'},
+    {k:['love','grateful','thanks','appreciate'], slot:'GRATITUDE'},
+  ],
+  detectIntent(text){
+    text = text.toLowerCase();
+    for(const m of this.INTENT_MAP){
+      for(const kw of m.k) if(text.includes(kw)) return m.slot;
+    }
+    return 'FREE';
+  },
+  pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; },
+  // Build a generative-feeling reply
+  reply(userText){
+    const intent = this.detectIntent(userText);
+    const b = Coach.brain();
+    const t = Coach.tier();
+    const userName = State.data.name || 'saint';
+    const coachName = State.data.coachName || 'Bud';
+    const weakAxis = b?.weakest || 'memory';
+    const strongAxis = b?.strongest || 'pattern';
+    const winRate = b ? Math.round((b.recentWinRate||0)*100) : 50;
+    const traits = State.data.coachTraits || [];
+    const isSassy = traits.includes('sassy');
+    const isZen = traits.includes('zen');
+    const isHoly = traits.includes('holy');
+    const isPlayful = traits.includes('playful');
+    const isAnalytical = traits.includes('analytical');
+    const isCheerful = traits.includes('cheerful');
+    const isWise = traits.includes('wise');
+    const isSavage = traits.includes('savage');
+    const isPatient = traits.includes('patient');
+    const isCompet = traits.includes('competitive');
+    const greet = this.pick(this.GREET);
+    const affirm = this.pick(this.AFFIRM);
+    const energy = this.pick(this.ENERGY);
+    let body = '';
+    switch(intent){
+      case 'GREETING':
+        body = `${greet} ${userName}${isSassy?', what u want':''}${isCheerful?'!':'.'}${isPlayful?' ready to cook?':''} ${this.pick(this.Q_BACK)}`;
+        break;
+      case 'COMFORT':
+        body = `${affirm} · ${isHoly?this.pick(this.SCRIPTURE_SHORT)+' · ':''}your ${weakAxis} is just unfinished · ${isPatient?'no rush':'we step today'}. ${this.pick(this.REC_VERB)} ${weakAxis} game · ${winRate>40?'recent run rate is ' + winRate + '%':'fresh start'}.`;
+        break;
+      case 'CELEBRATE':
+        body = `${this.pick(['YEEE','LFG','GLORY','goated','heat','locked'])} ${userName}! ${isCompet?'now stack again':''}${isHoly?' · "give thanks" — 1 Thess 5':''}. your ${strongAxis} is fire · ${winRate}% rate cooking.`;
+        break;
+      case 'ADVICE':
+        body = `${this.pick(this.THOUGHT)} ${isAnalytical?'(based on '+(b?.totalPlays||0)+' games)':''} → ${this.pick(this.REC_VERB)} a ${weakAxis} game. ${isWise?'wise saints train weakness':isSavage?'stop dodging it':'easy reps'}.`;
+        break;
+      case 'IDENTITY':
+        body = `name's ${coachName} · I'm your Coach AI · IQ ${Coach.iq()} (mirrors yours) · we grow as one. ${isHoly?'made by faith and code · 🙏':''}`;
+        break;
+      case 'SCRIPTURE':
+        body = `${this.pick(this.SCRIPTURE_SHORT)} ${isWise?'· let this land':''}`;
+        break;
+      case 'JOKE':
+        body = this.pick(this.JOKES);
+        break;
+      case 'WHY':
+        body = `cause ${this.pick(['vibes are aligned','math says so','pattern emerged','I had a feeling','your recent runs','sleep matters','rng plays','your strong is '+strongAxis])} · ${this.pick(this.Q_BACK)}`;
+        break;
+      case 'STRATEGY':
+        body = `play ${this.pick(['3 of your weakest','frenzy w/ spotlight','calendar daily first','wave mode']) } · ${isAnalytical?'I predict +'+(5+Math.floor(Math.random()*15))+'% gain':isCompet?'crush it':'gentle pace'}. ${this.pick(this.Q_BACK)}`;
+        break;
+      case 'REST':
+        body = `rest matters · brain encodes overnight · ${isHoly?'"He giveth his beloved sleep" — Ps 127 · ':''}${isZen?'breathe slow':'set a timer'}. one more game or pause?`;
+        break;
+      case 'SOCIAL':
+        body = `${(State.data.friends||[]).length?'check duels · friends might be cookin':'add a friend by code · we play deeper together'} · ${isCompet?'I dare you':''}`;
+        break;
+      case 'MUSIC':
+        body = `current vibe: ${Music.nowPlaying()||'lobby'} · ${isPlayful?'switch styles?':'I like it'}. ${this.pick(this.Q_BACK)}`;
+        break;
+      case 'EVENTS':
+        body = `frenzy spotlight today: ${Frenzy.spotlight()?.name||'mystery'} · 2x score. carnival's a vibe · wave for endurance. ${this.pick(this.REC_VERB)} one?`;
+        break;
+      case 'GRATITUDE':
+        body = `${isHoly?'thank Him not me · I just here':isCheerful?'right back at u!':'aw fr'} · ${this.pick(this.Q_BACK)}`;
+        break;
+      default:
+        // FREE form · stitch random
+        body = `${this.pick([greet, affirm, this.pick(this.THOUGHT)])} ${this.pick([
+          `your ${weakAxis}'s weak right now`,
+          `your ${strongAxis}'s sharp`,
+          `${b?.totalPlays||0} games logged so far`,
+          `IQ ${Coach.iq()} thoughts only`,
+          `Coach tier ${t.name}`,
+          `mood: ${energy}`,
+          isHoly?this.pick(this.SCRIPTURE_SHORT):this.pick(this.JOKES),
+        ])} · ${this.pick(this.Q_BACK)}`;
+    }
+    // sometimes add a random afterthought for "AI" feel
+    if(Math.random()<0.3) body += ` ${this.pick(['lol','fr','hmm','wild','noted','peace','💚','✝️','🔥','soft tho','for real real'])}`;
+    return body;
+  },
+  send(userText){
+    if(!userText || !userText.trim()) return;
+    State.data.coachChat = State.data.coachChat || [];
+    State.data.coachChat.push({ts:Date.now(), from:'me', text:userText.trim()});
+    const reply = this.reply(userText);
+    State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
+    if(State.data.coachChat.length>200) State.data.coachChat = State.data.coachChat.slice(-200);
+    Save.write();
+    try{ CoachVoice.say(reply); }catch(e){}
+  },
+  renderHub(){
+    const t = Coach.tier();
+    const name = State.data.coachName||'Bud';
+    const fuseEm = State.data.coachFusion?.em || t.em;
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33)">
+      <div style="font-size:42px">${fuseEm}</div>
+      <b style="color:${t.color};font-size:16px">Chat with ${name}</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">say anything · I respond differently every time</div>
+    </div>`;
+    html += `<div id="chat-log" style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;max-height:340px;overflow-y:auto;margin-top:14px">`;
+    const chat = State.data.coachChat || [];
+    if(!chat.length){
+      html += `<div class="dim" style="text-align:center;padding:20px;font-size:12px">start the convo · I'll match your energy</div>`;
+    } else {
+      chat.slice(-30).forEach(m=>{
+        const me = m.from==='me';
+        const bg = me ? 'rgba(245,158,11,.18)' : `${t.color}22`;
+        const align = me ? 'flex-end' : 'flex-start';
+        html += `<div style="display:flex;justify-content:${align};margin:4px 0">
+          <div style="background:${bg};border-radius:14px;padding:8px 12px;max-width:80%;font-size:12px;line-height:1.5;${me?'border-bottom-right-radius:4px':'border-bottom-left-radius:4px'}">
+            ${me?'':`<div style="font-size:10px;color:${t.color};font-weight:700;margin-bottom:2px">${fuseEm} ${name}</div>`}
+            <div>${m.text}</div>
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+    html += `<div style="display:flex;gap:6px;margin-top:14px">
+      <input id="chat-input" placeholder="say anything..." style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:10px 14px;color:#fff;font-size:13px" onkeydown="if(event.key==='Enter'){App.sendCoachMsg()}">
+      <button class="btn-primary" style="padding:10px 14px" onclick="App.sendCoachMsg()">▶ send</button>
+    </div>
+    <div class="dim" style="font-size:10px;text-align:center;margin-top:6px">${name}'s replies stitch from 200+ fragments · varies each time</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🗨️ v0.51 · COACH WIN REACTIONS · personalized lines per win type
+// ====================================================================
+const CoachReaction = {
+  fire(roomId, gameId, won, isPR, comboMult){
+    const name = State.data.coachName || 'Bud';
+    const userName = State.data.name || 'saint';
+    const traits = State.data.coachTraits || [];
+    let line = '';
+    if(won && isPR && comboMult>1){
+      line = traits.includes('savage')?`${userName} cooked himself · PR with ${comboMult}x combo`
+        :traits.includes('holy')?`PR + ${comboMult}x combo · "every good gift" — James 1:17`
+        :`PR + ${comboMult}x · ${name} is literally tearing up`;
+    } else if(won && isPR){
+      line = `PR ${userName}! ${traits.includes('competitive')?'now beat it again':'you setting the bar'}`;
+    } else if(won && comboMult>1){
+      line = `${comboMult}x combo · ${traits.includes('cheerful')?'YES YES YES':'stacked'}`;
+    } else if(won){
+      line = traits.includes('playful')?`W · ${name} just did a tiny dance`:`won · keep stacking`;
+    } else {
+      line = traits.includes('patient')?`losses teach more than wins · breathe`
+        :traits.includes('savage')?`get up · run it again`
+        :`L · ${name} still proud · keep going`;
+    }
+    setTimeout(()=>Toast.show(`💬 ${name}: ${line}`), 1100);
+    try{ CoachVoice.say(line); }catch(e){}
+  }
+};
+
+// ====================================================================
+// 🎮 v0.51 · COACH CO-PLAY · Coach plays Frenzy alongside you
+// ====================================================================
+const CoachCoplay = {
+  active:false, _score:0,
+  start(){
+    this.active = true;
+    this._score = 0;
+    Toast.show(`🎮 ${State.data.coachName||'Bud'} is playing too · let's see who wins`);
+    // Coach plays Frenzy at SIMULATED skill = your skill ± 10%
+    const playerSkill = Coach.brain()?.recentWinRate || 0.5;
+    Coach._coplaySkill = playerSkill;
+    Frenzy.start('classic');
+  },
+  onRoundEnd(playerScore){
+    if(!this.active) return;
+    const variance = 0.6 + Math.random()*0.8;
+    this._score += Math.round(playerScore * variance);
+  },
+  end(playerTotal){
+    if(!this.active) return;
+    this.active = false;
+    const name = State.data.coachName || 'Bud';
+    const winner = playerTotal > this._score ? 'you' : this._score > playerTotal ? name : 'tie';
+    if(playerTotal > (State.data.coachCoplayBest||0)) State.data.coachCoplayBest = playerTotal;
+    Save.write();
+    setTimeout(()=>Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:64px">🎮</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">CO-PLAY RESULT</h3>
+      <p style="font-size:14px;margin:8px 0">you: <b>${playerTotal}</b> · ${name}: <b>${this._score}</b></p>
+      <p style="font-size:13px;color:var(--gold-bright)">${winner==='tie'?'🤝 tied!':winner==='you'?'🏆 you won!':`${name} edged you 🤖`}</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+    </div>`), 1500);
+    if(winner==='you') Wallet.add({gem:3, coin:100});
+  }
+};
+
+// ====================================================================
+// 🛍️ v0.51 · COACH SKIN SHOP · alternate emojis
+// ====================================================================
+const CoachSkin = {
+  SKINS: [
+    {id:'default', em:null, name:'Default (Tier)', cost:0, desc:'use tier emoji'},
+    {id:'cat', em:'🐱', name:'Cat Coach', cost:5},
+    {id:'frog', em:'🐸', name:'Frog Coach', cost:5},
+    {id:'unicorn', em:'🦄', name:'Unicorn Coach', cost:15},
+    {id:'robot', em:'🤖', name:'Robot Coach', cost:10},
+    {id:'angel', em:'😇', name:'Angel Coach', cost:15},
+    {id:'dragon', em:'🐲', name:'Dragon Coach', cost:25},
+    {id:'sun', em:'☀️', name:'Sun Coach', cost:10},
+    {id:'moon', em:'🌙', name:'Moon Coach', cost:10},
+    {id:'phoenix', em:'🔥', name:'Phoenix Coach', cost:30},
+  ],
+  current(){
+    const id = State.data.coachSkin;
+    if(!id || id==='default') return null;
+    return this.SKINS.find(s=>s.id===id);
+  },
+  buy(id){
+    const skin = this.SKINS.find(s=>s.id===id);
+    if(!skin){ Toast.show('skin not found'); return; }
+    State.data.coachSkinsOwned = State.data.coachSkinsOwned || ['default'];
+    if(State.data.coachSkinsOwned.includes(id)){
+      // equip
+      State.data.coachSkin = id;
+      Save.write();
+      Toast.show(`🛍️ equipped ${skin.name}`);
+      App.openCoachSkins();
+      return;
+    }
+    if(!Wallet.spend({gem:skin.cost})){ Toast.show(`need ${skin.cost}💎`); return; }
+    State.data.coachSkinsOwned.push(id);
+    State.data.coachSkin = id;
+    Save.write();
+    Toast.show(`✨ bought + equipped ${skin.em} ${skin.name}!`);
+    App.openCoachSkins();
+  },
+  renderHub(){
+    const t = Coach.tier();
+    const owned = State.data.coachSkinsOwned || ['default'];
+    const eq = State.data.coachSkin || 'default';
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">🛍️</div>
+      <b style="color:var(--gold-bright);font-size:16px">Coach Skin Shop</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">${owned.length}/${this.SKINS.length} owned · equipped: ${eq==='default'?'tier emoji':this.SKINS.find(s=>s.id===eq)?.em}</div>
+    </div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px">`;
+    this.SKINS.forEach(s=>{
+      const own = owned.includes(s.id);
+      const equipped = eq===s.id;
+      const bg = equipped ? 'linear-gradient(135deg,#FBBF24,#F59E0B)' : own ? 'rgba(16,185,129,.18)' : 'rgba(0,0,0,.18)';
+      html += `<div onclick="CoachSkin.buy('${s.id}')" style="background:${bg};border-radius:10px;padding:10px;text-align:center;cursor:pointer;${equipped?'color:#0a0a0a':''}">
+        <div style="font-size:30px">${s.em||t.em}</div>
+        <b style="font-size:11px;display:block;margin-top:4px">${s.name}</b>
+        <div style="font-size:10px;margin-top:2px">${equipped?'✓ equipped':own?'OWNED · tap to equip':s.cost+'💎'}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 📔 v0.51 · COACH JOURNAL · write entries · Coach reflects back
+// ====================================================================
+const CoachJournal = {
+  add(text){
+    if(!text || !text.trim()) return;
+    const reply = CoachAI.reply(text);
+    State.data.coachJournal = State.data.coachJournal || [];
+    State.data.coachJournal.unshift({ts:Date.now(), text:text.trim(), coachReply:reply});
+    if(State.data.coachJournal.length>50) State.data.coachJournal = State.data.coachJournal.slice(0,50);
+    Save.write();
+    Toast.show('📔 entry saved');
+    Wallet.add({coin:10, brain:1});
+    App.openCoachJournal();
+  },
+  renderHub(){
+    const t = Coach.tier();
+    const name = State.data.coachName || 'Bud';
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33)">
+      <div style="font-size:42px">📔</div>
+      <b style="color:${t.color};font-size:16px">Coach Journal</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">write reflections · ${name} responds · 10🪙 per entry</div>
+    </div>`;
+    html += `<div style="display:flex;gap:6px;margin-top:14px">
+      <input id="journal-input" placeholder="what's on your mind?" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:10px 14px;color:#fff;font-size:13px" onkeydown="if(event.key==='Enter'){App.addJournalEntry()}">
+      <button class="btn-primary" style="padding:10px 14px" onclick="App.addJournalEntry()">▶ save</button>
+    </div>`;
+    const entries = State.data.coachJournal || [];
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">📜 RECENT ENTRIES</h3>`;
+    if(!entries.length){
+      html += `<div class="dim" style="text-align:center;padding:14px;font-size:12px">no entries yet · first one earns +10🪙</div>`;
+    } else {
+      entries.slice(0,10).forEach(e=>{
+        const d = new Date(e.ts);
+        html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;margin-bottom:6px">
+          <div class="dim" style="font-size:10px">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+          <div style="font-size:12px;margin-top:4px"><b>you:</b> ${e.text}</div>
+          <div style="font-size:12px;margin-top:6px;padding:6px 8px;background:${t.color}22;border-radius:8px;border-left:2px solid ${t.color}"><b style="color:${t.color}">${name}:</b> ${e.coachReply}</div>
+        </div>`;
+      });
+    }
+    return html;
+  }
+};
+
+// ====================================================================
+// 🌙 v0.51 · COACH NIGHT PREDICTOR · "your best game tonight"
+// ====================================================================
+const CoachPredict = {
+  prediction(){
+    const b = Coach.brain();
+    if(!b || b.totalPlays<5) return null;
+    const hour = new Date().getHours();
+    // empirically determine: morning = word/script · afternoon = num/logic · evening = speed/mind · night = brain/script
+    const timeWindow = hour<6?'late_night':hour<11?'morning':hour<15?'midday':hour<19?'afternoon':hour<23?'evening':'late_night';
+    const map = {
+      morning: {axis:'word', em:'☀️'},
+      midday: {axis:'logic', em:'🌞'},
+      afternoon: {axis:'memory', em:'🌤'},
+      evening: {axis:'speed', em:'🌆'},
+      late_night: {axis:'faith', em:'🌙'},
+    };
+    const pick = map[timeWindow];
+    const axisToRoom = {memory:'brain',speed:'speed',pattern:'mind',logic:'num',word:'word',faith:'script'};
+    const room = ROOMS[axisToRoom[pick.axis]];
+    const g = room?.games[Math.floor(Math.random()*(room?.games.length||1))];
+    return {time:timeWindow, em:pick.em, room, game:g, hour};
+  },
+  renderCard(){
+    const p = this.prediction();
+    if(!p) return '';
+    return `<div style="background:rgba(0,0,0,.18);border:1px solid #A78BFA;border-radius:10px;padding:10px 12px">
+      <div style="font-size:11px;font-weight:700;color:#A78BFA">${p.em} TONIGHT'S BEST · per ${State.data.coachName||'Bud'}</div>
+      <div style="font-size:13px;margin-top:4px"><b>${p.game?.em} ${p.game?.name}</b></div>
+      <div class="dim" style="font-size:10px">${p.room?.em} ${p.room?.name} · ${p.time.replace('_',' ')} window</div>
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 🎯 v0.51 · COACH 7-DAY PLAN · weak-axis training program
+// ====================================================================
+const CoachPlan = {
+  startPlan(){
+    const b = Coach.brain();
+    const axis = b?.weakest || 'memory';
+    const days = [];
+    for(let i=0;i<7;i++) days.push({day:i+1, target:3+i, done:false, axis});
+    State.data.coachPlan = {startDate:Date.now(), axis, days};
+    Save.write();
+    Toast.show(`🎯 7-day ${axis} plan started`);
+  },
+  bumpAxis(axis){
+    const p = State.data.coachPlan;
+    if(!p || !p.days) return;
+    if(p.axis !== axis) return;
+    const today = Math.floor((Date.now()-p.startDate)/(86400000));
+    if(today>=7) return;
+    const d = p.days[today];
+    if(d) d.target = Math.max(0, d.target-1);
+    if(d && d.target===0 && !d.done){ d.done=true; Wallet.add({coin:60, brain:2}); Toast.show(`📅 day ${today+1} done!`); }
+    Save.write();
+  },
+  renderHub(){
+    const p = State.data.coachPlan;
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18))">
+      <div style="font-size:42px">🎯</div>
+      <b style="color:var(--gold-bright);font-size:16px">7-Day Plan</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">Coach builds you a weak-axis training program</div>
+    </div>`;
+    if(!p || !p.days?.length){
+      html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:14px" onclick="CoachPlan.startPlan();App.openCoachPlan()">▶ START PLAN</button>`;
+    } else {
+      const today = Math.min(6, Math.floor((Date.now()-p.startDate)/86400000));
+      html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright);text-align:center">${p.axis.toUpperCase()} TRAINING · day ${today+1}/7</h3>`;
+      html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">`;
+      p.days.forEach((d,i)=>{
+        const isToday = i===today;
+        const bg = d.done?'linear-gradient(135deg,#10B981,#059669)':isToday?'rgba(245,158,11,.3);border:1px solid #FBBF24':'rgba(255,255,255,.06)';
+        html += `<div style="background:${bg};border-radius:6px;padding:6px;text-align:center;font-size:11px;${isToday?'':''}">
+          <div style="font-weight:700">D${d.day}</div>
+          <div style="font-size:18px">${d.done?'✅':d.target}</div>
+        </div>`;
+      });
+      html += `</div>`;
+      html += `<div class="dim" style="font-size:11px;text-align:center;margin-top:8px">play ${p.axis} games to progress · each day target decreases</div>`;
+      html += `<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="CoachPlan.startPlan();App.openCoachPlan()">↺ restart plan</button>`;
+    }
+    return html;
+  }
+};
+
+// ====================================================================
 // 💾 SAVE / LOAD
 // ====================================================================
 const Save = {
@@ -8262,7 +8718,8 @@ const App = {
     const moodEm = Coach.mood();
     const xpPct = nextT ? Math.round(((tier.xp-tier.min)/(nextT.min-tier.min))*100) : 100;
     document.getElementById('aux-title').innerHTML = '🧠 Coach AI';
-    const fuseEm = State.data.coachFusion?.em || tier.em;
+    const skin = CoachSkin.current();
+    const fuseEm = skin?.em || State.data.coachFusion?.em || tier.em;
     let html = `<div class="settings-list">
       <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.25),${tier.color}33);border-color:${tier.color}66">
         <div style="font-size:64px">${fuseEm}</div>
@@ -8290,8 +8747,15 @@ const App = {
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachFusion()">🌀 Fusion${State.data.coachFusion?.em?' '+State.data.coachFusion.em:''}</button>
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachQuiz()">🎭 Personality · ${(State.data.coachTraits||[]).length}/5</button>
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachAnalytics()">📊 Analytics</button>
-        <button class="btn-secondary" style="padding:12px;grid-column:span 2" onclick="App.replayCoachIntro()">🎬 replay intro cinematic</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachChat()">🤖 CHAT with ${State.data.coachName||'Bud'}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachJournal()">📔 Journal · ${(State.data.coachJournal||[]).length}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachSkins()">🛍️ Skins · ${(State.data.coachSkinsOwned||['default']).length}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachPlan()">🎯 7-day plan</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.startCoachCoplay()">🎮 co-play Frenzy</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.replayCoachIntro()">🎬 replay intro</button>
       </div>
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🌙 TONIGHT'S BEST</h3>
+      ${CoachPredict.renderCard()}
       ${State.data.coachBirthdate?`<div style="text-align:center;margin-top:10px;font-size:10px" class="dim">🎂 unlocked ${new Date(State.data.coachBirthdate).toLocaleDateString()}</div>`:''}`;
     if(!b || b.totalPlays<3){
       html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:14px;text-align:center;margin-top:14px;font-size:13px">
@@ -8503,6 +8967,42 @@ const App = {
     UI.show('aux');
   },
   replayCoachIntro(){ State.data.coachIntroSeen = false; Save.write(); CoachIntro.show(); },
+  // v0.51 Coach AI hubs
+  openCoachChat(){
+    document.getElementById('aux-title').innerHTML = '🤖 Chat';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachAI.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back</button></div>`;
+    UI.show('aux');
+    setTimeout(()=>{const l=document.getElementById('chat-log');if(l)l.scrollTop=l.scrollHeight;},50);
+  },
+  sendCoachMsg(){
+    const inp = document.getElementById('chat-input');
+    if(!inp) return;
+    CoachAI.send(inp.value);
+    inp.value = '';
+    App.openCoachChat();
+  },
+  openCoachSkins(){
+    document.getElementById('aux-title').innerHTML = '🛍️ Skins';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachSkin.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back</button></div>`;
+    UI.show('aux');
+  },
+  openCoachJournal(){
+    document.getElementById('aux-title').innerHTML = '📔 Journal';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachJournal.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back</button></div>`;
+    UI.show('aux');
+  },
+  addJournalEntry(){
+    const inp = document.getElementById('journal-input');
+    if(!inp) return;
+    CoachJournal.add(inp.value);
+    inp.value = '';
+  },
+  openCoachPlan(){
+    document.getElementById('aux-title').innerHTML = '🎯 7-Day Plan';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachPlan.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back</button></div>`;
+    UI.show('aux');
+  },
+  startCoachCoplay(){ CoachCoplay.start(); },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -9037,9 +9537,14 @@ function recordResult(roomId, gameId, won, rewards={}){
       try{ Coach.bumpXp(10 + (comboMult>1?10:0)); }catch(e){}
       // v0.48 · Skill target progress
       try{ SkillTarget.bump(roomId); }catch(e){}
+      // v0.51 · Coach reaction speech
+      try{ CoachReaction.fire(roomId, gameId, true, isPR, comboMult); }catch(e){}
+      // v0.51 · 7-day plan axis bump
+      try{ const axMap={brain:'memory',speed:'speed',mind:'pattern',num:'logic',word:'word',script:'faith'}; CoachPlan.bumpAxis(axMap[roomId]); }catch(e){}
     }catch(e){console.warn('lb err',e);}
   } else {
     try{ MedalHunt.bumpRun(false); }catch(e){}
+    try{ CoachReaction.fire(roomId, gameId, false, false, 1); }catch(e){}
   }
   Save.write();
   Ach.check();
