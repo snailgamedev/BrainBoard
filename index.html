@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.51.0 · 🤖 Coach AI chat · IQ-synced · 🗨️ win reactions · 🎮 co-play · 📔 journal · 🛍️ skins · 🌙 night predict · 7-day plan · 🙏</div>
+  <div class="splash-foot">v0.52.0 · 6 NEW games · TicTacToe · 2048 · Snake · Memory · WordSearch · Reversi · Coach 6 finishers · langs removed · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.51.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.52.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.51.0';
+const VERSION = '0.52.0';
 
 // ----- STATE -----
 const State = {
@@ -1535,6 +1535,10 @@ const DEFAULT_SAVE = {
   coachSkinsOwned:['default'], // owned skin ids
   coachPlan:{startDate:0, axis:'', days:[]}, // 7-day weak axis training
   coachCoplayBest:0, // best frenzy with co-play
+  // v0.52 Coach AI finishers
+  coachReplyMemory:[], // user-msg snippets Coach can reference later
+  coachVoiceInputUsed:0, // count of voice input messages
+  coachDailyPhotoLast:'', // YYYY-MM-DD of last photo claimed
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -2991,7 +2995,16 @@ const ACHIEVEMENTS = [
 // ====================================================================
 // 🌐 v0.40 · i18n MODULE · EN / ES
 // ====================================================================
+// v0.52 · Lang module deprecated · always English now · stub keeps API alive
 const Lang = {
+  current(){ return 'en'; },
+  autoDetect(){},
+  set(){},
+  t(en){ return en; },
+  s(key){ return ({WELCOME:'welcome',SHOP:'SHOP',STATS:'STATS',ACH:'ACH',PASS:'PASS',HOF:'HOF',FRIENDS:'FRIENDS',FRENZY:'FRENZY',RULES:'RULES',WIN:'WIN',TIMER:'TIMER',REWARD:'REWARD',WINS:'WINS',PLAYS:'PLAYS',START:'START',BACK:'back',PLAY:'play',RETRY:'retry',NEXT:'next',DAILY:'DAILY',WEEKLY:'WEEKLY',ALL_TIME:'ALL TIME',NEW_HIGH:'new high!',GOOD_JOB:'good job',CHALLENGE:'challenge',SEND:'send',DUEL:'duel'})[key] || key; },
+  verseBilingual(refEn, textEn){ return `<div style="font-style:italic">"${textEn}"</div><div class="dim" style="font-size:10px;margin-top:4px">${refEn}</div>`; }
+};
+const _LangDeleted = { // v0.52 · kept for ref but unused
   STRINGS: {
     en: {
       WELCOME:'welcome', SHOP:'SHOP', STATS:'STATS', ACH:'ACH', PASS:'PASS', HOF:'HOF', FRIENDS:'FRIENDS', FRENZY:'FRENZY',
@@ -5657,7 +5670,16 @@ const CoachAI = {
     if(!userText || !userText.trim()) return;
     State.data.coachChat = State.data.coachChat || [];
     State.data.coachChat.push({ts:Date.now(), from:'me', text:userText.trim()});
-    const reply = this.reply(userText);
+    // v0.52 · remember interesting snippets
+    try{ CoachMemory.remember(userText); }catch(e){}
+    let reply = this.reply(userText);
+    // v0.52 · 25% chance · prepend a callback to memory
+    if(Math.random() < 0.25){
+      const mem = CoachMemory.recall();
+      if(mem){
+        reply = `you said earlier · "${mem.snip}" · ${reply}`;
+      }
+    }
     State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
     if(State.data.coachChat.length>200) State.data.coachChat = State.data.coachChat.slice(-200);
     Save.write();
@@ -5692,9 +5714,12 @@ const CoachAI = {
     html += `</div>`;
     html += `<div style="display:flex;gap:6px;margin-top:14px">
       <input id="chat-input" placeholder="say anything..." style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:10px 14px;color:#fff;font-size:13px" onkeydown="if(event.key==='Enter'){App.sendCoachMsg()}">
-      <button class="btn-primary" style="padding:10px 14px" onclick="App.sendCoachMsg()">▶ send</button>
-    </div>
-    <div class="dim" style="font-size:10px;text-align:center;margin-top:6px">${name}'s replies stitch from 200+ fragments · varies each time</div>`;
+      <button class="btn-primary" style="padding:10px 14px;width:auto" onclick="App.sendCoachMsg()">▶</button>
+      <button class="btn-secondary" style="padding:10px 12px;width:auto" onclick="CoachListen.toggle()" title="voice input">🎙️</button>
+    </div>`;
+    // v0.52 · quick-reactions bar
+    html += CoachQuickReact.renderBar();
+    html += `<div class="dim" style="font-size:10px;text-align:center;margin-top:6px">${name}'s replies stitch from 200+ fragments · adapts · references your past chats</div>`;
     return html;
   }
 };
@@ -5960,6 +5985,661 @@ const CoachPlan = {
     }
     return html;
   }
+};
+
+// ====================================================================
+// 🧬 v0.52 · COACH MEMORY · Coach references your past chat messages
+// ====================================================================
+const CoachMemory = {
+  remember(text){
+    if(!text || text.length<8) return;
+    State.data.coachReplyMemory = State.data.coachReplyMemory || [];
+    // store interesting snippets · sentences containing names/feelings/games
+    const interesting = /\b(love|hate|lost|won|sad|happy|tired|stuck|gold|best|family|jesus|pray|tired)\b/i.test(text);
+    if(!interesting) return;
+    State.data.coachReplyMemory.unshift({ts:Date.now(), snip:text.slice(0,80)});
+    if(State.data.coachReplyMemory.length>20) State.data.coachReplyMemory = State.data.coachReplyMemory.slice(0,20);
+    Save.write();
+  },
+  recall(){
+    const mems = State.data.coachReplyMemory || [];
+    if(!mems.length) return null;
+    return mems[Math.floor(Math.random()*Math.min(5, mems.length))];
+  }
+};
+
+// ====================================================================
+// 🎙️ v0.52 · COACH VOICE INPUT · talk to Coach via mic
+// ====================================================================
+const CoachListen = {
+  _recog:null, _active:false,
+  available(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); },
+  toggle(){
+    if(this._active){ this.stop(); }
+    else { this.start(); }
+  },
+  start(){
+    if(!this.available()){ Toast.show('🎙️ voice not supported on this browser'); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this._recog = new SR();
+    this._recog.continuous = false;
+    this._recog.lang = 'en-US';
+    this._recog.interimResults = false;
+    this._recog.onresult = (e)=>{
+      const text = e.results[0][0].transcript;
+      State.data.coachVoiceInputUsed = (State.data.coachVoiceInputUsed||0)+1;
+      Save.write();
+      Toast.show(`🎙️ heard: "${text}"`);
+      CoachAI.send(text);
+      this._active = false;
+      App.openCoachChat();
+    };
+    this._recog.onerror = ()=>{ this._active=false; Toast.show('🎙️ retry'); };
+    this._recog.onend = ()=>{ this._active=false; };
+    try{ this._recog.start(); this._active=true; Toast.show('🎙️ listening...'); }catch(e){ Toast.show('🎙️ error'); }
+  },
+  stop(){
+    this._active=false;
+    if(this._recog){ try{this._recog.stop();}catch(e){} }
+  }
+};
+
+// ====================================================================
+// 📸 v0.52 · COACH DAILY PHOTO · stats snapshot as image
+// ====================================================================
+const CoachPhoto = {
+  todayKey(){
+    const d=new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  },
+  canClaim(){ return State.data.coachDailyPhotoLast !== this.todayKey(); },
+  generate(){
+    const b = Coach.brain();
+    const t = Coach.tier();
+    const name = State.data.coachName || 'Bud';
+    const userName = State.data.name || 'saint';
+    const skin = CoachSkin.current();
+    const fuseEm = skin?.em || State.data.coachFusion?.em || t.em;
+    // SVG-as-image
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" style="font-family:'Cinzel',serif">
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${t.color}"/><stop offset="1" stop-color="#1a1a1a"/></linearGradient></defs>
+      <rect width="320" height="200" fill="url(#g1)"/>
+      <text x="160" y="48" font-size="38" text-anchor="middle">${fuseEm}</text>
+      <text x="160" y="80" font-size="14" fill="#fff" text-anchor="middle" font-weight="bold">${name} · IQ ${Coach.iq()}</text>
+      <text x="160" y="100" font-size="11" fill="#fff" text-anchor="middle" opacity="0.85">w/ ${userName} · ${t.name}</text>
+      <text x="160" y="130" font-size="10" fill="#FBBF24" text-anchor="middle">🪙 ${State.data.wallet.coin} · 💎 ${State.data.wallet.gem} · 🧠 ${State.data.wallet.brain}</text>
+      <text x="160" y="148" font-size="10" fill="#fff" text-anchor="middle" opacity="0.75">${b?.totalPlays||0} games · ${Math.round((b?.recentWinRate||0)*100)}% win rate</text>
+      <text x="160" y="180" font-size="9" fill="#fff" text-anchor="middle" opacity="0.5">BrainBoard · ${this.todayKey()}</text>
+    </svg>`;
+    return svg;
+  },
+  claim(){
+    if(!this.canClaim()){ Toast.show('📸 next photo tomorrow'); return; }
+    State.data.coachDailyPhotoLast = this.todayKey();
+    Wallet.add({coin:30, faith:1});
+    Save.write();
+    const svg = this.generate();
+    const dataUrl = 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:32px">📸</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">DAILY SNAPSHOT</h3>
+      <img src="${dataUrl}" style="max-width:100%;border-radius:10px;margin:10px 0"/>
+      <p class="dim" style="font-size:11px">+30🪙 +1✝️ · long-press image to save</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+    </div>`);
+  }
+};
+
+// ====================================================================
+// 🎨 v0.52 · COACH MURAL · all owned skins displayed as wall
+// ====================================================================
+const CoachMural = {
+  renderHub(){
+    const owned = State.data.coachSkinsOwned || ['default'];
+    const t = Coach.tier();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">🎨</div>
+      <b style="color:var(--gold-bright);font-size:16px">Coach Mural</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">${owned.length} skins · your wall of Coaches</div>
+    </div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px">`;
+    CoachSkin.SKINS.forEach(s=>{
+      const own = owned.includes(s.id);
+      if(!own){
+        html += `<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px;text-align:center;opacity:.25">
+          <div style="font-size:32px">❔</div>
+          <div style="font-size:9px">locked</div>
+        </div>`;
+      } else {
+        html += `<div style="background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33);border-radius:10px;padding:14px;text-align:center;border:1px solid ${t.color}66">
+          <div style="font-size:32px">${s.em||t.em}</div>
+          <div style="font-size:9px">${s.name}</div>
+        </div>`;
+      }
+    });
+    // also tier emoji
+    html += `</div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">🧬 ALL TIERS UNLOCKED</h3>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">`;
+    const myTierIdx = Coach.tier().idx;
+    Coach.TIERS.forEach((tier,i)=>{
+      const reached = i<=myTierIdx;
+      html += `<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center;${reached?'':'opacity:.3'}">
+        <div style="font-size:28px;${reached?'':'filter:grayscale(1)'}">${reached?tier.em:'❔'}</div>
+        <div style="font-size:9px;color:${tier.color}">${tier.name}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🤝 v0.52 · COACH ASSIST · hint power-up gifted on demand
+// ====================================================================
+const CoachAssist = {
+  used:0,
+  give(){
+    const name = State.data.coachName || 'Bud';
+    const cooldownMs = 5 * 60 * 1000; // 5 min
+    const last = State.data._coachAssistLast || 0;
+    if(Date.now() - last < cooldownMs){
+      const wait = Math.ceil((cooldownMs - (Date.now()-last))/60000);
+      Toast.show(`🤝 ${name} resting · ${wait}min`); return;
+    }
+    State.data._coachAssistLast = Date.now();
+    State.data.powerups = State.data.powerups || {};
+    State.data.powerups.hint = (State.data.powerups.hint||0) + 1;
+    Save.write();
+    Toast.show(`🤝 ${name} gifted you a 💡 hint!`);
+  }
+};
+
+// ====================================================================
+// 📞 v0.52 · COACH QUICK-REACTIONS · preset emoji chat buttons
+// ====================================================================
+const CoachQuickReact = {
+  PRESETS: [
+    {em:'👋',text:'hey'},
+    {em:'🙏',text:'pray for me'},
+    {em:'🤔',text:'tip?'},
+    {em:'🔥',text:'I won!'},
+    {em:'😅',text:'I lost lol'},
+    {em:'🎯',text:'goal idea?'},
+    {em:'💬',text:'tell me a joke'},
+    {em:'📖',text:'scripture please'},
+  ],
+  renderBar(){
+    return `<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+      ${this.PRESETS.map(p=>`<button style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:6px 10px;color:inherit;cursor:pointer;font-size:11px" onclick="App.sendQuickReact('${p.text.replace(/'/g,'\\\'')}')">${p.em} ${p.text}</button>`).join('')}
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 🆕 v0.52 · NEW GAMES · TicTacToe · 2048 · Snake · MemoryPairs · WordSearch · Reversi
+// ====================================================================
+
+// ⭕ TIC-TAC-TOE · vs CPU
+const TicTacToeGame = {
+  start(){
+    State.gameInst=this;
+    this.board = Array(9).fill('');
+    this.turn = 'X'; // player
+    this.done = false;
+    this.render();
+    UI.show('game');
+  },
+  pick(i){
+    if(this.done || this.board[i]) return;
+    this.board[i] = 'X';
+    if(this._check('X')){ this._end(true); return; }
+    if(this.board.every(c=>c)){ this._end(null); return; }
+    // CPU move
+    setTimeout(()=>{ this._cpuMove(); },350);
+    this.render();
+  },
+  _cpuMove(){
+    if(this.done) return;
+    // simple AI: win > block > center > corner > random
+    const o=['',''], lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    const findMove=(sym)=>{
+      for(const L of lines){
+        const v=L.map(i=>this.board[i]);
+        if(v.filter(x=>x===sym).length===2 && v.includes('')){
+          return L[v.indexOf('')];
+        }
+      }
+      return -1;
+    };
+    let m=findMove('O'); if(m<0) m=findMove('X');
+    if(m<0 && !this.board[4]) m=4;
+    if(m<0) m=[0,2,6,8].find(i=>!this.board[i]) ?? -1;
+    if(m<0) m=this.board.findIndex(c=>!c);
+    if(m<0) return;
+    this.board[m]='O';
+    if(this._check('O')){ this._end(false); return; }
+    if(this.board.every(c=>c)){ this._end(null); return; }
+    this.render();
+  },
+  _check(s){
+    const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return L.some(l=>l.every(i=>this.board[i]===s));
+  },
+  _end(won){
+    this.done=true;
+    const reward = won===true?{coin:50, brain:2}:won===false?{coin:10}:{coin:25};
+    recordResult('logic','tictactoe', won===true, reward);
+    if(won===true) Modal.win({rewards:reward,title:'X marks the win!',emoji:'⭕',retry:()=>TicTacToeGame.start(),lobby:()=>App.toLobby()});
+    else if(won===false) Modal.lose({title:'CPU got u',msg:'rematch?',retry:()=>TicTacToeGame.start(),lobby:()=>App.toLobby()});
+    else Modal.show(`<div style="text-align:center"><div class="big">🤝</div><h3>tie game</h3><button class="btn-primary" onclick="Modal.close();TicTacToeGame.start()">↻ retry</button> <button class="btn-secondary" onclick="Modal.close();App.toLobby()">🚪 lobby</button></div>`);
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>⭕ Tic-Tac-Toe</b> · you=X · CPU=O`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    const grid=el('div',''); grid.style.cssText='display:grid;grid-template-columns:repeat(3,72px);gap:6px;margin:14px 0';
+    for(let i=0;i<9;i++){
+      const c=el('div',''); c.style.cssText='aspect-ratio:1;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);border-radius:10px;display:grid;place-items:center;font-size:38px;font-weight:900;cursor:pointer;color:'+(this.board[i]==='X'?'#FBBF24':this.board[i]==='O'?'#A78BFA':'transparent');
+      c.textContent=this.board[i]||'·';
+      c.onclick=()=>this.pick(i);
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// 🔢 2048 MINI (4x4 simplified)
+const G2048 = {
+  start(){
+    State.gameInst=this;
+    this.b = Array(16).fill(0);
+    this._spawn(); this._spawn();
+    this.score=0;
+    this.render();
+    UI.show('game');
+  },
+  _spawn(){
+    const empty = this.b.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
+    if(!empty.length) return;
+    this.b[empty[Math.floor(Math.random()*empty.length)]] = Math.random()<0.9?2:4;
+  },
+  move(dir){
+    const moves=[];
+    const idx=(r,c)=>r*4+c;
+    const slide=(line)=>{
+      let arr=line.filter(v=>v); let merged=[];
+      for(let i=0;i<arr.length;i++){
+        if(i+1<arr.length && arr[i]===arr[i+1]){ merged.push(arr[i]*2); this.score+=arr[i]*2; i++; }
+        else merged.push(arr[i]);
+      }
+      while(merged.length<4) merged.push(0);
+      return merged;
+    };
+    const newB=Array(16).fill(0);
+    for(let r=0;r<4;r++){
+      let line=[];
+      for(let c=0;c<4;c++) line.push(this.b[idx(r,c)]);
+      if(dir==='right') line=line.reverse();
+      const s=slide(line);
+      if(dir==='right') s.reverse();
+      for(let c=0;c<4;c++) newB[idx(r,c)]=s[c];
+    }
+    // handle up/down by transposing
+    if(dir==='up'||dir==='down'){
+      const t=Array(16).fill(0);
+      for(let r=0;r<4;r++) for(let c=0;c<4;c++) t[idx(c,r)]=this.b[idx(r,c)];
+      this.b=t;
+      const tn=Array(16).fill(0);
+      for(let r=0;r<4;r++){
+        let line=[]; for(let c=0;c<4;c++) line.push(this.b[idx(r,c)]);
+        if(dir==='down') line=line.reverse();
+        const s=slide(line);
+        if(dir==='down') s.reverse();
+        for(let c=0;c<4;c++) tn[idx(r,c)]=s[c];
+      }
+      this.b=tn;
+      const back=Array(16).fill(0);
+      for(let r=0;r<4;r++) for(let c=0;c<4;c++) back[idx(c,r)]=this.b[idx(r,c)];
+      this.b=back;
+    } else this.b = newB;
+    this._spawn();
+    if(this.b.includes(2048)){ this._end(true); return; }
+    if(!this._canMove()){ this._end(false); return; }
+    this.render();
+  },
+  _canMove(){
+    if(this.b.includes(0)) return true;
+    for(let i=0;i<16;i++){
+      const r=Math.floor(i/4), c=i%4;
+      if(c<3 && this.b[i]===this.b[i+1]) return true;
+      if(r<3 && this.b[i]===this.b[i+4]) return true;
+    }
+    return false;
+  },
+  _end(won){
+    const reward = won?{coin:200, brain:5, gem:1}:{coin:Math.max(20,Math.floor(this.score/10)), brain:1};
+    recordResult('num','2048',won,reward);
+    if(won) Modal.win({rewards:reward,title:`2048 reached! score ${this.score}`,emoji:'🔢',retry:()=>G2048.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`stuck at ${this.score}`,msg:'merge more · retry?',retry:()=>G2048.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🔢 2048</b> · score: <b>${this.score}</b> · reach 2048 to win`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    const grid=el('div',''); grid.style.cssText='display:grid;grid-template-columns:repeat(4,60px);gap:5px;margin:14px 0';
+    const colors={0:'rgba(255,255,255,.05)',2:'#FBE9C7',4:'#FCD590',8:'#F59E0B',16:'#F87171',32:'#EF4444',64:'#DC2626',128:'#FBBF24',256:'#A78BFA',512:'#7C3AED',1024:'#10B981',2048:'#FFD700'};
+    for(let i=0;i<16;i++){
+      const v=this.b[i];
+      const c=el('div',''); c.style.cssText=`aspect-ratio:1;background:${colors[v]||'#7C3AED'};border-radius:8px;display:grid;place-items:center;font-weight:900;color:${v>=128?'#fff':'#1a1a1a'};font-size:${v>=1024?'14px':v>=128?'16px':'18px'}`;
+      c.textContent=v||'';
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    const btns=el('div',''); btns.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;max-width:240px';
+    btns.innerHTML=`<div></div><button class="stroop-btn" onclick="G2048.move('up')">↑</button><div></div>
+      <button class="stroop-btn" onclick="G2048.move('left')">←</button><button class="stroop-btn" onclick="G2048.move('down')">↓</button><button class="stroop-btn" onclick="G2048.move('right')">→</button>`;
+    wrap.appendChild(btns);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// 🐍 SNAKE
+const SnakeGame = {
+  start(){
+    State.gameInst=this;
+    this.size=10;
+    this.snake=[{x:5,y:5}];
+    this.dir={x:1,y:0};
+    this.food={x:3,y:3};
+    this.score=0; this.done=false;
+    this.tick=setInterval(()=>this._step(), 220);
+    this.render();
+    UI.show('game');
+  },
+  setDir(dx,dy){
+    // prevent reversing
+    if(dx===-this.dir.x && dy===-this.dir.y) return;
+    this.dir={x:dx,y:dy};
+  },
+  _step(){
+    if(this.done) return;
+    const head=this.snake[0];
+    const nx={x:head.x+this.dir.x, y:head.y+this.dir.y};
+    if(nx.x<0||nx.x>=this.size||nx.y<0||nx.y>=this.size){ this._end(); return; }
+    if(this.snake.some(s=>s.x===nx.x&&s.y===nx.y)){ this._end(); return; }
+    this.snake.unshift(nx);
+    if(nx.x===this.food.x && nx.y===this.food.y){
+      this.score++;
+      do{ this.food={x:Math.floor(Math.random()*this.size), y:Math.floor(Math.random()*this.size)}; }
+      while(this.snake.some(s=>s.x===this.food.x&&s.y===this.food.y));
+    } else { this.snake.pop(); }
+    this.render();
+  },
+  _end(){
+    this.done=true;
+    clearInterval(this.tick);
+    const won=this.score>=10;
+    const reward = won?{coin:80+this.score*10, brain:4}:{coin:Math.max(15,this.score*5)};
+    recordResult('speed','snake',won,reward);
+    if(won) Modal.win({rewards:reward,title:`Snake ${this.score} apples!`,emoji:'🐍',retry:()=>SnakeGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score} apples`,msg:'reach 10 to win',retry:()=>SnakeGame.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🐍 Snake</b> · apples: <b>${this.score}</b> · reach 10`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    const grid=el('div',''); grid.style.cssText=`display:grid;grid-template-columns:repeat(${this.size},22px);gap:1px;margin:14px 0;background:rgba(0,0,0,.3);padding:6px;border-radius:8px`;
+    for(let y=0;y<this.size;y++)for(let x=0;x<this.size;x++){
+      const c=el('div',''); c.style.cssText='aspect-ratio:1;border-radius:3px';
+      const isHead=this.snake[0].x===x && this.snake[0].y===y;
+      const isBody=this.snake.some(s=>s.x===x&&s.y===y);
+      const isFood=this.food.x===x && this.food.y===y;
+      c.style.background = isHead?'#FBBF24':isBody?'#10B981':isFood?'#EF4444':'rgba(255,255,255,.05)';
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    const btns=el('div',''); btns.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;max-width:240px';
+    btns.innerHTML=`<div></div><button class="stroop-btn" onclick="SnakeGame.setDir(0,-1)">↑</button><div></div>
+      <button class="stroop-btn" onclick="SnakeGame.setDir(-1,0)">←</button><button class="stroop-btn" onclick="SnakeGame.setDir(0,1)">↓</button><button class="stroop-btn" onclick="SnakeGame.setDir(1,0)">→</button>`;
+    wrap.appendChild(btns);
+    area.appendChild(wrap);
+  },
+  cleanup(){if(this.tick)clearInterval(this.tick);}
+};
+
+// 🃏 MEMORY PAIRS · 4x3 grid
+const MemoryPairsGame = {
+  start(){
+    State.gameInst=this;
+    const ems=['🦁','🐑','🕊️','🦅','⭐','✝️'];
+    this.cards = [...ems, ...ems].sort(()=>Math.random()-.5).map((em,i)=>({em, flipped:false, matched:false, idx:i}));
+    this.flipped=[]; this.moves=0; this.done=false;
+    this.render();
+    UI.show('game');
+  },
+  flip(i){
+    if(this.done) return;
+    const c=this.cards[i];
+    if(c.flipped || c.matched) return;
+    if(this.flipped.length>=2) return;
+    c.flipped=true;
+    this.flipped.push(i);
+    this.render();
+    if(this.flipped.length===2){
+      this.moves++;
+      const [a,b]=this.flipped;
+      if(this.cards[a].em===this.cards[b].em){
+        this.cards[a].matched=true; this.cards[b].matched=true;
+        this.flipped=[];
+        if(this.cards.every(c=>c.matched)) setTimeout(()=>this._end(), 400);
+      } else {
+        setTimeout(()=>{
+          this.cards[a].flipped=false; this.cards[b].flipped=false;
+          this.flipped=[];
+          this.render();
+        }, 800);
+      }
+    }
+  },
+  _end(){
+    this.done=true;
+    const won = this.moves<=10;
+    const reward = won?{coin:80+(11-this.moves)*10, brain:4}:{coin:30, brain:1};
+    recordResult('brain','pairs',won,reward);
+    if(won) Modal.win({rewards:reward,title:`paired in ${this.moves} moves!`,emoji:'🃏',retry:()=>MemoryPairsGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.moves} moves`,msg:'sub-10 wins',retry:()=>MemoryPairsGame.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🃏 Memory Pairs</b> · moves: <b>${this.moves}</b> · sub-10 wins`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    const grid=el('div',''); grid.style.cssText='display:grid;grid-template-columns:repeat(4,64px);gap:6px;margin:14px 0';
+    this.cards.forEach((c,i)=>{
+      const card=el('div',''); card.style.cssText='aspect-ratio:1;border-radius:10px;display:grid;place-items:center;font-size:32px;cursor:pointer;'+(c.matched?'background:rgba(16,185,129,.3);border:2px solid #10B981':c.flipped?'background:rgba(245,158,11,.25);border:2px solid #FBBF24':'background:rgba(124,58,237,.25);border:2px solid #7C3AED');
+      card.textContent = c.flipped||c.matched?c.em:'?';
+      card.onclick=()=>this.flip(i);
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// 🔤 WORD SEARCH MINI
+const WordSearchGame = {
+  WORDS:['FAITH','HOPE','LOVE','PRAY','LION','LAMB','JOY','PEACE','GRACE'],
+  start(){
+    State.gameInst=this;
+    this.size=8;
+    this.targets = [...this.WORDS].sort(()=>Math.random()-.5).slice(0,3);
+    this.grid = this._buildGrid();
+    this.found=[]; this.selected=[];
+    this.render();
+    UI.show('game');
+  },
+  _buildGrid(){
+    const g=Array(this.size*this.size).fill('');
+    const place=(word)=>{
+      const dirs=[[1,0],[0,1],[1,1]];
+      for(let tries=0;tries<50;tries++){
+        const [dx,dy]=dirs[Math.floor(Math.random()*dirs.length)];
+        const sx=Math.floor(Math.random()*this.size);
+        const sy=Math.floor(Math.random()*this.size);
+        if(sx+dx*(word.length-1)>=this.size || sy+dy*(word.length-1)>=this.size) continue;
+        let ok=true;
+        for(let i=0;i<word.length;i++){
+          const x=sx+dx*i, y=sy+dy*i;
+          const ex=g[y*this.size+x];
+          if(ex && ex!==word[i]){ ok=false; break; }
+        }
+        if(!ok) continue;
+        for(let i=0;i<word.length;i++){
+          const x=sx+dx*i, y=sy+dy*i;
+          g[y*this.size+x]=word[i];
+        }
+        return true;
+      }
+      return false;
+    };
+    this.targets.forEach(w=>place(w));
+    // fill blanks
+    const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for(let i=0;i<g.length;i++) if(!g[i]) g[i]=letters[Math.floor(Math.random()*letters.length)];
+    return g;
+  },
+  pick(i){
+    if(this.found.length===this.targets.length) return;
+    const idx=this.selected.indexOf(i);
+    if(idx>=0){ this.selected.splice(idx,1); }
+    else { this.selected.push(i); }
+    // check selection forms a target word
+    if(this.selected.length>=3){
+      const text = this.selected.map(s=>this.grid[s]).join('');
+      const match = this.targets.find(w=>!this.found.includes(w) && (w===text || w===text.split('').reverse().join('')));
+      if(match){
+        this.found.push(match);
+        Toast.show(`✓ ${match}!`);
+        this.selected=[];
+        if(this.found.length===this.targets.length) setTimeout(()=>this._end(), 600);
+      }
+    }
+    this.render();
+  },
+  _end(){
+    const reward = {coin:100, brain:3, faith:2};
+    recordResult('word','wordsearch',true,reward);
+    Modal.win({rewards:reward,title:`all ${this.targets.length} found!`,emoji:'🔤',retry:()=>WordSearchGame.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🔤 Word Search</b> · found: <b>${this.found.length}/${this.targets.length}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    const hints=el('div','dim','find: '+this.targets.map(w=>this.found.includes(w)?`<s>${w}</s>`:w).join(' · ')); hints.style.fontSize='12px';
+    wrap.appendChild(hints);
+    const grid=el('div',''); grid.style.cssText=`display:grid;grid-template-columns:repeat(${this.size},32px);gap:2px;margin:14px 0`;
+    for(let i=0;i<this.grid.length;i++){
+      const c=el('div',this.grid[i]);
+      const isSel=this.selected.includes(i);
+      c.style.cssText=`aspect-ratio:1;border-radius:4px;display:grid;place-items:center;font-weight:700;font-size:14px;cursor:pointer;${isSel?'background:#FBBF24;color:#0a0a0a':'background:rgba(255,255,255,.06);color:#fff'}`;
+      c.onclick=()=>this.pick(i);
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// ⚫⚪ REVERSI MINI (6x6)
+const ReversiGame = {
+  start(){
+    State.gameInst=this;
+    this.size=6;
+    this.b = Array(this.size*this.size).fill(0); // 0 empty, 1 black (you), 2 white (cpu)
+    const m=this.size/2;
+    this.b[(m-1)*this.size+(m-1)]=2;
+    this.b[(m-1)*this.size+m]=1;
+    this.b[m*this.size+(m-1)]=1;
+    this.b[m*this.size+m]=2;
+    this.turn=1;
+    this.render();
+    UI.show('game');
+  },
+  _dirs(){return [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];},
+  _flips(idx, p){
+    const x=idx%this.size, y=Math.floor(idx/this.size);
+    const op=p===1?2:1;
+    const flips=[];
+    for(const [dx,dy] of this._dirs()){
+      let cx=x+dx, cy=y+dy;
+      const line=[];
+      while(cx>=0&&cx<this.size&&cy>=0&&cy<this.size){
+        const i=cy*this.size+cx;
+        if(this.b[i]===op){ line.push(i); cx+=dx; cy+=dy; continue; }
+        if(this.b[i]===p && line.length){ flips.push(...line); }
+        break;
+      }
+    }
+    return flips;
+  },
+  pick(idx){
+    if(this.turn!==1 || this.b[idx]!==0) return;
+    const fl=this._flips(idx,1);
+    if(!fl.length){ Toast.show('invalid move'); return; }
+    this.b[idx]=1; fl.forEach(i=>this.b[i]=1);
+    this.turn=2;
+    this.render();
+    setTimeout(()=>this._cpu(),500);
+  },
+  _cpu(){
+    let best=null, bestCount=-1;
+    for(let i=0;i<this.b.length;i++){
+      if(this.b[i]!==0) continue;
+      const fl=this._flips(i,2);
+      if(fl.length>bestCount){bestCount=fl.length;best=i;}
+    }
+    if(best!==null){
+      const fl=this._flips(best,2);
+      this.b[best]=2; fl.forEach(i=>this.b[i]=2);
+    }
+    this.turn=1;
+    // check end
+    if(!this.b.includes(0) || !this._anyLegal(1)){ this._end(); return; }
+    this.render();
+  },
+  _anyLegal(p){
+    for(let i=0;i<this.b.length;i++) if(this.b[i]===0 && this._flips(i,p).length) return true;
+    return false;
+  },
+  _end(){
+    const bk=this.b.filter(v=>v===1).length;
+    const wh=this.b.filter(v=>v===2).length;
+    const won=bk>wh;
+    const reward = won?{coin:120, brain:5, gem:1}:{coin:30, brain:1};
+    recordResult('logic','reversi',won,reward);
+    if(won) Modal.win({rewards:reward,title:`${bk}-${wh} · WIN`,emoji:'⚫',retry:()=>ReversiGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${bk}-${wh} · CPU won`,msg:'rematch?',retry:()=>ReversiGame.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>⚫⚪ Reversi</b> · ${this.turn===1?'your turn (⚫)':'CPU thinking...'}`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    const grid=el('div',''); grid.style.cssText=`display:grid;grid-template-columns:repeat(${this.size},44px);gap:2px;margin:14px 0;background:#064E3B;padding:6px;border-radius:8px`;
+    for(let i=0;i<this.b.length;i++){
+      const c=el('div',''); c.style.cssText='aspect-ratio:1;background:#10B981;border-radius:4px;display:grid;place-items:center;font-size:28px;cursor:pointer';
+      c.textContent = this.b[i]===1?'⚫':this.b[i]===2?'⚪':'';
+      c.onclick=()=>this.pick(i);
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  cleanup(){}
 };
 
 // ====================================================================
@@ -6791,6 +7471,7 @@ const ROOMS = {
     {id:'antonym',em:'🔄',name:'Antonym Sprint',sub:'pick the opposite · 45s · 10 rounds',launch:()=>AntonymGame.start()},
     {id:'spelling',em:'🐝',name:'Spelling Bee',sub:'pick correct spelling · 45 sec',launch:()=>SpellingGame.start()},
     {id:'wordquiz',em:'📚',name:'Word Quiz',sub:'mixed grammar + vocab · 60 sec',launch:()=>NewWordQuizGame.start()},
+    {id:'wordsearch',em:'🔤',name:'Word Search',sub:'find 3 hidden words in the grid',launch:()=>WordSearchGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
@@ -6802,6 +7483,7 @@ const ROOMS = {
     {id:'cardsort',em:'🃏',name:'Card Sort',sub:'sort 4 numbers ascending · 8 rounds',launch:()=>CardSortGame.start()},
     {id:'audio',em:'🎵',name:'Audio Memory',sub:'memorize note sequence · recall by index',launch:()=>NewAudioMemoryGame.start()},
     {id:'wordrecall',em:'📝',name:'Word Recall',sub:'memorize 4 words · recall by position',launch:()=>NewWordRecallGame.start()},
+    {id:'pairs',em:'🃏',name:'Memory Pairs',sub:'match 6 pairs in ≤10 moves',launch:()=>MemoryPairsGame.start()},
   ]},
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
@@ -6823,6 +7505,7 @@ const ROOMS = {
     {id:'equation',em:'🔣',name:'Equation Solve',sub:'solve for x · 10 rounds · 60 sec',launch:()=>NewEquationGame.start()},
     {id:'decimal',em:'🔢',name:'Decimal Match',sub:'decimal → fraction · 60 sec',launch:()=>NewDecimalGame.start()},
     {id:'calcrace',em:'⚡',name:'Calc Race',sub:'rapid mental math · 12 Qs · 45 sec',launch:()=>NewCalcRaceGame.start()},
+    {id:'2048',em:'🔢',name:'2048',sub:'merge tiles · reach 2048 · 4x4 grid',launch:()=>G2048.start()},
   ]},
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
@@ -6844,6 +7527,8 @@ const ROOMS = {
     {id:'dropfour',em:'🟡',name:'Drop Four',sub:'connect 4 in a row · vs CPU · 7x6 grid',launch:()=>DropFourGame.start()},
     {id:'dotsboxes',em:'📦',name:'Dots & Boxes',sub:'3×3 grid · capture more boxes than CPU',launch:()=>DotsBoxesGame.start()},
     {id:'lights4',em:'💡',name:'Lights 4×4',sub:'turn off all 16 lights · clear in ≤15 moves',launch:()=>NewLights4Game.start()},
+    {id:'tictactoe',em:'⭕',name:'Tic-Tac-Toe',sub:'classic 3×3 · vs smart CPU',launch:()=>TicTacToeGame.start()},
+    {id:'reversi',em:'⚫⚪',name:'Reversi Mini',sub:'flip opponent · 6×6 board · vs CPU',launch:()=>ReversiGame.start()},
   ]},
   speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
@@ -6856,6 +7541,7 @@ const ROOMS = {
     {id:'cuppong',em:'🥤',name:'Cup Pong',sub:'sink 4+ of 6 cups · 10 shots',launch:()=>CupPongGame.start()},
     {id:'darts',em:'🎯',name:'Darts',sub:'aim crosshair · 8 throws · 120+ wins',launch:()=>DartsGame.start()},
     {id:'minigolf',em:'⛳',name:'Mini Golf',sub:'angle + power · sink in par or less',launch:()=>MiniGolfGame.start()},
+    {id:'snake',em:'🐍',name:'Snake',sub:'eat 10 apples · don\'t hit walls',launch:()=>SnakeGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -8097,12 +8783,6 @@ const App = {
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           ${Object.entries(APP_THEMES).map(([id,t])=>`<button class="av-tool-btn ${(d.appTheme||'cobalt')===id?'active':''}" onclick="App.setAppTheme('${id}')">${t.name}</button>`).join('')}
         </div>
-        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🌐 ${Lang.t('LANGUAGE','IDIOMA')}</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <button class="av-tool-btn ${Lang.current()==='en'?'active':''}" onclick="App.setLang('en')">🇺🇸 ENGLISH</button>
-          <button class="av-tool-btn ${Lang.current()==='es'?'active':''}" onclick="App.setLang('es')">🇪🇸 ESPAÑOL</button>
-        </div>
-        <p class="dim" style="font-size:10px;margin-top:6px">${Lang.t('scripture stays English · UI labels translate','las escrituras quedan en inglés · etiquetas se traducen')}</p>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎬 CINEMATIC INTROS</h3>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           <button class="av-tool-btn ${(d.cinematicPref||'on')==='on'?'active':''}" onclick="App.setCinematicPref('on')">🎬 FULL</button>
@@ -8678,8 +9358,8 @@ const App = {
     Modal.close();
     Cinematic.show(d.roomId, game, ()=>game.launch());
   },
-  // v0.40 i18n picker
-  setLang(code){ Lang.set(code); App.openSettings(); },
+  // v0.52 lang removed · keep no-op for old saves
+  setLang(){ /* deprecated · v0.52 */ },
   // v0.40 LAYER 2 · DUEL vs CPU (no friend needed)
   duelQuickMatch(){
     const games = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
@@ -8753,6 +9433,9 @@ const App = {
         <button class="btn-secondary" style="padding:12px" onclick="App.openCoachPlan()">🎯 7-day plan</button>
         <button class="btn-secondary" style="padding:12px" onclick="App.startCoachCoplay()">🎮 co-play Frenzy</button>
         <button class="btn-secondary" style="padding:12px" onclick="App.replayCoachIntro()">🎬 replay intro</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachMural()">🎨 mural · ${(State.data.coachSkinsOwned||['default']).length} skins</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.claimCoachPhoto()">📸 daily photo${CoachPhoto.canClaim()?' · ready':''}</button>
+        <button class="btn-secondary" style="padding:12px;grid-column:span 2;background:linear-gradient(135deg,rgba(16,185,129,.25),rgba(245,158,11,.2));border-color:#10B981" onclick="App.coachAssist()">🤝 ask ${State.data.coachName||'Bud'} for a hint · 5-min cooldown</button>
       </div>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🌙 TONIGHT'S BEST</h3>
       ${CoachPredict.renderCard()}
@@ -9003,6 +9686,18 @@ const App = {
     UI.show('aux');
   },
   startCoachCoplay(){ CoachCoplay.start(); },
+  // v0.52 hubs
+  openCoachMural(){
+    document.getElementById('aux-title').innerHTML = '🎨 Mural';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachMural.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back</button></div>`;
+    UI.show('aux');
+  },
+  claimCoachPhoto(){ CoachPhoto.claim(); },
+  coachAssist(){ CoachAssist.give(); },
+  sendQuickReact(text){
+    CoachAI.send(text);
+    App.openCoachChat();
+  },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
