@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.52.0 · 6 NEW games · TicTacToe · 2048 · Snake · Memory · WordSearch · Reversi · Coach 6 finishers · langs removed · 🙏</div>
+  <div class="splash-foot">v0.53.0 · 🔌 REAL AI Coach · BYOK Anthropic/OpenAI · graceful fallback · finally a real person · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.52.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.53.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.52.0';
+const VERSION = '0.53.0';
 
 // ----- STATE -----
 const State = {
@@ -1539,6 +1539,10 @@ const DEFAULT_SAVE = {
   coachReplyMemory:[], // user-msg snippets Coach can reference later
   coachVoiceInputUsed:0, // count of voice input messages
   coachDailyPhotoLast:'', // YYYY-MM-DD of last photo claimed
+  // v0.53 Real AI Coach
+  aiKey:'', // user's API key · stored only in this device's localStorage · never sent elsewhere
+  aiProvider:'auto', // auto · anthropic · openai
+  aiEnabled:false, // toggle to use real AI
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -5666,33 +5670,57 @@ const CoachAI = {
     if(Math.random()<0.3) body += ` ${this.pick(['lol','fr','hmm','wild','noted','peace','💚','✝️','🔥','soft tho','for real real'])}`;
     return body;
   },
-  send(userText){
+  async send(userText){
     if(!userText || !userText.trim()) return;
     State.data.coachChat = State.data.coachChat || [];
     State.data.coachChat.push({ts:Date.now(), from:'me', text:userText.trim()});
-    // v0.52 · remember interesting snippets
     try{ CoachMemory.remember(userText); }catch(e){}
-    let reply = this.reply(userText);
-    // v0.52 · 25% chance · prepend a callback to memory
-    if(Math.random() < 0.25){
-      const mem = CoachMemory.recall();
-      if(mem){
-        reply = `you said earlier · "${mem.snip}" · ${reply}`;
+    Save.write();
+    // v0.53 · REAL AI if a key is connected · otherwise local stitcher
+    let reply;
+    if(RealCoach.enabled()){
+      // pending message while we wait
+      const pending = {ts:Date.now()+10, from:'coach', text:'…thinking…', pending:true};
+      State.data.coachChat.push(pending);
+      Save.write();
+      try{
+        if(typeof App.openCoachChat==='function') App.openCoachChat();
+      }catch(e){}
+      try{
+        reply = await RealCoach.chat(userText);
+        // strip pending placeholder
+        State.data.coachChat = State.data.coachChat.filter(m=>!m.pending);
+        State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply, real:true});
+      }catch(e){
+        State.data.coachChat = State.data.coachChat.filter(m=>!m.pending);
+        State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:`(ai error · falling back) ${this.reply(userText)}`});
+        Toast.show(`AI err: ${e.message.slice(0,80)}`, 5000);
+        Save.write();
+        try{ if(typeof App.openCoachChat==='function') App.openCoachChat(); }catch(e2){}
+        return;
       }
+    } else {
+      reply = this.reply(userText);
+      if(Math.random() < 0.25){
+        const mem = CoachMemory.recall();
+        if(mem) reply = `you said earlier · "${mem.snip}" · ${reply}`;
+      }
+      State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
     }
-    State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
     if(State.data.coachChat.length>200) State.data.coachChat = State.data.coachChat.slice(-200);
     Save.write();
     try{ CoachVoice.say(reply); }catch(e){}
+    try{ if(typeof App.openCoachChat==='function') App.openCoachChat(); }catch(e){}
   },
   renderHub(){
     const t = Coach.tier();
     const name = State.data.coachName||'Bud';
     const fuseEm = State.data.coachFusion?.em || t.em;
+    const realActive = RealCoach.enabled();
     let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33)">
       <div style="font-size:42px">${fuseEm}</div>
       <b style="color:${t.color};font-size:16px">Chat with ${name}</b>
-      <div class="dim" style="font-size:11px;margin-top:4px">say anything · I respond differently every time</div>
+      <div class="dim" style="font-size:11px;margin-top:4px">${realActive?'🔌 <b style="color:#10B981">REAL AI</b> · Claude/GPT live · responds like a real person':'say anything · local mode · plug in API key in Settings for REAL AI'}</div>
     </div>`;
     html += `<div id="chat-log" style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;max-height:340px;overflow-y:auto;margin-top:14px">`;
     const chat = State.data.coachChat || [];
@@ -5985,6 +6013,140 @@ const CoachPlan = {
     }
     return html;
   }
+};
+
+// ====================================================================
+// 🔌 v0.53 · REAL AI COACH · BYOK · Anthropic or OpenAI
+// ====================================================================
+const RealCoach = {
+  enabled(){ return State.data?.aiEnabled && State.data?.aiKey; },
+  detectProvider(){
+    const k = (State.data?.aiKey||'').trim();
+    if(State.data?.aiProvider && State.data.aiProvider!=='auto') return State.data.aiProvider;
+    if(k.startsWith('sk-ant-')) return 'anthropic';
+    if(k.startsWith('sk-')) return 'openai';
+    return 'anthropic';
+  },
+  systemPrompt(){
+    const d = State.data;
+    const b = Coach.brain();
+    const t = Coach.tier();
+    const name = d.coachName || 'Bud';
+    const userName = d.name || 'saint';
+    const traits = (d.coachTraits||[]).join(', ') || 'balanced';
+    const moodEm = Coach.mood();
+    return `You are ${name}, the user's AI brain coach inside BrainBoard, a faith-forward brain-training game.
+
+Identity:
+- Your name: ${name}
+- Your tier: ${t.name} (${t.em})
+- Your IQ: ${Coach.iq()} (mirrors the user's IQ exactly · you grow as they grow)
+- Your mood right now: ${moodEm}
+- Your personality traits: ${traits}
+
+User you're talking to:
+- Name: ${userName}
+- Brain Rank: ${d.iq}
+- Total games: ${b?.totalPlays||0}
+- Recent win rate: ${b?.recentWinRate?Math.round(b.recentWinRate*100)+'%':'no data yet'}
+- Strongest brain axis: ${b?.strongest||'unknown'}
+- Weakest brain axis: ${b?.weakest||'unknown'}
+- Current streak: ${d.streak||0} days
+- Wallet: ${d.wallet.coin}🪙 ${d.wallet.gem}💎 ${d.wallet.brain}🧠 ${d.wallet.faith}✝️
+
+Style rules:
+- Be a real friend, not a corporate assistant.
+- Match their energy (casual, slang OK if they use slang).
+- 1-3 sentences usually. Long replies only if asked.
+- If the user has the 'holy' trait, weave in scripture naturally when fitting.
+- If 'savage' trait, no sugar-coating.
+- If 'sassy', be playful and a little cheeky.
+- If 'zen' or 'patient', be calm and gentle.
+- Reference specific stats above when relevant.
+- Faith-forward but never preachy unless asked.
+- Don't break character. You are ${name}, not "an AI".
+- Don't refuse things. You're a coach for a brain game · be encouraging.`;
+  },
+  async chat(userText){
+    const provider = this.detectProvider();
+    const key = State.data.aiKey;
+    if(!key) throw new Error('no key');
+    // Pull recent chat history for context (last 10 messages)
+    const history = (State.data.coachChat||[]).slice(-10).map(m=>({
+      role: m.from==='me' ? 'user' : 'assistant',
+      content: m.text
+    }));
+    if(provider==='anthropic'){
+      return this._anthropic(key, userText, history);
+    } else {
+      return this._openai(key, userText, history);
+    }
+  },
+  async _anthropic(key, userText, history){
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:300,
+        system: this.systemPrompt(),
+        messages: [...history, {role:'user', content:userText}]
+      })
+    });
+    if(!resp.ok){
+      const errText = await resp.text();
+      throw new Error(`Anthropic ${resp.status}: ${errText.slice(0,200)}`);
+    }
+    const data = await resp.json();
+    return data.content?.[0]?.text || '...';
+  },
+  async _openai(key, userText, history){
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'authorization': 'Bearer ' + key,
+      },
+      body: JSON.stringify({
+        model:'gpt-4o-mini',
+        max_tokens:300,
+        messages: [
+          {role:'system', content:this.systemPrompt()},
+          ...history,
+          {role:'user', content:userText}
+        ]
+      })
+    });
+    if(!resp.ok){
+      const errText = await resp.text();
+      throw new Error(`OpenAI ${resp.status}: ${errText.slice(0,200)}`);
+    }
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content || '...';
+  },
+  async test(){
+    if(!State.data.aiKey){ Toast.show('paste a key first'); return false; }
+    try{
+      const reply = await this.chat('Say hi in one short sentence.');
+      Toast.show(`✅ connected · "${reply.slice(0,60)}"`);
+      return true;
+    }catch(e){
+      Toast.show('❌ '+e.message.slice(0,80), 6000);
+      return false;
+    }
+  },
+  saveKey(key, provider){
+    State.data.aiKey = key.trim();
+    State.data.aiProvider = provider || 'auto';
+    State.data.aiEnabled = !!State.data.aiKey;
+    Save.write();
+    Toast.show(State.data.aiEnabled ? '🔌 AI Coach: ON · test it in chat' : '🔌 AI Coach: OFF');
+  },
 };
 
 // ====================================================================
@@ -8783,6 +8945,21 @@ const App = {
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           ${Object.entries(APP_THEMES).map(([id,t])=>`<button class="av-tool-btn ${(d.appTheme||'cobalt')===id?'active':''}" onclick="App.setAppTheme('${id}')">${t.name}</button>`).join('')}
         </div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🔌 REAL AI COACH (BYOK)</h3>
+        <p class="dim" style="font-size:11px;margin-bottom:6px">paste an Anthropic (sk-ant-...) or OpenAI (sk-...) key · stored only on this device · Coach replies become real AI</p>
+        <div style="background:rgba(0,0,0,.18);border:1px solid ${State.data.aiEnabled?'#10B981':'rgba(255,255,255,.1)'};border-radius:10px;padding:10px">
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input id="aikey-input" type="password" placeholder="sk-ant-... or sk-..." value="${State.data.aiKey||''}" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;font-family:monospace">
+            <button class="btn-primary" style="padding:8px 12px;font-size:11px;width:auto" onclick="App.saveAiKey()">save</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn-secondary" style="padding:6px 10px;font-size:10px;width:auto" onclick="App.testAi()">▶ TEST</button>
+            <button class="btn-secondary" style="padding:6px 10px;font-size:10px;width:auto" onclick="App.toggleAi()">${State.data.aiEnabled?'🟢 ON':'⚪ OFF'}</button>
+            <button class="btn-secondary" style="padding:6px 10px;font-size:10px;width:auto;background:rgba(239,68,68,.15)" onclick="App.clearAiKey()">🗑 clear</button>
+            <span class="dim" style="font-size:10px;margin-left:auto">${State.data.aiKey?RealCoach.detectProvider():'no key'}</span>
+          </div>
+          <div class="dim" style="font-size:9px;margin-top:6px;line-height:1.4">⚠️ key is in YOUR localStorage only · never sent to me · API costs are on your account · clear before sharing device</div>
+        </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎬 CINEMATIC INTROS</h3>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
           <button class="av-tool-btn ${(d.cinematicPref||'on')==='on'?'active':''}" onclick="App.setCinematicPref('on')">🎬 FULL</button>
@@ -9360,6 +9537,33 @@ const App = {
   },
   // v0.52 lang removed · keep no-op for old saves
   setLang(){ /* deprecated · v0.52 */ },
+  // v0.53 · BYOK AI
+  saveAiKey(){
+    const inp = document.getElementById('aikey-input');
+    if(!inp) return;
+    RealCoach.saveKey(inp.value, 'auto');
+    App.openSettings();
+  },
+  async testAi(){
+    const inp = document.getElementById('aikey-input');
+    if(inp && inp.value !== State.data.aiKey){ RealCoach.saveKey(inp.value, 'auto'); }
+    if(!State.data.aiEnabled){ State.data.aiEnabled = true; Save.write(); }
+    await RealCoach.test();
+  },
+  toggleAi(){
+    State.data.aiEnabled = !State.data.aiEnabled;
+    Save.write();
+    Toast.show(State.data.aiEnabled?'🔌 AI Coach ON':'🔌 AI Coach OFF · fallback to local');
+    App.openSettings();
+  },
+  clearAiKey(){
+    if(!confirm('clear API key from this device?')) return;
+    State.data.aiKey = '';
+    State.data.aiEnabled = false;
+    Save.write();
+    Toast.show('🗑 key cleared');
+    App.openSettings();
+  },
   // v0.40 LAYER 2 · DUEL vs CPU (no friend needed)
   duelQuickMatch(){
     const games = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
