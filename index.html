@@ -1179,7 +1179,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.12.1 · screen overlap squashed · 🙏</div>
+  <div class="splash-foot">v0.13.0 · 20 games · TZ-aware · time-lock · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1324,7 +1324,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.12.1';
+const VERSION = '0.13.0';
 
 // ----- STATE -----
 const State = {
@@ -1870,6 +1870,11 @@ const ACHIEVEMENTS = [
   {id:'first_pr',em:'💎',t:'New Record',d:'Set your first personal record'},
   {id:'quest_3',em:'📋',t:'Quester',d:'Complete 3 daily quests'},
   {id:'quest_10',em:'📋',t:'Quest Master',d:'Complete 10 daily quests total'},
+  // v0.13 new games
+  {id:'trivia_5',em:'🧠',t:'Bible Scholar',d:'Win 5 Bible Trivia games'},
+  {id:'define_5',em:'📚',t:'Lexicon',d:'Win 5 Define It games'},
+  {id:'tap_sub15',em:'⚡',t:'Lightning Tap',d:'Number Tap under 15s'},
+  {id:'gameset_20',em:'🎮',t:'Twenty Strong',d:'Win 20+ across the new games'},
 ];
 
 // ====================================================================
@@ -2045,8 +2050,13 @@ const Ach = {
     d._totalQuestsClaimed = (d._totalQuestsClaimed||0);
     if(claimedToday>=3) Ach.unlock('quest_3');
     if((d._totalQuestsClaimed||0)>=10) Ach.unlock('quest_10');
-    // try-everything: played all 16 non-daily games
-    const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code'];
+    // v0.13 new games
+    if((p['script:trivia']?.wins||0)>=5) Ach.unlock('trivia_5');
+    if((p['word:define']?.wins||0)>=5) Ach.unlock('define_5');
+    const newGameWins = (p['script:trivia']?.wins||0)+(p['word:define']?.wins||0)+(p['speed:numbertap']?.wins||0);
+    if(newGameWins>=20) Ach.unlock('gameset_20');
+    // try-everything: played all 19 non-daily games
+    const allIds=['word:wordle','word:anagram','word:define','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','script:trivia','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code','speed:numbertap'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
     // dna_balanced: 5+ in every axis
     const dna = State.data.brainDNA||{};
@@ -2244,6 +2254,9 @@ const GAME_INTROS = {
   'speed:colormatch':{rules:['Color name shows','Tap the COLOR button matching that name','+1 right · −1 wrong'], win:'15+ correct in 30s', timer:'30 sec', reward:'+30–75 🪙 · +3 🧠', dna:'speed'},
   'speed:whack':    {rules:['🌟 stars pop up · TAP them','❌ bombs pop up · DO NOT TAP','+1 star · −2 wrong tap'], win:'12+ stars in 30s', timer:'30 sec', reward:'+30–80 🪙 · +3 🧠', dna:'speed'},
   'speed:code':     {rules:['4-digit code shows for 1.5 sec','Type it back from memory','5 rounds total'], win:'3+ codes correct', timer:'5 rounds', reward:'+40–115 🪙 · +4 🧠', dna:'memory'},
+  'word:define':    {rules:['Definition shown · pick the matching word','4 multi-choice options','10 questions per run'], win:'7/10 correct', timer:'60 sec', reward:'+40–110 🪙 · +4 🧠', dna:'word'},
+  'script:trivia':  {rules:['Random Bible question','4 multi-choice options','10 questions per run'], win:'7/10 correct', timer:'60 sec', reward:'+50–130 🪙 · +5 ✝️', dna:'faith'},
+  'speed:numbertap':{rules:['Numbers 1-15 in random spots','Tap them IN ORDER (1, 2, 3...)','Wrong tap = no penalty, just wait'], win:'Clear under 20s', timer:'no limit', reward:'+50–300 🪙 · +4 🧠', dna:'speed'},
   'daily:dotd':     {rules:['Today\'s spotlight game','Same rules as the original','2x rewards multiplier!'], win:'Per game rules', timer:'varies', reward:'2x base rewards 🔥', dna:'speed'},
 };
 
@@ -2295,6 +2308,7 @@ const ROOMS = {
   word:{em:'📖',name:'Word Lab',sub:'parchment · ink · letters',games:[
     {id:'wordle',em:'🔤',name:'5-Letter Daily',sub:'guess the 5-letter word in 6 tries',launch:()=>WordleGame.start()},
     {id:'anagram',em:'📜',name:'Anagram Storm',sub:'unscramble · 45-sec sprint · multi-choice',launch:()=>AnagramGame.start()},
+    {id:'define',em:'📚',name:'Define It',sub:'definition → pick the word · 10 rounds',launch:()=>DefineGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
@@ -2311,6 +2325,7 @@ const ROOMS = {
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
     {id:'books',em:'📖',name:'Books Race',sub:'OT or NT? · 45 sec · 66 books',launch:()=>BooksGame.start()},
+    {id:'trivia',em:'🧠',name:'Bible Trivia',sub:'10 random Qs · 30+ pool · 60 sec',launch:()=>TriviaGame.start()},
   ]},
   logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
@@ -2321,6 +2336,7 @@ const ROOMS = {
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
     {id:'whack',em:'🌟',name:'Whack-a-Star',sub:'tap stars · NOT bombs · 30 sec',launch:()=>WhackGame.start()},
     {id:'code',em:'🔑',name:'Code Sprint',sub:'memorize 4-digit codes · 5 rounds',launch:()=>CodeSprintGame.start()},
+    {id:'numbertap',em:'🔢',name:'Number Tap',sub:'tap 1→15 in order · sub-20s wins',launch:()=>NumberTapGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -2355,14 +2371,18 @@ const App = {
       const v = randomVerse();
       const stats = d.totals||{};
       const streak = d.streak||0;
-      // v0.12 time-aware greeting
-      const h = new Date().getHours();
+      // v0.13 ACTIVE time-aware greeting · uses device local time + TZ
+      const now = new Date();
+      const h = now.getHours();
       const greeting = h<5 ? 'late night' : h<12 ? 'good morning' : h<17 ? 'good afternoon' : h<21 ? 'good evening' : 'late night';
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const timeStr = now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
       personal.innerHTML = `
-        <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(245,158,11,.3);border-radius:99px;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--cream)">
+        <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(245,158,11,.3);border-radius:99px;margin-bottom:6px;font-size:14px;font-weight:600;color:var(--cream)">
           ${renderAvatarStack(d.avatar,d.avatarHue,'S')}
           <span>${greeting}, <b style="color:var(--gold-bright)">${d.name}</b></span>
         </div>
+        <div class="dim" style="font-size:11px;margin-bottom:12px">${timeStr} · ${tz.split('/').pop().replace('_',' ')}</div>
         <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px">
           ${streak>=1?`<span class="reward-chip flame-streak">🔥 ${streak}-day streak</span>`:''}
           <span class="reward-chip">📊 IQ ${d.iq||1000}</span>
@@ -4675,15 +4695,253 @@ const BP = {
 };
 
 // ====================================================================
-// 🎮 GAME 18 · DAILY (rotating mini)
+// 🎮 GAME 18 · BIBLE TRIVIA (Scripture)
+// ====================================================================
+const BIBLE_TRIVIA = [
+  {q:'Who built the ark?',o:['Noah','Moses','Abraham','David'],a:'Noah'},
+  {q:'How many days/nights did it rain?',o:['7','40','100','12'],a:'40'},
+  {q:'Who was thrown to the lions?',o:['Daniel','Jonah','Joseph','Samuel'],a:'Daniel'},
+  {q:'Who parted the Red Sea?',o:['Moses','Joshua','Aaron','Elijah'],a:'Moses'},
+  {q:'First book of the Bible?',o:['Genesis','Exodus','Matthew','Psalms'],a:'Genesis'},
+  {q:'How many disciples did Jesus have?',o:['7','10','12','24'],a:'12'},
+  {q:'Where was Jesus born?',o:['Bethlehem','Jerusalem','Nazareth','Galilee'],a:'Bethlehem'},
+  {q:'Who betrayed Jesus?',o:['Peter','Judas','Thomas','John'],a:'Judas'},
+  {q:'David defeated Goliath with a...',o:['Sword','Spear','Sling','Bow'],a:'Sling'},
+  {q:'Who was swallowed by a great fish?',o:['Jonah','Daniel','Joseph','Peter'],a:'Jonah'},
+  {q:'How many Psalms are there?',o:['100','120','150','200'],a:'150'},
+  {q:'Who walked on water with Jesus?',o:['Peter','John','James','Andrew'],a:'Peter'},
+  {q:'Books in the New Testament?',o:['12','27','39','66'],a:'27'},
+  {q:'Strongest man in the Bible?',o:['Goliath','David','Samson','Saul'],a:'Samson'},
+  {q:'Last book of the Bible?',o:['Jude','Revelation','3 John','James'],a:'Revelation'},
+  {q:'Who denied Jesus 3 times?',o:['Peter','Judas','John','Thomas'],a:'Peter'},
+  {q:'Father of John the Baptist?',o:['Zechariah','Matthew','Joseph','Aaron'],a:'Zechariah'},
+  {q:'Where did Jesus turn water into wine?',o:['Cana','Galilee','Bethany','Nazareth'],a:'Cana'},
+  {q:'Who wrote most of the New Testament?',o:['Paul','Peter','John','Luke'],a:'Paul'},
+  {q:'How long was Jesus in the wilderness?',o:['7 days','40 days','3 days','12 days'],a:'40 days'},
+  {q:'First king of Israel?',o:['David','Saul','Solomon','Samuel'],a:'Saul'},
+  {q:"Solomon's father?",o:['David','Saul','Abraham','Joseph'],a:'David'},
+  {q:"Mary was Jesus'... ",o:['Mother','Sister','Aunt','Cousin'],a:'Mother'},
+  {q:'How many gospels?',o:['2','3','4','5'],a:'4'},
+  {q:'Books in the Old Testament?',o:['12','27','39','66'],a:'39'},
+  {q:'Who was sold into slavery by his brothers?',o:['Joseph','Daniel','Moses','Jacob'],a:'Joseph'},
+  {q:'Goliath was a...',o:['Hebrew','Egyptian','Philistine','Roman'],a:'Philistine'},
+  {q:'Books in the Bible (KJV)?',o:['39','66','77','100'],a:'66'},
+  {q:'Where did Moses receive the 10 Commandments?',o:['Mt Sinai','Mt Olives','Mt Zion','Mt Ararat'],a:'Mt Sinai'},
+  {q:'Tribes of Israel?',o:['7','10','12','24'],a:'12'},
+];
+const TriviaGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=60; this.q=0;
+    this.questions = [...BIBLE_TRIVIA].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    UI.show('game');
+  },
+  next(){
+    if(this.q>=this.questions.length){this.end();return;}
+    this.current = this.questions[this.q];
+    this.options = [...this.current.o].sort(()=>Math.random()-.5);
+    this.q++;
+    this.render();
+  },
+  pick(o){
+    if(o===this.current.a){ this.score++; SFX.correct(); haptic(8); }
+    else{ SFX.wrong(); haptic(20); }
+    this.next();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>✝️ Bible Trivia</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','question '+this.q+' of 10'));
+    const w = el('div','math-q', this.current.q);
+    w.style.fontSize='20px';
+    w.style.color='var(--cream)';
+    w.style.fontFamily="'Cinzel',serif";
+    w.style.maxWidth='340px';
+    w.style.lineHeight='1.4';
+    wrap.appendChild(w);
+    const grid = el('div','verse-options');
+    this.options.forEach(o=>{
+      const b = el('button','verse-opt', o);
+      b.onclick=()=>this.pick(o);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=7;
+    const rewards = won ? {coin:50+this.score*8, faith:5, brain:2} : {coin:Math.max(20,this.score*5), faith:1};
+    recordResult('script','trivia',won,rewards);
+    if(won) Modal.win({rewards, title:`${this.score}/10 · Scholar!`, emoji:'🙏',
+      retry:()=>TriviaGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/10`,msg:'aim for 7+ correct!',
+      retry:()=>TriviaGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 19 · DEFINE IT (Word Lab)
+// ====================================================================
+const DEFINITIONS = [
+  {def:'a sacred song or hymn',a:'PSALM',o:['PSALM','VERSE','HYMN','POEM']},
+  {def:'precious gem',a:'JEWEL',o:['JEWEL','STONE','METAL','GLASS']},
+  {def:'large body of salt water',a:'OCEAN',o:['OCEAN','LAKE','RIVER','POND']},
+  {def:'a story Jesus told to teach',a:'PARABLE',o:['STORY','PARABLE','POEM','LESSON']},
+  {def:'devotion to God',a:'WORSHIP',o:['WORSHIP','PRAYER','PRAISE','SONG']},
+  {def:'unmerited divine favor',a:'GRACE',o:['GRACE','MERCY','HONOR','GLORY']},
+  {def:'building for worship',a:'CHURCH',o:['CHURCH','TEMPLE','CHAPEL','HOUSE']},
+  {def:'sacred biblical text',a:'BIBLE',o:['BIBLE','TORAH','VERSE','SCROLL']},
+  {def:'eternal home with God',a:'HEAVEN',o:['HEAVEN','PARADISE','GLORY','ZION']},
+  {def:'spiritual confidence in God',a:'FAITH',o:['HOPE','FAITH','TRUST','LOVE']},
+  {def:'small green plant',a:'GRASS',o:['GRASS','LEAF','TREE','FERN']},
+  {def:'four-legged feline pet',a:'CAT',o:['CAT','DOG','RAT','FOX']},
+  {def:'molten rock from a volcano',a:'LAVA',o:['LAVA','ROCK','FIRE','DUST']},
+  {def:'powerful storm with strong winds',a:'STORM',o:['STORM','RAIN','GUST','BLAZE']},
+  {def:'one who follows Christ',a:'SAINT',o:['SAINT','PRIEST','MONK','ELDER']},
+  {def:'rapidly moving stream',a:'RIVER',o:['RIVER','LAKE','BAY','SEA']},
+  {def:'celestial body that gives light',a:'STAR',o:['STAR','MOON','SUN','PLANET']},
+  {def:'first book of the Bible',a:'GENESIS',o:['GENESIS','EXODUS','JOHN','PSALMS']},
+  {def:'female royal ruler',a:'QUEEN',o:['QUEEN','KING','LADY','LORD']},
+  {def:'morning meal',a:'BREAKFAST',o:['BREAKFAST','LUNCH','DINNER','SNACK']},
+  {def:'feeling of strong like for someone',a:'LOVE',o:['LOVE','HATE','LIKE','WISH']},
+  {def:'tool to write with',a:'PEN',o:['PEN','BRUSH','BOOK','RULER']},
+  {def:'noble courage',a:'BRAVE',o:['BRAVE','SCARED','SILLY','TIRED']},
+  {def:'10 sacred rules from God',a:'COMMANDMENTS',o:['LAWS','RULES','COMMANDMENTS','TABLES']},
+];
+const DefineGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=60; this.q=0;
+    this.questions = [...DEFINITIONS].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer = setInterval(()=>{
+      this.timeLeft--;
+      if(this.timeLeft<=0){this.end();return;}
+      this.render();
+    },1000);
+    UI.show('game');
+  },
+  next(){
+    if(this.q>=this.questions.length){this.end();return;}
+    this.current = this.questions[this.q];
+    this.options = [...this.current.o].sort(()=>Math.random()-.5);
+    this.q++;
+    this.render();
+  },
+  pick(o){
+    if(o===this.current.a){ this.score++; SFX.correct(); haptic(8); }
+    else{ SFX.wrong(); haptic(20); }
+    this.next();
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML = `<b>📖 Define It</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area = document.getElementById('g-area');
+    area.innerHTML = '';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','what is the word for...'));
+    const w = el('div','verse-card');
+    w.innerHTML = `"${this.current.def}"`;
+    w.style.fontSize = '17px';
+    wrap.appendChild(w);
+    const grid = el('div','verse-options');
+    this.options.forEach(o=>{
+      const b = el('button','verse-opt', o);
+      b.onclick=()=>this.pick(o);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  end(){
+    clearInterval(this.timer);
+    const won = this.score>=7;
+    const rewards = won ? {coin:40+this.score*7, brain:4} : {coin:Math.max(15,this.score*5)};
+    recordResult('word','define',won,rewards);
+    if(won) Modal.win({rewards, title:`${this.score}/10 · Lexicon!`, emoji:'📖',
+      retry:()=>DefineGame.start(), lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/10`,msg:'aim for 7+ correct!',
+      retry:()=>DefineGame.start(), lobby:()=>App.toLobby()});
+  },
+  cleanup(){ if(this.timer) clearInterval(this.timer); }
+};
+
+// ====================================================================
+// 🎮 GAME 20 · NUMBER TAP (Speed Wing)
+// ====================================================================
+const NumberTapGame = {
+  start(){
+    State.gameInst=this;
+    this.target=1;
+    this.startTime=Date.now();
+    this.numbers=Array.from({length:15},(_,i)=>i+1).sort(()=>Math.random()-.5);
+    this.tapped=new Set();
+    this.render();
+    this.tickInt = setInterval(()=>this.render(), 100);
+    UI.show('game');
+  },
+  tap(n){
+    if(n!==this.target){ SFX.wrong(); haptic(20); return; }
+    this.tapped.add(n);
+    this.target++;
+    SFX.correct(); haptic(6);
+    if(this.target>15){
+      clearInterval(this.tickInt);
+      const time=((Date.now()-this.startTime)/1000).toFixed(1);
+      const t=parseFloat(time);
+      const won=t<=20;
+      const rewards=won?{coin:Math.max(50,300-Math.round(t*8)),brain:4}:{coin:30};
+      recordResult('speed','numbertap',won,rewards);
+      if(won) Modal.win({rewards,title:`Cleared in ${time}s · ⚡`,emoji:'⚡',
+        retry:()=>NumberTapGame.start(),lobby:()=>App.toLobby()});
+      else Modal.lose({title:`${time}s`,msg:'sub-20s for the win!',
+        retry:()=>NumberTapGame.start(),lobby:()=>App.toLobby()});
+      return;
+    }
+    this.render();
+  },
+  render(){
+    const elapsed=((Date.now()-this.startTime)/1000).toFixed(1);
+    document.getElementById('g-stats').innerHTML = `<b>⚡ Number Tap</b> · next: <b>${this.target}</b>/15 · ⏱ <b>${elapsed}s</b>`;
+    const area=document.getElementById('g-area');
+    area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','tap numbers in order 1→15'));
+    const grid=el('div','');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(3,76px);gap:8px;margin:14px 0';
+    this.numbers.forEach(n=>{
+      const c=el('div','');
+      const isTapped=this.tapped.has(n);
+      c.style.cssText=`aspect-ratio:1;border-radius:14px;background:${isTapped?'rgba(16,185,129,.5)':'rgba(255,255,255,.08)'};border:2px solid ${isTapped?'#10B981':'rgba(255,255,255,.18)'};display:grid;place-items:center;font-size:24px;font-weight:800;cursor:${isTapped?'default':'pointer'};font-family:'Cinzel',serif;color:${isTapped?'rgba(255,255,255,.5)':'var(--cream)'}`;
+      c.textContent=n;
+      if(!isTapped) c.onclick=()=>this.tap(n);
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  cleanup(){ if(this.tickInt) clearInterval(this.tickInt); }
+};
+
+// ====================================================================
+// 🎮 GAME 21 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
-    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame];
+    const games = [WordleGame, MemoryGame, StroopGame, MathGame, VerseGame, AnagramGame, SimonGame, ReactionGame, SequenceGame, BooksGame, LightsGame, SpotGame, HuntGame, ColorMatchGame, WhackGame, CodeSprintGame, TriviaGame, DefineGame, NumberTapGame];
     const pickIdx = day % games.length;
     const pick = games[pickIdx];
-    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color Match','🌟 Whack','🔑 Code Sprint'];
+    const names = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color','🌟 Whack','🔑 Code','🧠 Trivia','📚 Define','🔢 Tap'];
     Toast.show(`🎲 today's spotlight: <b>${names[pickIdx]}</b> · 2x rewards!`);
     State._dailyMultiplier = 2;
     setTimeout(()=>pick.start(), 800);
@@ -4695,6 +4953,18 @@ const DailyGame = {
 // ====================================================================
 window.App = App; // expose for inline handlers
 VisibilityGuard.init();
+
+// v0.13 ACTIVE TIME REFRESH — re-render splash greeting every 60s + on visibility
+setInterval(()=>{
+  if(document.getElementById('splash')?.classList.contains('active') && State.data){
+    App.renderSplashPersonal();
+  }
+}, 60000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && document.getElementById('splash')?.classList.contains('active') && State.data){
+    App.renderSplashPersonal();
+  }
+});
 function _showFatal(e){
   const msg = (e && (e.message||String(e)))||'unknown error';
   const stack = (e && e.stack)||'';
