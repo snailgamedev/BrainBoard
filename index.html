@@ -56,7 +56,7 @@ body.color-blind .word-cell.yellow{background:#FFC107 !important}
 
 /* v0.29 SCROLL EVERYWHERE · every screen body scrolls, headers stick */
 .lobby-content, #aux-body, .room-body, .game-area{
-  overflow-y:auto;
+  overflow-y:auto !important;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
 }
@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.34.0 · AUDIBLE MUSIC · Darts · Sea Battle · Dots Boxes · 🙏</div>
+  <div class="splash-foot">v0.35.0 · RICH MUSIC · 4-layer · 3 new games · all-pass · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.34.0';
+const VERSION = '0.35.0';
 
 // ----- STATE -----
 const State = {
@@ -1484,6 +1484,14 @@ const AVATAR_ITEMS = {
     {id:'helmet',em:'⛑️',name:'Helmet'},
     {id:'gradcap',em:'🎓',name:'Grad Cap'},
     {id:'starcrown',em:'🌟',name:'Star Halo'},
+    {id:'crown2',em:'👸',name:'Tiara'},
+    {id:'beret',em:'🎨',name:'Beret'},
+    {id:'witch',em:'🧙',name:'Wizard Hat'},
+    {id:'pirate',em:'🏴‍☠️',name:'Pirate Hat'},
+    {id:'cowboy',em:'🤠',name:'Cowboy'},
+    {id:'flower',em:'🌺',name:'Flower'},
+    {id:'flame',em:'🔥',name:'Flame Hair'},
+    {id:'bow',em:'🎀',name:'Bow'},
   ],
   face:[
     {id:'none',em:'',name:'None'},
@@ -1492,6 +1500,12 @@ const AVATAR_ITEMS = {
     {id:'starry',em:'🤩',name:'Starstruck'},
     {id:'fire',em:'🔥',name:'On Fire'},
     {id:'love',em:'😍',name:'In Love'},
+    {id:'mustache',em:'👨',name:'Mustache'},
+    {id:'monocle',em:'🧐',name:'Monocle'},
+    {id:'mask',em:'😷',name:'Mask'},
+    {id:'wink',em:'😉',name:'Wink'},
+    {id:'tears',em:'😅',name:'Sweat'},
+    {id:'cool',em:'🥶',name:'Cool'},
   ],
   outfit:[
     {id:'plain',em:'👕',name:'Plain Tee'},
@@ -1512,6 +1526,14 @@ const AVATAR_ITEMS = {
     {id:'cat',em:'🐱',name:'Cat'},
     {id:'dog',em:'🐶',name:'Dog'},
     {id:'fish',em:'🐟',name:'Fish'},
+    {id:'unicorn',em:'🦄',name:'Unicorn'},
+    {id:'fox',em:'🦊',name:'Fox'},
+    {id:'wolf',em:'🐺',name:'Wolf'},
+    {id:'bear',em:'🐻',name:'Bear'},
+    {id:'panda',em:'🐼',name:'Panda'},
+    {id:'rabbit',em:'🐰',name:'Rabbit'},
+    {id:'dragon',em:'🐉',name:'Dragon'},
+    {id:'butterfly',em:'🦋',name:'Butterfly'},
   ],
   aura:[
     {id:'none',em:'',name:'None'},
@@ -1522,6 +1544,14 @@ const AVATAR_ITEMS = {
     {id:'lightning',em:'⚡',name:'Lightning'},
     {id:'glow',em:'💫',name:'Glow'},
     {id:'sun',em:'🌞',name:'Sun'},
+    {id:'moon',em:'🌙',name:'Moon'},
+    {id:'comet',em:'☄️',name:'Comet'},
+    {id:'snow',em:'❄️',name:'Snow'},
+    {id:'leaves',em:'🍃',name:'Leaves'},
+    {id:'cherry',em:'🌸',name:'Cherry Blossom'},
+    {id:'galaxy',em:'🌌',name:'Galaxy'},
+    {id:'crown',em:'👑',name:'Crown Glow'},
+    {id:'heart',em:'💖',name:'Heart Aura'},
   ],
 };
 
@@ -2605,6 +2635,11 @@ const ACHIEVEMENTS = [
   {id:'seabattle_5',em:'🚢',t:'Sea Captain',d:'Win 5 Sea Battle games'},
   {id:'dotsboxes_5',em:'📦',t:'Box Master',d:'Win 5 Dots & Boxes games'},
   {id:'music_tested',em:'🎵',t:'Sound Check',d:'Hit the TEST MUSIC button'},
+  // v0.35
+  {id:'tq_5',em:'❓',t:'Mind Reader',d:'Win 5 Twenty Questions'},
+  {id:'wildstack_5',em:'🃏',t:'Stack Master',d:'Win 5 Wild Stack'},
+  {id:'minigolf_ace',em:'⛳',t:'Hole-in-One',d:'Sink Mini Golf in 1 shot'},
+  {id:'avatar_max',em:'👤',t:'Style Connoisseur',d:'Try 50+ avatar items'},
   // v0.29
   {id:'pass_advent',em:'⭐',t:'Advent Saint',d:'Active during Advent (Dec) pass'},
   {id:'pass_pentecost',em:'🔥',t:'Pentecost Saint',d:'Active during Pentecost (May) pass'},
@@ -2902,22 +2937,51 @@ const Music = (()=>{
     o.connect(g); g.connect(master);
     o.start(); o.stop(c.currentTime+dur+0.05);
   }
+  function envKick(){
+    const c=ac(); if(!c||c.state==='suspended')return;
+    const o=c.createOscillator(), g=c.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(120,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(40,c.currentTime+0.1);
+    g.gain.setValueAtTime(0.18,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.15);
+    o.connect(g); g.connect(master);
+    o.start(); o.stop(c.currentTime+0.18);
+  }
+  function envHat(){
+    const c=ac(); if(!c||c.state==='suspended')return;
+    const buf=c.createBuffer(1,2200,c.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const src=c.createBufferSource(); src.buffer=buf;
+    const g=c.createGain();
+    g.gain.setValueAtTime(0.04,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.05);
+    src.connect(g); g.connect(master);
+    src.start();
+  }
   function playChord(track, chordIdx){
     if(!State.data?.settings?.music) return;
     const c=ac(); if(!c || c.state==='suspended') return;
     const sc = scales[track.scale];
     const base = track.root + sc[chordIdx % sc.length];
     const beatSec = 60/track.bpm;
-    // v0.34 boosted amplitudes (was 0.04/0.03/0.02 · now 0.08/0.06/0.04)
+    // v0.35 RICH MUSIC · 4 layers: bass · pad · arp · percussion
+    // BASS · 1 octave below root
+    envNote(midiToFreq(base-12), beatSec*4, 'sawtooth', 0.06);
+    // PAD · triadic chord
     envNote(midiToFreq(base),       beatSec*4, track.pad, 0.08);
     envNote(midiToFreq(base+sc[2]), beatSec*4, track.pad, 0.06);
     envNote(midiToFreq(base+sc[4]), beatSec*4, track.pad, 0.04);
+    // ARP · 4 quick notes
     for(let i=0;i<4;i++){
       const noteIdx = [0,2,4,2][i % 4];
       const noteMidi = base + sc[noteIdx];
-      // arp boosted 0.025 → 0.045
       setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, track.arp, 0.045), i*beatSec*1000);
     }
+    // PERCUSSION · kick on 1+3 · hat on offbeats
+    setTimeout(()=>envKick(), 0);
+    setTimeout(()=>envKick(), beatSec*2*1000);
+    for(let i=0;i<8;i++){ setTimeout(()=>envHat(), (i*beatSec/2)*1000+(i%2===0?beatSec*250:0)); }
   }
   function loop(track){
     if(!currentTrack) return;
@@ -4560,7 +4624,7 @@ const App = {
   },
   openHallOfFame(){
     Ach.unlock('hof_open');
-    document.getElementById('aux-title').innerHTML = '🏛️ Hall of Fame';
+    document.getElementById('aux-title').innerHTML = 'Hall of Fame 🏛️';
     const d = State.data;
     const prs = d.prRecords||{};
     const allGames = [];
@@ -4577,7 +4641,7 @@ const App = {
     allGames.sort((a,b)=>(b.stat.wins||0)-(a.stat.wins||0));
     const top3 = allGames.slice(0,3);
     let html = `<div class="lobby-banner" style="text-align:center">
-      <b style="color:var(--gold-bright);font-size:18px">🏛️ YOUR HALL OF FAME</b><br>
+      <b style="color:var(--gold-bright);font-size:18px">🏛️ Hall of Fame</b><br>
       <span class="dim">${d.totals.wins} total wins · IQ ${d.iq} · ${Object.keys(prs).length} PRs</span>
     </div>`;
     if(top3.length && top3[0].stat.wins>0){
@@ -4641,11 +4705,11 @@ const App = {
       const dealCost = Object.fromEntries(Object.entries(dealItem.cost).map(([k,v])=>[k, Math.max(1, Math.round(v*0.7))]));
       const dealCostStr = Object.entries(dealCost).map(([k,v])=>`${v} ${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'})[k]||k}`).join(' · ');
       const canAfford = Object.entries(dealCost).every(([k,v])=>(wallet[k]||0)>=v);
-      html += `<div class="setting-row" style="background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(245,158,11,.25));border-color:#FBBF24">
+      html += `<h3 style="margin:14px 0 6px;color:#EF4444;font-size:13px;text-align:center">🔥 DAILY DEAL · 30% OFF</h3>
+      <div class="setting-row" style="background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(245,158,11,.25));border-color:#FBBF24">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:30px">${dealItem.em}</span>
           <div>
-            <div style="font-size:10px;font-weight:800;color:#EF4444;letter-spacing:.1em">🔥 TODAY ONLY · 30% OFF</div>
             <b style="display:block">${dealItem.name}</b>
             <span style="font-size:11px;opacity:.85">${dealItem.desc}</span>
           </div>
