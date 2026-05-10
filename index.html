@@ -1262,7 +1262,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.42.0 · pace · crossfade · 🧠 Coach hub · TTS · tour · keys · welcome gift · 🙏</div>
+  <div class="splash-foot">v0.43.0 · 🏆 medal cabinet · ⏸ pause · 📅 weekly tournament · 🎯 adaptive frenzy · 💬 reactions · 🧪 A/B preview · 🎵 music styles · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1302,6 +1302,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.43.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1386,6 +1387,7 @@ button{
   <div class="game-header">
     <button class="back-btn" onclick="App.exitGame()">←</button>
     <div class="game-stats" id="g-stats">—</div>
+    <button class="back-btn" onclick="Pause.toggle()" title="pause (P)">⏸</button>
     <div class="mini-wallet" id="g-wallet"></div>
   </div>
   <div id="g-powerups"></div>
@@ -1416,7 +1418,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.42.0';
+const VERSION = '0.43.0';
 
 // ----- STATE -----
 const State = {
@@ -1482,6 +1484,13 @@ const DEFAULT_SAVE = {
   tourDone:false, // v0.42 first-time lobby tour
   welcomeGiftClaimed:false, // v0.42 first-game free gift
   roomTipsSeen:{}, // v0.42 first-time room entry tips
+  // v0.43 ALL THE FEATURES
+  musicStyle:'calm', // calm/arcade/dynamic
+  pauseCount:0, // total game pauses
+  weeklyTourney:{wins:0, lastWeekId:'', podiumed:0, totalGems:0}, // weekly frenzy tournament
+  adaptiveFrenzy:false, // when true Frenzy picks rounds from Coach
+  duelReactions:[], // [{duelId, em, ts, from:'me'|'them'}]
+  abPreviewSeen:0, // count of A/B previews shown
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -3036,13 +3045,18 @@ const Duels = {
     }
     if(d.history.length){
       html += `<div style="margin:14px 0 6px"><b style="font-size:12px;color:var(--gold-bright)">📜 HISTORY (${d.history.length})</b></div>`;
-      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;text-align:left;max-height:240px;overflow-y:auto">`;
+      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;text-align:left;max-height:300px;overflow-y:auto">`;
       d.history.slice(-10).reverse().forEach(x=>{
         const icon = x.status==='won'?'🏆':x.status==='tie'?'🤝':'💪';
         const gameName = ROOMS[x.roomId]?.games.find(g=>g.id===x.gameId)?.name || x.gameId;
-        html += `<div style="padding:5px 0;font-size:11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06)">
-          <span>${icon} ${gameName} · ${x.myScore} vs ${x.theirScore} · <b>${x.status.toUpperCase()}</b></span>
-          <button class="btn-primary" style="padding:2px 8px;font-size:10px" onclick="App.duelRematch('${x.friendCode}','${x.roomId}','${x.gameId}')">↻ rematch</button>
+        const reactions = DuelReactions.forDuel(x.id);
+        html += `<div style="padding:6px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>${icon} ${gameName} · ${x.myScore} vs ${x.theirScore} · <b>${x.status.toUpperCase()}</b></span>
+            <button class="btn-primary" style="padding:2px 8px;font-size:10px" onclick="App.duelRematch('${x.friendCode}','${x.roomId}','${x.gameId}')">↻ rematch</button>
+          </div>
+          ${reactions.length?`<div style="font-size:14px;margin-top:4px">${reactions.map(r=>`<span title="${r.from}" style="margin-right:3px">${r.em}</span>`).join('')}</div>`:''}
+          ${DuelReactions.pickerHtml(x.id)}
         </div>`;
       });
       html += `</div>`;
@@ -3215,7 +3229,23 @@ const Frenzy = {
     this.round = 0;
     this.totalScore = 0;
     const count = mode==='gauntlet'?5:3;
-    this.runs = [...this.POOL].sort(()=>Math.random()-.5).slice(0,count);
+    // v0.43 ADAPTIVE FRENZY · Coach picks rounds aimed at user's weakness
+    if(State.data.adaptiveFrenzy && mode!=='gauntlet'){
+      const b = Coach.brain();
+      if(b && b.totalPlays>=3){
+        // map weakness axis → preferred frenzy round
+        const axisRound = {memory:'frenzy-mem', word:'frenzy-word', logic:'frenzy-eq', speed:'frenzy-tap', pattern:'frenzy-color', faith:'frenzy-math'};
+        const preferred = axisRound[b.weakest];
+        const target = this.POOL.find(p=>p.id===preferred);
+        const rest = this.POOL.filter(p=>p.id!==preferred).sort(()=>Math.random()-.5).slice(0,count-1);
+        this.runs = target ? [target, ...rest] : [...this.POOL].sort(()=>Math.random()-.5).slice(0,count);
+        Toast.show(`🎯 adaptive · targeting ${b.weakest}`);
+      } else {
+        this.runs = [...this.POOL].sort(()=>Math.random()-.5).slice(0,count);
+      }
+    } else {
+      this.runs = [...this.POOL].sort(()=>Math.random()-.5).slice(0,count);
+    }
     this.state = {timers:[]};
     UI.show('game');
     this._tick();
@@ -3492,6 +3522,299 @@ const Keys = {
       if(e.key==='Escape'){ App.toLobby(); }
       if(e.key==='m'||e.key==='M'){ App.toggleMusic(); e.preventDefault(); }
     });
+    // v0.43 · GLOBAL pause key (works on game screen)
+    document.addEventListener('keydown',(e)=>{
+      const tag=(e.target.tagName||'').toLowerCase();
+      if(['input','textarea','select'].includes(tag)) return;
+      const onGame = document.getElementById('game')?.classList.contains('active');
+      if(!onGame) return;
+      if(e.key==='p'||e.key==='P'){ Pause.toggle(); e.preventDefault(); }
+    });
+  }
+};
+
+// ====================================================================
+// 🏆 v0.43 · MEDAL CABINET · earned medals per game
+// ====================================================================
+const Cabinet = {
+  earnedFor(roomId, gameId){
+    const lb = State.data.leaderboards?.[`${roomId}:${gameId}`];
+    if(!lb || !lb.allTime || !lb.allTime.length) return null;
+    // user's personal best from allTime list
+    const mine = lb.allTime.filter(e=>e.me);
+    if(!mine.length) return null;
+    const best = mine.reduce((a,b)=>b.score>a.score?b:a);
+    return Medals.earned(roomId, gameId, best.score);
+  },
+  countAll(){
+    let bronze=0, silver=0, gold=0, total=0;
+    Object.entries(ROOMS).forEach(([rid,r])=>{
+      r.games.forEach(g=>{
+        const m=this.earnedFor(rid,g.id);
+        if(m){
+          total++;
+          if(m.name==='gold') gold++;
+          else if(m.name==='silver') silver++;
+          else bronze++;
+        }
+      });
+    });
+    return {bronze, silver, gold, total};
+  },
+  renderHtml(){
+    const counts = this.countAll();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18))">
+      <div style="font-size:42px">🏆</div>
+      <b style="color:var(--gold-bright);font-size:16px">Medal Cabinet</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">${counts.total} medals · 🥇${counts.gold} 🥈${counts.silver} 🥉${counts.bronze}</div>
+    </div>`;
+    Object.entries(ROOMS).forEach(([rid,r])=>{
+      const earned = r.games.map(g=>({g, m:this.earnedFor(rid,g.id)})).filter(x=>x.m);
+      if(!earned.length) return;
+      html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">${r.em} ${r.name} · ${earned.length}/${r.games.length}</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px">
+          ${earned.map(x=>`<div style="background:rgba(0,0,0,.18);border-radius:8px;padding:8px;text-align:center;font-size:11px">
+            <div style="font-size:18px">${x.g.em}</div>
+            <div style="font-size:10px;opacity:.85">${x.g.name}</div>
+            <div style="font-size:14px;margin-top:2px">${x.m.em}</div>
+          </div>`).join('')}
+        </div>`;
+    });
+    if(counts.total===0){
+      html += `<div class="dim" style="padding:20px;text-align:center;font-size:12px">win games to earn medals · bronze 🥉 silver 🥈 gold 🥇 based on leaderboard rank</div>`;
+    }
+    return html;
+  }
+};
+
+// ====================================================================
+// ⏸ v0.43 · PAUSE MANAGER · P key + onscreen · 3-2-1 resume countdown
+// ====================================================================
+const Pause = {
+  _paused:false, _frozenInterval:null, _frozenAt:0, _onResume:null,
+  toggle(){
+    if(this._paused) this.resume();
+    else this.pause();
+  },
+  pause(){
+    if(this._paused) return;
+    const game = State.gameInst;
+    if(!game) return;
+    this._paused = true;
+    this._frozenAt = Date.now();
+    State.data.pauseCount = (State.data.pauseCount||0)+1;
+    // freeze all timers by removing their callback temporarily
+    if(game.timer){
+      clearInterval(game.timer);
+      game._pausedTimer = game.timer;
+      game.timer = null;
+    }
+    // freeze Frenzy state too
+    if(game === Frenzy && Frenzy.state?.timers){
+      Frenzy.state._pausedTimers = [...Frenzy.state.timers];
+      Frenzy.state.timers.forEach(t=>{ clearInterval(t); clearTimeout(t); });
+      Frenzy.state.timers = [];
+    }
+    SFX.tap(); haptic(10);
+    // overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'pause-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,40,.88);z-index:9990;display:grid;place-items:center;color:#fff;font-family:"Cinzel",serif;backdrop-filter:blur(8px)';
+    overlay.innerHTML = `
+      <div style="text-align:center;padding:24px">
+        <div style="font-size:64px;margin-bottom:8px">⏸</div>
+        <h2 style="font-size:32px;margin:4px 0;color:#FBBF24">PAUSED</h2>
+        <p class="dim" style="font-size:13px;margin-bottom:18px">tap resume · ESC to lobby · P to toggle</p>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="btn-primary" style="padding:12px 24px;font-size:14px" onclick="Pause.resume()">▶ RESUME</button>
+          <button class="btn-secondary" style="padding:12px 24px;font-size:14px" onclick="App.exitGame()">🚪 EXIT</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  },
+  resume(){
+    if(!this._paused) return;
+    // dismiss overlay
+    const overlay = document.getElementById('pause-overlay');
+    if(overlay) overlay.remove();
+    // 3-2-1 countdown
+    const cd = document.createElement('div');
+    cd.id='pause-countdown';
+    cd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9990;display:grid;place-items:center;color:#FBBF24;font-family:"Cinzel",serif;font-weight:900;backdrop-filter:blur(4px);pointer-events:none';
+    document.body.appendChild(cd);
+    let n=3;
+    const tick=()=>{
+      if(n===0){
+        cd.remove();
+        this._paused = false;
+        // resume game timer
+        const game = State.gameInst;
+        if(game && game._pausedTimer){
+          // restart with same render cadence (1s)
+          if(typeof game.render === 'function'){
+            game.timer = setInterval(()=>{
+              if(typeof game.timeLeft === 'number'){
+                game.timeLeft--;
+                if(game.timeLeft<=0){ if(game.end) game.end(); return; }
+              }
+              game.render();
+            }, 1000);
+          }
+          game._pausedTimer = null;
+        }
+        return;
+      }
+      cd.innerHTML = `<div style="font-size:160px;animation:cineCount .9s ease-out forwards">${n}</div>`;
+      n--;
+      setTimeout(tick, 900);
+    };
+    tick();
+  }
+};
+
+// ====================================================================
+// 📅 v0.43 · WEEKLY FRENZY TOURNAMENT · Sunday midnight payout
+// ====================================================================
+const WeeklyTourney = {
+  weekId(){
+    const d=new Date();
+    const wk=Math.floor((d-new Date(d.getFullYear(),0,1))/(7*86400000));
+    return `${d.getFullYear()}-W${wk}`;
+  },
+  checkPayout(){
+    const wt = State.data.weeklyTourney || (State.data.weeklyTourney={wins:0,lastWeekId:'',podiumed:0,totalGems:0});
+    const cur = this.weekId();
+    if(wt.lastWeekId && wt.lastWeekId !== cur){
+      // payout for the PREVIOUS week's standing
+      const lb = State.data.leaderboards?.['frenzy:daily'];
+      if(lb && lb.weekly?.[wt.lastWeekId]){
+        const list = lb.weekly[wt.lastWeekId];
+        const myRank = list.findIndex(e=>e.me)+1;
+        if(myRank>0 && myRank<=10){
+          const gems = [50,30,20,15,12,10,8,6,4,3][myRank-1];
+          Wallet.add({gem:gems, coin:gems*15});
+          wt.totalGems += gems;
+          wt.podiumed++;
+          Activity.log('win','🏆',`Weekly Tourney #${myRank} · +${gems}💎`);
+          setTimeout(()=>Modal.show(`<div style="text-align:center;padding:8px">
+            <div style="font-size:64px">${myRank===1?'🥇':myRank===2?'🥈':myRank===3?'🥉':'🏅'}</div>
+            <h3 style="margin:8px 0;color:var(--gold-bright)">Weekly Tourney · ${wt.lastWeekId}</h3>
+            <p style="font-size:13px;margin:8px 0">finished #<b>${myRank}</b> of ${list.length}</p>
+            <p style="font-size:13px;color:var(--gold-bright)">+${gems} 💎 gems · +${gems*15} 🪙 coins</p>
+            <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ CLAIM</button>
+          </div>`),1000);
+        }
+      }
+    }
+    wt.lastWeekId = cur;
+    Save.write();
+  },
+  countdownToSunday(){
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun
+    const daysUntilSun = (7-day)%7 || 7;
+    const next = new Date(now.getFullYear(),now.getMonth(),now.getDate()+daysUntilSun,0,0,0);
+    const ms = next - now;
+    const h = Math.floor(ms/3600000);
+    const m = Math.floor((ms%3600000)/60000);
+    return `${h}h ${m}m to payout`;
+  },
+  topThis(){
+    const lb = State.data.leaderboards?.['frenzy:daily'];
+    if(!lb) return [];
+    const wk = this.weekId();
+    return lb.weekly?.[wk] || [];
+  },
+  renderHtml(){
+    const wt = State.data.weeklyTourney || {wins:0,podiumed:0,totalGems:0};
+    const top = this.topThis();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(220,38,38,.18));border-color:#FBBF24">
+      <div style="font-size:42px">📅</div>
+      <b style="color:var(--gold-bright);font-size:16px">Weekly Frenzy Tournament</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">top 10 of week · paid out Sunday midnight</div>
+      <div style="font-size:11px;margin-top:4px;color:#FBBF24">⏱ ${this.countdownToSunday()}</div>
+    </div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px;font-size:11px">
+      <div style="background:rgba(255,255,255,.06);padding:10px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🏆 PODIUMED</div><b>${wt.podiumed}</b></div>
+      <div style="background:rgba(255,255,255,.06);padding:10px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">💎 EARNED</div><b>${wt.totalGems}</b></div>
+      <div style="background:rgba(255,255,255,.06);padding:10px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">📅 WEEK</div><b style="font-size:10px">${this.weekId()}</b></div>
+    </div>`;
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🏆 THIS WEEK · TOP 10</h3>`;
+    if(top.length){
+      html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;font-size:11px">${top.slice(0,10).map((e,i)=>{
+        const gems = [50,30,20,15,12,10,8,6,4,3][i]||0;
+        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+        const bg = e.me?'background:rgba(245,158,11,.22);border-radius:6px;padding:4px 6px':'padding:4px 6px';
+        return `<div style="display:flex;justify-content:space-between;${bg}"><span>${medal} ${e.name}${e.me?' (you)':''}</span><span><b>${e.score}</b> · <span style="color:#FBBF24">${gems}💎</span></span></div>`;
+      }).join('')}</div>`;
+    } else {
+      html += `<div class="dim" style="padding:14px;text-align:center;font-size:11px">play Frenzy this week to enter the tournament!</div>`;
+    }
+    html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:12px" onclick="Frenzy.start()">▶ PLAY FRENZY · enter tourney</button>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 💬 v0.43 · DUEL REACTIONS · stickers per duel
+// ====================================================================
+const DuelReactions = {
+  POOL: ['👏','🔥','🙏','💪','🎯','😂','⚡','💎'],
+  add(duelId, em){
+    State.data.duelReactions = State.data.duelReactions || [];
+    State.data.duelReactions.push({duelId, em, ts:Date.now(), from:'me'});
+    // simulate friend reaction back ~50%
+    if(Math.random()<0.5){
+      setTimeout(()=>{
+        const back = this.POOL[Math.floor(Math.random()*this.POOL.length)];
+        State.data.duelReactions.push({duelId, em:back, ts:Date.now(), from:'them'});
+        Save.write();
+        Toast.show(`💬 friend reacted ${back}`);
+      }, 800);
+    }
+    Save.write();
+    SFX.tap(); haptic(8);
+    Toast.show(`✓ reacted ${em}`);
+  },
+  forDuel(duelId){
+    return (State.data.duelReactions||[]).filter(r=>r.duelId===duelId);
+  },
+  pickerHtml(duelId){
+    return `<div style="display:flex;gap:4px;justify-content:center;margin-top:6px;flex-wrap:wrap">
+      ${this.POOL.map(em=>`<button onclick="DuelReactions.add('${duelId}','${em}')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:99px;width:32px;height:32px;font-size:16px;cursor:pointer">${em}</button>`).join('')}
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 🧪 v0.43 · A/B DIFFICULTY PREVIEW · Coach predicts your score
+// ====================================================================
+const Preview = {
+  predict(roomId, gameId){
+    const prob = Coach.predict(roomId, gameId);
+    const stats = State.data.perGame[`${roomId}:${gameId}`] || {wins:0,plays:0};
+    const lb = State.data.leaderboards?.[`${roomId}:${gameId}`]?.allTime || [];
+    const mine = lb.filter(e=>e.me);
+    const personalBest = mine.length?mine.reduce((a,b)=>b.score>a.score?b:a).score : null;
+    return {
+      prob,
+      personalBest,
+      label: prob>0.7?'easy for you':prob>0.5?'fair fight':prob>0.3?'challenging':'tough — but Coach is easing it',
+      color: prob>0.6?'#10B981':prob>0.4?'#FBBF24':'#F87171',
+      predictedRange: personalBest ? {
+        low: Math.round(personalBest*(0.7+prob*0.2)),
+        high: Math.round(personalBest*(0.95+prob*0.3))
+      } : null
+    };
+  },
+  renderHtml(roomId, gameId){
+    State.data.abPreviewSeen = (State.data.abPreviewSeen||0)+1;
+    const p = this.predict(roomId, gameId);
+    return `<div style="background:rgba(0,0,0,.18);border:1px solid ${p.color};border-radius:10px;padding:8px 10px;margin-bottom:10px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:${p.color};letter-spacing:.08em">🧪 COACH PREDICTS</div>
+      <div style="font-size:13px;margin-top:4px"><b>${Math.round(p.prob*100)}% win chance</b> · ${p.label}</div>
+      ${p.predictedRange?`<div class="dim" style="font-size:10px;margin-top:3px">expect score ${p.predictedRange.low}-${p.predictedRange.high}</div>`:''}
+    </div>`;
   }
 };
 
@@ -3799,26 +4122,55 @@ const Music = (()=>{
   function playChord(track, chordIdx){
     if(!State.data?.settings?.music) return;
     const c=ac(); if(!c || c.state==='suspended') return;
+    // v0.43 MUSIC STYLE · calm / arcade / dynamic
+    const style = State.data?.musicStyle || 'calm';
     const sc = scales[track.scale];
     const base = track.root + sc[chordIdx % sc.length];
-    const beatSec = 60/track.bpm;
-    // v0.35 RICH MUSIC · 4 layers: bass · pad · arp · percussion
-    // BASS · 1 octave below root
-    envNote(midiToFreq(base-12), beatSec*4, 'sawtooth', 0.06);
-    // PAD · triadic chord
-    envNote(midiToFreq(base),       beatSec*4, track.pad, 0.08);
-    envNote(midiToFreq(base+sc[2]), beatSec*4, track.pad, 0.06);
-    envNote(midiToFreq(base+sc[4]), beatSec*4, track.pad, 0.04);
-    // ARP · 4 quick notes
-    for(let i=0;i<4;i++){
-      const noteIdx = [0,2,4,2][i % 4];
-      const noteMidi = base + sc[noteIdx];
-      setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, track.arp, 0.045), i*beatSec*1000);
+    let beatSec = 60/track.bpm;
+    // arcade = +20% bpm, gamier · calm = -25% bpm, ambient
+    if(style==='arcade') beatSec *= 0.83;
+    if(style==='calm') beatSec *= 1.25;
+    // dynamic shifts based on the screen · same as calm for menus/scripture, arcade for speed/game
+    if(style==='dynamic'){
+      const arcadeIds = ['speed','daily','game','brain','num'];
+      const trackId = Object.keys(TRACKS).find(k=>TRACKS[k]===track);
+      if(arcadeIds.includes(trackId)) beatSec *= 0.83;
+      else beatSec *= 1.2;
     }
-    // PERCUSSION · kick on 1+3 · hat on offbeats
-    setTimeout(()=>envKick(), 0);
-    setTimeout(()=>envKick(), beatSec*2*1000);
-    for(let i=0;i<8;i++){ setTimeout(()=>envHat(), (i*beatSec/2)*1000+(i%2===0?beatSec*250:0)); }
+    // BASS · 1 octave below root
+    const bassVol = style==='arcade'?0.08:style==='calm'?0.045:0.06;
+    envNote(midiToFreq(base-12), beatSec*4, 'sawtooth', bassVol);
+    // PAD · triadic chord
+    const padVol = style==='calm'?0.10:0.08; // calm = thicker pad
+    envNote(midiToFreq(base),       beatSec*4, track.pad, padVol);
+    envNote(midiToFreq(base+sc[2]), beatSec*4, track.pad, padVol*0.75);
+    envNote(midiToFreq(base+sc[4]), beatSec*4, track.pad, padVol*0.5);
+    // calm adds a high airy fifth
+    if(style==='calm'){
+      envNote(midiToFreq(base+sc[4]+12), beatSec*4, 'sine', 0.03);
+    }
+    // ARP · 4 quick notes · arcade = chiptune square · calm = sine subtle
+    const arpType = style==='arcade'?'square':style==='calm'?'sine':track.arp;
+    const arpVol = style==='arcade'?0.06:style==='calm'?0.025:0.045;
+    const arpSteps = style==='arcade'?8:4; // arcade has busier arp
+    for(let i=0;i<arpSteps;i++){
+      const noteIdx = [0,2,4,2,0,4,2,0][i % 8];
+      const noteMidi = base + sc[noteIdx];
+      setTimeout(()=>envNote(midiToFreq(noteMidi+12), beatSec*0.7, arpType, arpVol), i*beatSec*(4/arpSteps)*1000);
+    }
+    // PERCUSSION · kick on 1+3 · arcade = busier · calm = lighter
+    if(style!=='calm'){
+      setTimeout(()=>envKick(), 0);
+      setTimeout(()=>envKick(), beatSec*2*1000);
+      if(style==='arcade'){
+        setTimeout(()=>envKick(), beatSec*1.5*1000); // extra kick syncopation
+      }
+    }
+    // hat: calm omits, arcade doubles
+    const hatBeats = style==='calm'?0:style==='arcade'?16:8;
+    for(let i=0;i<hatBeats;i++){
+      setTimeout(()=>envHat(), (i*beatSec*4/hatBeats)*1000);
+    }
   }
   function loop(track){
     if(!currentTrack) return;
@@ -4179,11 +4531,13 @@ const GameIntro = {
         <div style="background:rgba(255,255,255,.06);padding:8px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🏆 WINS</div><b>${stat.wins}</b></div>
         <div style="background:rgba(255,255,255,.06);padding:8px;border-radius:10px;text-align:center"><div class="dim" style="font-size:10px">🎮 PLAYS</div><b>${stat.plays}</b></div>
       </div>
+      ${Preview.renderHtml(roomId, game.id)}
       <div style="background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;text-align:center;margin-bottom:6px">📈 LEADERBOARD · DAILY TOP 5</div>
         ${Leaderboards.renderHtml(roomId, game.id, 'daily')}
         <div style="font-size:10px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;text-align:center;margin:8px 0 6px">🏅 MEDAL THRESHOLDS</div>
         ${Medals.renderHtml(roomId, game.id)}
+        ${(()=>{const m=Cabinet.earnedFor(roomId,game.id); return m?`<div style="text-align:center;margin-top:8px;font-size:11px"><b style="color:var(--gold-bright)">your best: ${m.em} ${m.name.toUpperCase()}</b></div>`:'';})()}
       </div>
       ${ownedPU.length?`<div style="background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.4);padding:8px;border-radius:10px;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;color:#c4b5fd;letter-spacing:.06em;margin-bottom:6px;text-align:center">⚡ EQUIP POWER-UP</div>
@@ -4879,6 +5233,8 @@ const App = {
     Quests.ensureToday();
     // v0.40 · auto-detect language on first ever lobby render
     Lang.autoDetect();
+    // v0.43 · weekly tournament check (payout previous-week standing if rollover)
+    try{ WeeklyTourney.checkPayout(); }catch(e){}
     // v0.41 · help pulse · until user taps it once
     const pulse = document.getElementById('help-pulse');
     if(pulse) pulse.style.display = State.data.helpHubSeen ? 'none' : 'block';
@@ -5511,6 +5867,18 @@ const App = {
           <button class="av-tool-btn ${d.cinematicPref==='short'?'active':''}" onclick="App.setCinematicPref('short')">⚡ SHORT</button>
           <button class="av-tool-btn ${d.cinematicPref==='off'?'active':''}" onclick="App.setCinematicPref('off')">🚫 OFF</button>
         </div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎵 MUSIC STYLE</h3>
+        <p class="dim" style="font-size:11px;margin-bottom:6px">calm = ambient · arcade = gamy chiptune · dynamic = auto</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="av-tool-btn ${(d.musicStyle||'calm')==='calm'?'active':''}" onclick="App.setMusicStyle('calm')">🌊 CALM</button>
+          <button class="av-tool-btn ${d.musicStyle==='arcade'?'active':''}" onclick="App.setMusicStyle('arcade')">🕹️ ARCADE</button>
+          <button class="av-tool-btn ${d.musicStyle==='dynamic'?'active':''}" onclick="App.setMusicStyle('dynamic')">⚡ DYNAMIC</button>
+        </div>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎯 ADAPTIVE FRENZY</h3>
+        <div class="setting-row" onclick="App.toggleAdaptiveFrenzy()" style="cursor:pointer">
+          <span>🎯 Coach picks rounds (your weakness)</span>
+          <div class="toggle ${d.adaptiveFrenzy?'on':''}"></div>
+        </div>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">⏱ GAME PACE</h3>
         <p class="dim" style="font-size:11px;margin-bottom:6px">multiplies timed-game durations · accessibility</p>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
@@ -5521,6 +5889,10 @@ const App = {
         <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
           <button class="btn-secondary" onclick="App.openAccount()">👤 account & security</button>
           <button class="btn-secondary" onclick="App.openSoundTest()">🎵 sound test</button>
+          <button class="btn-secondary" onclick="App.openCabinet()">🏆 medal cabinet</button>
+          <button class="btn-secondary" onclick="App.openWeeklyTourney()">📅 weekly tournament</button>
+          <button class="btn-secondary" onclick="App.openCoach()">🧠 coach AI</button>
+          <button class="btn-secondary" onclick="App.startTour()">🎯 replay tour</button>
         </div>
         <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
         <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -6170,6 +6542,38 @@ const App = {
   },
   // v0.42 · TOUR launcher (manual replay)
   startTour(){ Tour.manual(); App.toLobby(); },
+  // v0.43 · MEDAL CABINET
+  openCabinet(){
+    document.getElementById('aux-title').innerHTML = '🏆 Medal Cabinet';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${Cabinet.renderHtml()}
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button></div>`;
+    UI.show('aux');
+  },
+  // v0.43 · WEEKLY TOURNEY
+  openWeeklyTourney(){
+    document.getElementById('aux-title').innerHTML = '📅 Weekly Tournament';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${WeeklyTourney.renderHtml()}
+      <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button></div>`;
+    UI.show('aux');
+  },
+  // v0.43 · MUSIC STYLE
+  setMusicStyle(s){
+    State.data.musicStyle = s;
+    Save.write();
+    Toast.show(`🎵 music: ${s}`);
+    // restart current track to apply new style immediately
+    const cur = Music.nowPlaying();
+    Music.stop();
+    setTimeout(()=>{ if(cur) Music.play(cur); else Music.play('lobby'); }, 350);
+    App.openSettings();
+  },
+  // v0.43 · ADAPTIVE FRENZY toggle
+  toggleAdaptiveFrenzy(){
+    State.data.adaptiveFrenzy = !State.data.adaptiveFrenzy;
+    Save.write();
+    Toast.show(State.data.adaptiveFrenzy?'🎯 adaptive frenzy ON · Coach picks rounds':'🎲 random frenzy rounds');
+    App.openSettings();
+  },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -6191,6 +6595,10 @@ const App = {
       {em:'🧬',t:'Brain DNA',d:'STATS shows your radar of strengths (memory/speed/pattern/logic/word/faith) · grows as you win.',cta:{label:'📊 Stats',fn:'openStats'}},
       {em:'🌐',t:'Language',d:'Toggle EN/ES in Settings. 20 verses are bilingual. Auto-detects from browser on first launch.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
       {em:'🤝',t:'Friends',d:'Add by code · message · gift gems · cheer · MVP of week. Required for non-CPU duels.',cta:{label:'🤝 Friends',fn:'openFriends'}},
+      {em:'🏆',t:'Medal Cabinet',d:'Every game you have medals in · bronze 🥉 silver 🥈 gold 🥇 based on your leaderboard rank.',cta:{label:'🏆 Open Cabinet',fn:'openCabinet'}},
+      {em:'📅',t:'Weekly Tournament',d:'Top 10 Frenzy scores of the week → gem prizes Sunday midnight. #1 wins 50💎.',cta:{label:'📅 Open Tournament',fn:'openWeeklyTourney'}},
+      {em:'⏸',t:'Pause anywhere',d:'Press P during any game or tap ⏸ in the game header · 3-2-1 resume countdown.',cta:null},
+      {em:'⌨️',t:'Keyboard shortcuts',d:'1-7 = foot buttons · ? = help · M = mute · P = pause · Esc = lobby',cta:null},
     ];
     let html = `<div class="settings-list">
       <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
