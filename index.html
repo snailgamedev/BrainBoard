@@ -303,9 +303,11 @@ button{
 .room-speed{background:linear-gradient(135deg,#DC2626 0%,#7C2D12 100%)}
 .room-daily{background:linear-gradient(135deg,#10B981 0%,#064E3B 100%)}
 .lobby-foot{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
+  display:grid;grid-template-columns:repeat(6,1fr);gap:5px;
   margin-top:8px;
 }
+.foot-btn{font-size:10px}
+.foot-btn .em{font-size:20px}
 .foot-btn{
   background:rgba(255,255,255,.06);
   border:1px solid rgba(255,255,255,.12);
@@ -1196,7 +1198,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.17.0 · accounts · 25 games · world vocab · 🙏</div>
+  <div class="splash-foot">v0.18.0 · friends · messaging · live clock · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1242,6 +1244,7 @@ button{
         <span id="p-name">Saint</span>
         <span style="opacity:.7">· IQ <span id="p-iq">1000</span></span>
       </button>
+      <div class="dim" id="lobby-clock" style="font-size:11px;opacity:.85">⏱ —</div>
       <div class="dim">🔥 <span id="p-streak">0</span></div>
     </div>
   </div>
@@ -1293,6 +1296,7 @@ button{
       <button class="foot-btn" onclick="App.openShop()"><span class="em">🛒</span>SHOP</button>
       <button class="foot-btn" onclick="App.openBP()"><span class="em">🎫</span>PASS</button>
       <button class="foot-btn" onclick="App.openHallOfFame()"><span class="em">🏛️</span>HOF</button>
+      <button class="foot-btn" onclick="App.openFriends()"><span class="em">🤝</span>FRIENDS</button>
     </div>
   </div>
 </section>
@@ -1344,7 +1348,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.17.0';
+const VERSION = '0.18.0';
 
 // ----- STATE -----
 const State = {
@@ -1387,6 +1391,8 @@ const DEFAULT_SAVE = {
   powerups:{hint:0,skip:0,double:0,freeze:0,undo:0,fire:0},
   // v0.17 account + security
   account:{username:'', pinHash:'', friendCode:'', lockEnabled:false, createdAt:0, failedAttempts:0, lockedUntil:0},
+  // v0.18 friends + messaging
+  friends:[], // [{code, name, vibe, addedAt, lastSeen, messages:[{ts, from:'me'|'them', text}]}]
   // v0.12 quests + combos + PRs
   quests:{date:'',list:[],claimed:[]},
   combo:{count:0,lastWinTs:0},
@@ -1647,6 +1653,81 @@ function _antiCheatClamp(rewards){
   });
   return out;
 }
+
+// v0.18 FRIENDS + MESSAGING (real local-first · architected for cloud sync)
+const FRIEND_VIBES = {
+  hype:{em:'🔥',replies:["that's heat 🔥","let's gooo!","you're cooking saint","big w","dub vibes","runnin it back","let it ride","💪 mode locked","bar's high","stay sharp","one more rep saint"]},
+  prayerful:{em:'🙏',replies:["praying for you 🙏","grace and peace","Lord bless your day","keep walking by faith","Phil 4:13 my friend","Christ is enough","stay anchored ⚓","Jesus loves you","Romans 8:28 fr"]},
+  philosopher:{em:'🦉',replies:["that's a thought","interesting take","what's the why?","truth · I see it","considered the inverse?","mind well-fed today","keep questioning saint","wisdom multiplied"]},
+  joker:{em:'🤣',replies:["bro 💀","whatchu doin","ayyyy","fr fr no cap","skill issue · jk","real talk · funny","I'm crying","you wildin","big LMAO"]},
+  scholar:{em:'📚',replies:["interesting","let me look it up","cite your source","this checks out","quality observation","studied response: yes","I read about that"]},
+  hype_christian:{em:'✝️',replies:["GLORY 🙌","HALLELUJAH","Jesus is KING","let's praise Him","walking in the spirit","Romans 12:2 my saint","stay anointed","blessed be the LORD"]},
+};
+const FRIEND_VIBE_KEYS = Object.keys(FRIEND_VIBES);
+function _validateFriendCode(code){
+  if(!code) return false;
+  code = code.toUpperCase().trim();
+  if(!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) return false;
+  if(code === State.data.account?.friendCode) return false; // can't add self
+  return code;
+}
+const Friends = {
+  add(code, name){
+    const c = _validateFriendCode(code);
+    if(!c) return {ok:false, msg:'invalid friend code'};
+    if(!State.data.friends) State.data.friends = [];
+    if(State.data.friends.some(f=>f.code===c)) return {ok:false, msg:'already friends'};
+    if(State.data.friends.length>=20) return {ok:false, msg:'max 20 friends · remove one first'};
+    // assign random vibe so each friend has personality
+    const vibe = FRIEND_VIBE_KEYS[Math.floor(Math.random()*FRIEND_VIBE_KEYS.length)];
+    State.data.friends.push({
+      code:c, name:name||c, vibe,
+      addedAt:Date.now(),
+      lastSeen:Date.now(),
+      messages:[{ts:Date.now(), from:'them', text:`${FRIEND_VIBES[vibe].em} hey saint · we're connected now`}],
+    });
+    Save.write();
+    return {ok:true, code:c};
+  },
+  remove(code){
+    State.data.friends = (State.data.friends||[]).filter(f=>f.code!==code);
+    Save.write();
+  },
+  send(code, text){
+    const f = (State.data.friends||[]).find(f=>f.code===code);
+    if(!f) return false;
+    text = text.trim();
+    if(!text) return false;
+    f.messages.push({ts:Date.now(), from:'me', text});
+    f.lastSeen = Date.now();
+    Save.write();
+    // Schedule canned reply (1.5–4 sec delay · feels real)
+    setTimeout(()=>Friends._reply(code), 1500 + Math.random()*2500);
+    return true;
+  },
+  _reply(code){
+    const f = (State.data.friends||[]).find(f=>f.code===code);
+    if(!f) return;
+    const vibe = FRIEND_VIBES[f.vibe] || FRIEND_VIBES.hype;
+    const reply = vibe.replies[Math.floor(Math.random()*vibe.replies.length)];
+    f.messages.push({ts:Date.now(), from:'them', text:reply});
+    f.lastSeen = Date.now();
+    Save.write();
+    // If user is in this chat, re-render
+    if(State._currentChat===code) App.openChat(code);
+    else Toast.show(`${vibe.em} <b>${f.name}</b>: ${reply}`);
+  },
+  unread(code){
+    const f = (State.data.friends||[]).find(f=>f.code===code);
+    if(!f) return 0;
+    const lastSeen = f.userSawAt||0;
+    return f.messages.filter(m=>m.from==='them' && m.ts>lastSeen).length;
+  },
+  markSeen(code){
+    const f = (State.data.friends||[]).find(f=>f.code===code);
+    if(f){ f.userSawAt = Date.now(); Save.write(); }
+  }
+};
 
 // v0.17 ACCOUNT · username · PIN · friend code · soft-lock
 const Account = {
@@ -2082,6 +2163,11 @@ const ACHIEVEMENTS = [
   {id:'username_set',em:'🆔',t:'Identity',d:'Set a custom username'},
   {id:'sound_test',em:'🎵',t:'Audiophile',d:'Open the Sound Test'},
   {id:'friend_share',em:'🤝',t:'Friend',d:'Share your friend code'},
+  // v0.18
+  {id:'first_friend',em:'🤝',t:'New Friend',d:'Add your first friend'},
+  {id:'five_friends',em:'👥',t:'Squad',d:'Add 5 friends'},
+  {id:'first_message',em:'💬',t:'Connected',d:'Send your first message'},
+  {id:'chatty',em:'💬',t:'Chatty Saint',d:'Send 20 messages'},
 ];
 
 // ====================================================================
@@ -3253,6 +3339,124 @@ const App = {
       Toast.show('🔓 PIN removed');
       App.openAccount();
     }
+  },
+  openFriends(){
+    document.getElementById('aux-title').innerHTML = '🤝 Friends';
+    Account.ensureFriendCode();
+    const myCode = State.data.account?.friendCode;
+    const friends = State.data.friends||[];
+    let html = `<div class="settings-list">
+      <div class="lobby-banner" style="text-align:center">
+        <span class="dim" style="font-size:11px">your code · share with friends</span><br>
+        <div style="font-family:'Cinzel',serif;font-size:22px;letter-spacing:.3em;margin:4px 0;color:var(--gold-bright)">${myCode}</div>
+        <button class="btn-secondary" style="padding:6px 14px;font-size:11px" onclick="App.copyFriendCode()">📋 COPY MY CODE</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin:10px 0">
+        <input id="add-friend-code" placeholder="6-char code · ABC23X" maxlength="6" style="flex:1;padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;color:var(--cream);font-size:14px;letter-spacing:.2em;text-transform:uppercase;font-family:'Cinzel',serif" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn-primary" style="padding:10px 16px;width:auto" onclick="App.tryAddFriend()">+ ADD</button>
+      </div>
+      <p class="dim text-center" style="font-size:11px;margin-bottom:8px">friends are local · architected for cloud sync · messages stored on your device</p>`;
+    if(friends.length){
+      html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">YOUR FRIENDS · ${friends.length}/20</h3>`;
+      friends.forEach(f=>{
+        const vibe = FRIEND_VIBES[f.vibe]||FRIEND_VIBES.hype;
+        const lastMsg = f.messages[f.messages.length-1];
+        const unread = Friends.unread(f.code);
+        const time = lastMsg ? new Date(lastMsg.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : '';
+        html += `<div class="setting-row" style="cursor:pointer" onclick="App.openChat('${f.code}')">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+            <span style="font-size:28px">${vibe.em}</span>
+            <div style="flex:1;min-width:0">
+              <b style="display:flex;align-items:center;gap:6px">${f.name||f.code} ${unread?`<span class="reward-chip" style="background:#EF4444;color:white;font-size:10px;padding:2px 6px">${unread}</span>`:''}</b>
+              <div class="dim" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsg?(lastMsg.from==='me'?'you: ':'')+lastMsg.text:'no messages yet'}</div>
+            </div>
+            <div class="dim" style="font-size:10px">${time}</div>
+          </div>
+        </div>`;
+      });
+    }else{
+      html += `<p class="dim text-center" style="font-size:12px;margin-top:14px">no friends yet · share your code to connect</p>`;
+    }
+    html += `</div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+  },
+  tryAddFriend(){
+    const inp = document.getElementById('add-friend-code');
+    if(!inp) return;
+    const code = inp.value.trim().toUpperCase();
+    const result = Friends.add(code, code);
+    if(result.ok){
+      Toast.show(`✅ added · ${result.code}`);
+      SFX.holy(); haptic(20); confetti();
+      Ach.unlock('first_friend');
+      if((State.data.friends||[]).length>=5) Ach.unlock('five_friends');
+      App.openFriends();
+    }else{
+      Toast.show(`🚫 ${result.msg}`);
+      SFX.wrong(); haptic(30);
+    }
+  },
+  openChat(code){
+    const f = (State.data.friends||[]).find(f=>f.code===code);
+    if(!f) return;
+    State._currentChat = code;
+    Friends.markSeen(code);
+    const vibe = FRIEND_VIBES[f.vibe]||FRIEND_VIBES.hype;
+    document.getElementById('aux-title').innerHTML = `${vibe.em} ${f.name}`;
+    let html = `<div style="display:flex;flex-direction:column;height:calc(100vh - 200px);max-width:520px;margin:0 auto">
+      <div id="chat-thread" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px">`;
+    f.messages.forEach(m=>{
+      const isMe = m.from==='me';
+      const time = new Date(m.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+      html += `<div style="display:flex;justify-content:${isMe?'flex-end':'flex-start'}">
+        <div style="max-width:75%;background:${isMe?'linear-gradient(135deg,var(--gold),var(--gold-bright))':'rgba(255,255,255,.1)'};color:${isMe?'var(--ink)':'var(--cream)'};padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.4;word-wrap:break-word">
+          ${m.text}
+          <div style="font-size:9px;opacity:.6;margin-top:2px;text-align:right">${time}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>
+      <div style="display:flex;gap:6px;padding:10px;background:rgba(0,0,0,.3);border-radius:14px;margin-top:8px">
+        <input id="chat-input" placeholder="message ${f.name}..." maxlength="200" style="flex:1;padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;color:var(--cream);font-size:13px" onkeydown="if(event.key==='Enter')App.sendChat()">
+        <button class="btn-primary" style="padding:10px 16px;width:auto" onclick="App.sendChat()">SEND</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="App.openFriends()">← back to list</button>
+        <button class="btn-secondary" style="padding:6px 12px;font-size:11px;background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4)" onclick="App.removeFriend('${f.code}')">🗑️ remove</button>
+      </div>
+    </div>`;
+    document.getElementById('aux-body').innerHTML = html;
+    UI.show('aux');
+    // Scroll to bottom
+    setTimeout(()=>{
+      const th = document.getElementById('chat-thread');
+      if(th) th.scrollTop = th.scrollHeight;
+      document.getElementById('chat-input')?.focus();
+    },50);
+  },
+  sendChat(){
+    const inp = document.getElementById('chat-input');
+    if(!inp || !State._currentChat) return;
+    const text = inp.value.trim();
+    if(!text) return;
+    if(Friends.send(State._currentChat, text)){
+      inp.value = '';
+      SFX.tap(); haptic(8);
+      Ach.unlock('first_message');
+      // count messages sent
+      State.data._msgsSent = (State.data._msgsSent||0)+1;
+      if(State.data._msgsSent>=20) Ach.unlock('chatty');
+      Save.write();
+      App.openChat(State._currentChat);
+    }
+  },
+  removeFriend(code){
+    if(!confirm('remove this friend?')) return;
+    Friends.remove(code);
+    State._currentChat = null;
+    App.openFriends();
+    Toast.show('friend removed');
   },
   openSoundTest(){
     Ach.unlock('sound_test');
@@ -6137,17 +6341,31 @@ window.addEventListener('beforeinstallprompt', (e)=>{
   window._deferredPrompt = e;
 });
 
-// v0.13 ACTIVE TIME REFRESH — re-render splash greeting every 60s + on visibility
-setInterval(()=>{
-  if(document.getElementById('splash')?.classList.contains('active') && State.data){
+// v0.13/v0.18 LIVE CLOCK · refreshes every 30 sec across visible screens
+function _refreshLiveClock(){
+  if(!State.data) return;
+  const now = new Date();
+  const t = now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const lc = document.getElementById('lobby-clock');
+  if(lc) lc.textContent = '⏱ '+t;
+  // Refresh splash greeting if visible (handles new minute/hour boundary)
+  if(document.getElementById('splash')?.classList.contains('active')){
     App.renderSplashPersonal();
   }
-}, 60000);
+}
+setInterval(_refreshLiveClock, 30000);
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState==='visible' && document.getElementById('splash')?.classList.contains('active') && State.data){
-    App.renderSplashPersonal();
+  if(document.visibilityState==='visible' && State.data){
+    _refreshLiveClock();
   }
 });
+// also tick every minute boundary precisely
+function _tickToNextMinute(){
+  const now = new Date();
+  const msToNext = (60-now.getSeconds())*1000 - now.getMilliseconds();
+  setTimeout(()=>{ _refreshLiveClock(); _tickToNextMinute(); }, msToNext);
+}
+_tickToNextMinute();
 function _showFatal(e){
   const msg = (e && (e.message||String(e)))||'unknown error';
   const stack = (e && e.stack)||'';
