@@ -61,12 +61,13 @@ button{
 .screen{
   position:fixed;
   top:0;right:0;bottom:0;left:0;
-  display:none;flex-direction:column;
+  display:none !important;
+  flex-direction:column;
   padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   opacity:1;
   z-index:1;
 }
-.screen.active{display:flex !important;opacity:1 !important}
+.screen.active{display:flex !important;opacity:1 !important;z-index:2}
 .screen.fade-in{animation:screenIn .35s ease forwards}
 @keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
@@ -1171,14 +1172,14 @@ button{
 <body>
 
 <!-- ============ SPLASH ============ -->
-<section id="splash" class="screen active" style="display:flex">
+<section id="splash" class="screen active">
   <div class="splash-emoji">🧠</div>
   <h1 class="splash-title">BrainBoard</h1>
   <p class="splash-tagline">✨ sharpen the mind · feed the spirit ✨</p>
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.12.0 · TOTAL CAEE · quests · combos · PR cinematic · 🙏</div>
+  <div class="splash-foot">v0.12.1 · screen overlap squashed · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1323,7 +1324,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.12.0';
+const VERSION = '0.12.1';
 
 // ----- STATE -----
 const State = {
@@ -2177,8 +2178,13 @@ const Modal = {
 // ====================================================================
 const UI = {
   show(id){
-    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    // v0.12.1 hard-reset: clear inline display + active class on ALL screens before showing target
+    document.querySelectorAll('.screen').forEach(s=>{
+      s.classList.remove('active');
+      s.style.display = ''; // clear any leftover inline display
+    });
+    const target = document.getElementById(id);
+    if(target){ target.classList.add('active'); }
     window.scrollTo(0,0);
   },
   updateWallet(){
