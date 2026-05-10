@@ -1178,7 +1178,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.11.0 · SPLASH SUPREME · always-on entry · 🙏</div>
+  <div class="splash-foot">v0.12.0 · TOTAL CAEE · quests · combos · PR cinematic · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1232,6 +1232,8 @@ button{
     <div id="dailyBanner" class="lobby-banner" style="display:none">
       <b>🎁 daily reward ready!</b> tap any room to claim today's blessing
     </div>
+    <div id="dailyChallenge"></div>
+    <div id="dailyQuests"></div>
     <div class="lobby-title">— THE LOBBY —</div>
     <div class="rooms-grid">
       <button class="room-door room-word" onclick="App.openRoom('word')">
@@ -1321,7 +1323,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.11.0';
+const VERSION = '0.12.0';
 
 // ----- STATE -----
 const State = {
@@ -1362,6 +1364,10 @@ const DEFAULT_SAVE = {
   glow:0, // 0-100
   // v0.8 power-ups inventory
   powerups:{hint:0,skip:0,double:0,freeze:0,undo:0,fire:0},
+  // v0.12 quests + combos + PRs
+  quests:{date:'',list:[],claimed:[]},
+  combo:{count:0,lastWinTs:0},
+  prRecords:{}, // {gameKey: {bestScore, bestTime, when}}
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -1642,6 +1648,125 @@ const VisibilityGuard = {
   }
 };
 
+// ===== v0.12 QUESTS + COMBOS + PRs =====
+const QUEST_TEMPLATES = [
+  {id:'win_3_word', em:'📖', t:'Win 3 word games', need:3, room:'word', reward:{coin:200,brain:5}},
+  {id:'win_3_brain',em:'🧠', t:'Win 3 brain games', need:3, room:'brain', reward:{coin:200,brain:5}},
+  {id:'win_3_mind', em:'🎯', t:'Win 3 mind games', need:3, room:'mind', reward:{coin:200,brain:5}},
+  {id:'win_3_num',  em:'🔢', t:'Win 3 number games', need:3, room:'num', reward:{coin:200,brain:5}},
+  {id:'win_2_script',em:'✝️',t:'Win 2 scripture games', need:2, room:'script', reward:{coin:150,faith:5}},
+  {id:'win_3_logic',em:'🧩', t:'Win 3 logic games', need:3, room:'logic', reward:{coin:200,brain:5}},
+  {id:'win_3_speed',em:'⚡', t:'Win 3 speed games', need:3, room:'speed', reward:{coin:200,brain:5}},
+  {id:'play_5_any', em:'🎮', t:'Play any 5 games', need:5, any:true, reward:{coin:100,gem:1}},
+  {id:'win_5_any',  em:'🏆', t:'Win 5 games', need:5, anyWin:true, reward:{coin:300,gem:2}},
+  {id:'combo_3',    em:'🔥', t:'Get a 3-win combo', need:3, comboTarget:true, reward:{coin:250,key:1}},
+  {id:'pr_1',       em:'💎', t:'Set 1 personal record', need:1, prTarget:true, reward:{coin:150,gem:2}},
+];
+const Quests = {
+  ensureToday(){
+    const d = State.data;
+    if(!d.quests) d.quests = {date:'',list:[],claimed:[]};
+    const today = new Date().toDateString();
+    if(d.quests.date===today) return;
+    // Pick 3 random quests for today (deterministic by date)
+    const seed = today.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+    const pool = [...QUEST_TEMPLATES];
+    const list = [];
+    for(let i=0;i<3 && pool.length;i++){
+      const idx = (seed + i*7) % pool.length;
+      const q = pool.splice(idx,1)[0];
+      list.push({...q, progress:0});
+    }
+    d.quests = {date:today, list, claimed:[]};
+    Save.write();
+  },
+  bump(roomId, won){
+    Quests.ensureToday();
+    const d = State.data;
+    d.quests.list.forEach(q=>{
+      if(q.any) q.progress++;
+      else if(q.anyWin && won) q.progress++;
+      else if(q.room===roomId && won) q.progress++;
+    });
+    Save.write();
+  },
+  bumpCombo(combo){
+    Quests.ensureToday();
+    const d = State.data;
+    d.quests.list.forEach(q=>{
+      if(q.comboTarget && combo>=q.need) q.progress = q.need;
+    });
+    Save.write();
+  },
+  bumpPR(){
+    Quests.ensureToday();
+    const d = State.data;
+    d.quests.list.forEach(q=>{
+      if(q.prTarget) q.progress++;
+    });
+    Save.write();
+  },
+  claim(qid){
+    const d = State.data;
+    const q = d.quests.list.find(x=>x.id===qid); if(!q) return false;
+    if(q.progress<q.need) return false;
+    if(d.quests.claimed.includes(qid)) return false;
+    d.quests.claimed.push(qid);
+    d._totalQuestsClaimed = (d._totalQuestsClaimed||0)+1;
+    Wallet.add(q.reward);
+    Activity.log('ach', q.em, `quest done: ${q.t}`);
+    Toast.show(`✅ ${q.em} ${q.t} claimed!`);
+    SFX.holy(); confetti(); haptic(30);
+    Save.write();
+    return true;
+  }
+};
+
+// COMBO SYSTEM
+const Combo = {
+  WINDOW: 5*60*1000, // 5 min between wins maintains combo
+  bump(won){
+    const d = State.data;
+    if(!d.combo) d.combo = {count:0,lastWinTs:0};
+    if(!won){ d.combo.count = 0; d.combo.lastWinTs = 0; return 1; }
+    const now = Date.now();
+    if(now - d.combo.lastWinTs > Combo.WINDOW){ d.combo.count = 1; }
+    else d.combo.count++;
+    d.combo.lastWinTs = now;
+    Quests.bumpCombo(d.combo.count);
+    Save.write();
+    // Multipliers: 3+ = 1.5x, 5+ = 2x
+    if(d.combo.count>=5) return 2;
+    if(d.combo.count>=3) return 1.5;
+    return 1;
+  }
+};
+
+// PR DETECTION
+const PR = {
+  check(roomId, gameId, won, score, time){
+    if(!won) return false;
+    const d = State.data;
+    if(!d.prRecords) d.prRecords = {};
+    const k = `${roomId}:${gameId}`;
+    const prev = d.prRecords[k] || {};
+    let isPR = false;
+    if(score!==undefined){
+      if(!prev.bestScore || score>prev.bestScore){ prev.bestScore = score; isPR = true; }
+    }
+    if(time!==undefined){
+      if(!prev.bestTime || time<prev.bestTime){ prev.bestTime = time; isPR = true; }
+    }
+    if(isPR){
+      prev.when = Date.now();
+      d.prRecords[k] = prev;
+      Quests.bumpPR();
+      Save.write();
+    }
+    return isPR;
+  }
+};
+
 // ===== v0.9 NATURAL FAITH frequency rule =====
 function shouldShowVerseOnWin(roomId, ctx){
   // Scripture room ALWAYS shows verse — that's the room identity.
@@ -1738,6 +1863,12 @@ const ACHIEVEMENTS = [
   // v0.9 fair-play
   {id:'fair_play',em:'⚖️',t:'Fair Play',d:'10 wins with no cheats detected'},
   {id:'pure_form',em:'💎',t:'Pure Form',d:'5 wins without using a power-up'},
+  // v0.12
+  {id:'combo_3',em:'🔥',t:'On Fire',d:'Get a 3-win combo'},
+  {id:'combo_5',em:'🌋',t:'INFERNO',d:'Get a 5-win combo'},
+  {id:'first_pr',em:'💎',t:'New Record',d:'Set your first personal record'},
+  {id:'quest_3',em:'📋',t:'Quester',d:'Complete 3 daily quests'},
+  {id:'quest_10',em:'📋',t:'Quest Master',d:'Complete 10 daily quests total'},
 ];
 
 // ====================================================================
@@ -1905,6 +2036,14 @@ const Ach = {
     // v0.9 fair-play
     if(d.totals.wins>=10) Ach.unlock('fair_play');
     if(d.totals.wins>=5 && (d._powerupUses||0)===0) Ach.unlock('pure_form');
+    // v0.12 combo + PR + quests
+    if((d.combo?.count||0)>=3) Ach.unlock('combo_3');
+    if((d.combo?.count||0)>=5) Ach.unlock('combo_5');
+    if(Object.keys(d.prRecords||{}).length>=1) Ach.unlock('first_pr');
+    const claimedToday = (d.quests?.claimed||[]).length;
+    d._totalQuestsClaimed = (d._totalQuestsClaimed||0);
+    if(claimedToday>=3) Ach.unlock('quest_3');
+    if((d._totalQuestsClaimed||0)>=10) Ach.unlock('quest_10');
     // try-everything: played all 16 non-daily games
     const allIds=['word:wordle','word:anagram','brain:memory','brain:simon','mind:stroop','mind:reaction','num:math','num:sequence','script:verse','script:books','logic:lights','logic:spot','logic:hunt','speed:colormatch','speed:whack','speed:code'];
     if(allIds.every(id=>p[id]?.plays>0)) Ach.unlock('all_games');
@@ -1978,6 +2117,17 @@ const Modal = {
   close(){ document.getElementById('modal').classList.remove('active'); },
   win({rewards, title='🎉 YOU GOT IT!', emoji='🎉', verse=null, retry, lobby, roomId, ctx}){
     if(!roomId) roomId = State._lastResultRoom;
+    // v0.12 detect PR + combo for context-aware celebration
+    const isPR = State._lastPR;
+    const comboMult = State._lastCombo||1;
+    if(isPR){
+      title = `💎 NEW BEST · ${title}`;
+      ctx = ctx||{};
+      ctx.pr = true;
+    }
+    if(comboMult>1){
+      title = `🔥 ${comboMult}x COMBO · ${title}`;
+    }
     const r = Object.entries(rewards||{}).map(([k,n])=>{
       const e = {coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️',ticket:'🎫',key:'🗝️'}[k]||'';
       return `<span class="reward-chip">+${n} ${e}</span>`;
@@ -2199,10 +2349,13 @@ const App = {
       const v = randomVerse();
       const stats = d.totals||{};
       const streak = d.streak||0;
+      // v0.12 time-aware greeting
+      const h = new Date().getHours();
+      const greeting = h<5 ? 'late night' : h<12 ? 'good morning' : h<17 ? 'good afternoon' : h<21 ? 'good evening' : 'late night';
       personal.innerHTML = `
         <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(245,158,11,.3);border-radius:99px;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--cream)">
           ${renderAvatarStack(d.avatar,d.avatarHue,'S')}
-          <span>welcome back, <b style="color:var(--gold-bright)">${d.name}</b></span>
+          <span>${greeting}, <b style="color:var(--gold-bright)">${d.name}</b></span>
         </div>
         <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px">
           ${streak>=1?`<span class="reward-chip flame-streak">🔥 ${streak}-day streak</span>`:''}
@@ -2232,7 +2385,11 @@ const App = {
     }
   },
   tapEnter(){
-    if(State.data && State.data.onboarded){ UI.show('lobby'); App.checkDaily(); }
+    if(State.data && State.data.onboarded){
+      UI.show('lobby');
+      App.checkDaily();
+      App.renderLobbyExtras();
+    }
     else{ UI.show('onboard'); App.obStart(); }
     SFX.chime();
     haptic(20);
@@ -2463,6 +2620,7 @@ const App = {
       UI.updateWallet();
       UI.show('lobby');
       App.checkDaily();
+      App.renderLobbyExtras();
       Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · craft more anytime in your profile`);
     }
   },
@@ -2519,7 +2677,63 @@ const App = {
     UI.show('room');
     haptic(8);
   },
-  toLobby(){ UI.show('lobby'); haptic(6); },
+  toLobby(){
+    UI.show('lobby');
+    haptic(6);
+    App.renderLobbyExtras();
+  },
+  renderLobbyExtras(){
+    Quests.ensureToday();
+    // Daily Challenge widget — shows today's spotlight game
+    const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
+    const dailyEm = ['📖','🧠','🎯','🔢','✝️','📜','🎼','⚡','🧮','📖','💡','🔍','🔢','🎨','🌟','🔑'][day%16];
+    const dailyName = ['5-Letter','Memory','Stroop','Math','Verse','Anagram','Simon','Reaction','Sequence','Books','Lights','Spot','Hunt','Color Match','Whack','Code Sprint'][day%16];
+    const dc = document.getElementById('dailyChallenge');
+    if(dc) dc.innerHTML = `
+      <div class="daily-widget">
+        <div class="em">${dailyEm}</div>
+        <div class="info">
+          <b>today: ${dailyName}</b>
+          <span>2x rewards · spotlight</span>
+        </div>
+        <button onclick="App.openRoom('daily')">PLAY</button>
+      </div>`;
+    // Daily Quests
+    const dq = document.getElementById('dailyQuests');
+    const d = State.data;
+    const quests = d.quests?.list||[];
+    if(dq && quests.length){
+      let html = `<div style="margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center">
+        <h3 style="font-family:'Cinzel',serif;color:var(--gold-bright);font-size:13px;margin:0">📋 DAILY QUESTS</h3>
+        <span class="dim" style="font-size:11px">resets midnight</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">`;
+      quests.forEach(q=>{
+        const done = q.progress>=q.need;
+        const claimed = (d.quests.claimed||[]).includes(q.id);
+        const pct = Math.min(100, Math.round((q.progress/q.need)*100));
+        const rewardStr = Object.entries(q.reward).map(([k,v])=>`+${v}${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️',key:'🗝️'})[k]||''}`).join(' ');
+        const status = claimed ? '✅' : done ? `<button class="reward-chip" style="cursor:pointer;background:linear-gradient(90deg,var(--gold),var(--gold-bright));color:var(--ink);border:none" onclick="App.claimQuest('${q.id}')">CLAIM</button>` : `<span class="dim" style="font-size:11px">${q.progress}/${q.need}</span>`;
+        html += `<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${q.em}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;line-height:1.3">${q.t}</div>
+            <div style="background:rgba(255,255,255,.08);border-radius:99px;height:4px;margin-top:4px;overflow:hidden"><div style="background:${done?'var(--good)':'var(--gold)'};height:100%;width:${pct}%"></div></div>
+            <div class="dim" style="font-size:10px;margin-top:2px">${rewardStr}</div>
+          </div>
+          ${status}
+        </div>`;
+      });
+      html += `</div>`;
+      dq.innerHTML = html;
+    }
+  },
+  claimQuest(qid){
+    if(Quests.claim(qid)){
+      App.renderLobbyExtras();
+      UI.updateWallet();
+    }
+  },
   exitGame(){
     if(State.gameInst?.cleanup) State.gameInst.cleanup();
     State.gameInst = null;
@@ -2649,18 +2863,73 @@ const App = {
   },
   openAch(){
     document.getElementById('aux-title').innerHTML = '🎖️ Achievements';
-    let html = '<div class="ach-list">';
-    ACHIEVEMENTS.forEach(a=>{
-      const u = !!State.data.ach[a.id];
+    const d = State.data;
+    const total = ACHIEVEMENTS.length;
+    const unlocked = Object.keys(d.ach||{}).length;
+    let html = `<div style="text-align:center;margin-bottom:10px">
+      <b style="color:var(--gold-bright);font-size:18px">${unlocked} / ${total}</b>
+      <div style="background:rgba(255,255,255,.08);height:8px;border-radius:99px;margin:6px auto;max-width:300px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--gold),var(--gold-bright));height:100%;width:${Math.round(unlocked/total*100)}%"></div></div>
+    </div>`;
+    // sort: unlocked first by ts, then locked at bottom
+    const sorted = [...ACHIEVEMENTS].sort((a,b)=>{
+      const ua = !!d.ach[a.id], ub = !!d.ach[b.id];
+      if(ua!==ub) return ua?-1:1;
+      return 0;
+    });
+    html += '<div class="ach-list">';
+    sorted.forEach(a=>{
+      const u = !!d.ach[a.id];
+      // Estimate progress for locked ones (best-effort by parsing description)
+      let progressBar = '';
+      if(!u){
+        const prog = App._achProgress(a, d);
+        if(prog && prog.need>0){
+          const pct = Math.min(100, Math.round((prog.have/prog.need)*100));
+          progressBar = `<div style="background:rgba(255,255,255,.06);border-radius:99px;height:4px;margin-top:4px;overflow:hidden"><div style="background:var(--gold);height:100%;width:${pct}%"></div></div><div class="dim" style="font-size:10px;margin-top:2px">${prog.have}/${prog.need}</div>`;
+        }
+      }
       html += `<div class="ach-row ${u?'unlocked':''}">
         <div class="em">${u?a.em:'🔒'}</div>
-        <div class="info"><b>${a.t}</b><span>${a.d}</span></div>
+        <div class="info"><b>${a.t}</b><span>${a.d}</span>${progressBar}</div>
         ${u?'<span style="color:var(--good);font-size:18px">✓</span>':''}
       </div>`;
     });
     html += '</div>';
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
+  },
+  _achProgress(a, d){
+    const p = d.perGame||{};
+    const sum = (cat)=>Object.entries(p).filter(([k])=>k.startsWith(cat+':')).reduce((acc,[,v])=>acc+(v.wins||0),0);
+    switch(a.id){
+      case 'first_win': return {have:d.totals.wins, need:1};
+      case 'word_5': return {have:sum('word'), need:5};
+      case 'brain_5': return {have:sum('brain'), need:5};
+      case 'mind_5': return {have:sum('mind'), need:5};
+      case 'num_5': return {have:sum('num'), need:5};
+      case 'script_5': return {have:sum('script'), need:5};
+      case 'word_25': return {have:sum('word'), need:25};
+      case 'brain_25': return {have:sum('brain'), need:25};
+      case 'mind_25': return {have:sum('mind'), need:25};
+      case 'num_25': return {have:sum('num'), need:25};
+      case 'script_25': return {have:sum('script'), need:25};
+      case 'logic_5': return {have:sum('logic'), need:5};
+      case 'logic_25': return {have:sum('logic'), need:25};
+      case 'speed_5': return {have:sum('speed'), need:5};
+      case 'speed_25': return {have:sum('speed'), need:25};
+      case 'streak_3': return {have:d.streak, need:3};
+      case 'streak_7': return {have:d.streak, need:7};
+      case 'streak_30': return {have:d.streak, need:30};
+      case 'wins_50': return {have:d.totals.wins, need:50};
+      case 'wins_100': return {have:d.totals.wins, need:100};
+      case 'iq_1200': return {have:d.iq, need:1200};
+      case 'iq_1500': return {have:d.iq, need:1500};
+      case 'iq_2000': return {have:d.iq, need:2000};
+      case 'fashion_3': return {have:(d.loadouts||[]).length, need:3};
+      case 'avatar_chaos': return {have:(d._randomizeCount||0), need:5};
+      case 'fair_play': return {have:d.totals.wins, need:10};
+    }
+    return null;
   },
   openShop(){
     if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0};
@@ -3092,10 +3361,16 @@ function recordResult(roomId, gameId, won, rewards={}){
   d.totals.games++;
   const gameDef = ROOMS[roomId]?.games.find(g=>g.id===gameId);
   const gName = gameDef ? gameDef.name : gameId;
+  let isPR = false, comboMult = 1;
   if(won){
+    // Combo multiplier (back-to-back wins)
+    comboMult = Combo.bump(true);
     if(State._dailyMultiplier){
       Object.keys(rewards).forEach(k=>rewards[k]=Math.round(rewards[k]*State._dailyMultiplier));
       State._dailyMultiplier = null;
+    }
+    if(comboMult>1){
+      Object.keys(rewards).forEach(k=>rewards[k]=Math.round(rewards[k]*comboMult));
     }
     d.perGame[key].wins++;
     d.perGame[key].lastWin = Date.now();
@@ -3103,14 +3378,22 @@ function recordResult(roomId, gameId, won, rewards={}){
     d.iq = Math.min(2400, d.iq + 8);
     Wallet.add(rewards);
     DNA.bumpFromRoom(roomId);
-    Activity.log('win','🏆',`won ${gName}`);
+    Activity.log('win','🏆',`won ${gName}${comboMult>1?` · ${comboMult}x combo!`:''}`);
     BP.addXp(2);
+    // PR check (uses coin reward as approximate score for cross-game comparison)
+    isPR = PR.check(roomId, gameId, true, rewards.coin||0);
+    State._lastPR = isPR;
+    State._lastCombo = comboMult;
   }else{
+    Combo.bump(false);
     d.totals.losses++;
     d.iq = Math.max(800, d.iq - 4);
     Activity.log('loss','💪',`played ${gName}`);
     BP.addXp(1);
+    State._lastPR = false;
+    State._lastCombo = 1;
   }
+  Quests.bump(roomId, won);
   Save.write();
   Ach.check();
   UI.updateWallet();
