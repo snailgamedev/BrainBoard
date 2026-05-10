@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.48.0 · 🧠 Coach IQ scales with you · 🎯 skill targets · 6-tier coach evolution · CAEE'd · 🙏</div>
+  <div class="splash-foot">v0.49.0 · 💬 Coach DMs · 🎓 lessons · 🏆 LB · 🌀 fusion · 🎁 100xp gifts · name+IQ identity · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.48.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.49.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.48.0';
+const VERSION = '0.49.0';
 
 // ----- STATE -----
 const State = {
@@ -1516,6 +1516,12 @@ const DEFAULT_SAVE = {
   coachName:'Bud', // user can rename
   skillTarget:{weekId:'', axis:'', target:5, progress:0, claimed:false},
   coachRelations:0, // 0-100 vibe meter
+  // v0.49 Coach expansion
+  coachDms:[], // [{ts, text, read, em}] inbox-style messages
+  coachLessonsDone:[], // ids of completed lessons
+  coachFusion:{slot:null}, // {a:'aura1',b:'aura2',name:'AuraName'} merged cosmetic
+  coachLastGiftXp:0, // last XP threshold where gift was dispensed
+  coachDmLastDate:'', // YYYY-MM-DD of last daily DM
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -2340,12 +2346,15 @@ const Coach = {
   bumpXp(amount){
     State.data.coachXp = (State.data.coachXp||0) + amount;
     State.data.coachRelations = Math.min(100, (State.data.coachRelations||0) + 0.5);
+    // v0.49 · gift dispense every 100 XP threshold
+    try{ CoachGift.checkDispense(); }catch(e){}
     // tier-up detection
     const prev = this._lastTier || this.tier().idx;
     const cur = this.tier().idx;
     if(cur>prev){
       this._lastTier = cur;
       const t = this.tier();
+      if(t.name==='Apostle') try{ Ach.unlock('coach_apostle'); }catch(e){}
       setTimeout(()=>Modal.show(`<div style="text-align:center;padding:8px">
         <div style="font-size:84px">${t.em}</div>
         <h3 style="margin:8px 0;color:${t.color}">COACH ${t.name.toUpperCase()}</h3>
@@ -2956,6 +2965,8 @@ const ACHIEVEMENTS = [
   {id:'duel_send',em:'⚔️',t:'Challenger',d:'Send a duel challenge'},
   {id:'duel_win',em:'🏆',t:'Duelist',d:'Win a duel'},
   {id:'duel_10wins',em:'👑',t:'Duel Lord',d:'Win 10 duels'},
+  {id:'coach_fused',em:'🌀',t:'Fusion Master',d:'Fuse 2 Coach tier emojis'},
+  {id:'coach_apostle',em:'✝️',t:'Coach Apostle',d:'Evolve Coach to Apostle tier'},
 ];
 
 // ====================================================================
@@ -4856,6 +4867,374 @@ const Trader = {
 };
 
 // ====================================================================
+// 💬 v0.49 · COACH DMs · daily inbox check-in messages
+// ====================================================================
+const CoachDM = {
+  todayKey(){
+    const d=new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  },
+  ensureDailyDM(){
+    if(State.data.coachDmLastDate === this.todayKey()) return;
+    const t = Coach.tier();
+    const b = Coach.brain();
+    const name = State.data.coachName || 'Bud';
+    const userName = State.data.name || 'saint';
+    const tipPool = {
+      low: [
+        `gm ${userName}! ${name} forgot how to math but we'll figure it out today 😅`,
+        `dawn ${userName}. me · ${name} · barely knows what i'm doing but here we go`,
+        `wsg ${userName} · let's lose together (or win idk lol)`,
+        `morning ${userName}! Coach IQ low but vibes high 🌅`,
+      ],
+      mid: [
+        `morning ${userName} · ${name} here · 3 games today and we level up`,
+        `${userName} I see your last run was ${b?.recentWinRate>0.5?'solid':'rough'} · keep going`,
+        `hey ${userName}. weak axis: ${b?.weakest||'???'} · today's mission`,
+        `daily report · ${b?.totalPlays||0} games logged · ${b?.strongest||'?'} is fire`,
+      ],
+      high: [
+        `briefing ${userName} · pattern analysis: ${b?.strongest} dominant, ${b?.weakest} pending`,
+        `intel for ${userName} · target ${b?.weakest} for 18% efficiency gain`,
+        `${name} report: ${b?.recentWinRate>0.7?'optimal flow detected':'recalibrating thresholds'}`,
+        `strategic recommendation: 5 ${b?.weakest} runs unlocks combo tier`,
+      ],
+      apostle: [
+        `"The Lord renew thy strength like the eagle" · today's ${b?.weakest} is the trial`,
+        `${userName} · weakness is opportunity · ${b?.weakest} awaits`,
+        `morning blessing ${userName} · craft sharpens craft`,
+        `"all things are possible" · including your ${b?.weakest}`,
+      ]
+    };
+    const pool = tipPool[t.voice] || tipPool.mid;
+    const text = pool[Math.floor(Math.random()*pool.length)];
+    State.data.coachDms = State.data.coachDms || [];
+    State.data.coachDms.unshift({ts:Date.now(), em:t.em, text, read:false});
+    if(State.data.coachDms.length>20) State.data.coachDms = State.data.coachDms.slice(0,20);
+    State.data.coachDmLastDate = this.todayKey();
+    Save.write();
+  },
+  unreadCount(){
+    return (State.data.coachDms||[]).filter(m=>!m.read).length;
+  },
+  markAllRead(){
+    (State.data.coachDms||[]).forEach(m=>m.read=true);
+    Save.write();
+  },
+  renderHub(){
+    this.ensureDailyDM();
+    const t = Coach.tier();
+    const name = State.data.coachName||'Bud';
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33)">
+      <div style="font-size:42px">${t.em}</div>
+      <b style="color:${t.color};font-size:16px">${name} DMs</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">daily check-ins · auto-pushed at dawn</div>
+    </div>`;
+    const dms = State.data.coachDms || [];
+    if(!dms.length){ html += `<div class="dim" style="padding:20px;text-align:center;font-size:12px">no messages yet · check back tomorrow</div>`; return html; }
+    html += `<div style="margin-top:14px">`;
+    dms.forEach(m=>{
+      const ago = Math.round((Date.now()-m.ts)/3600000);
+      const when = ago<1?'just now':ago<24?`${ago}h ago`:`${Math.floor(ago/24)}d ago`;
+      html += `<div style="background:rgba(0,0,0,.18);border-left:3px solid ${m.read?'rgba(255,255,255,.2)':t.color};border-radius:8px;padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:700;color:${t.color}">${m.em} ${name}</span>
+          <span class="dim" style="font-size:10px">${when}${m.read?'':' · 🔵'}</span>
+        </div>
+        <div style="font-size:12px;margin-top:4px;line-height:1.5">${m.text}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    setTimeout(()=>this.markAllRead(), 600);
+    return html;
+  }
+};
+
+// ====================================================================
+// 🎓 v0.49 · COACH LESSONS · strategy walkthroughs per topic
+// ====================================================================
+const CoachLessons = {
+  LESSONS: [
+    {id:'memory101', em:'🧠', t:'Memory 101', steps:[
+      'memory games train recall by repetition',
+      'try to chunk patterns: group 3-4 items at a time',
+      'rehearse silently before answering',
+      'sleep matters: rested brain encodes better'
+    ], reward:{coin:80, brain:5}},
+    {id:'word101', em:'📖', t:'Word Mastery', steps:[
+      'common letters appear in 90% of english words: E A R T O',
+      'start with vowel positions in word puzzles',
+      'common endings: -ING -ED -ER -ION',
+      'read scripture daily · vocab grows'
+    ], reward:{coin:80, faith:3}},
+    {id:'speed101', em:'⚡', t:'Speed Reflex', steps:[
+      'breathe before tapping · panic loses runs',
+      'focus on screen center · peripheral catches motion',
+      'don\'t look at score during run · distracts',
+      'practice 2 min daily for steady gain'
+    ], reward:{coin:80, brain:3}},
+    {id:'logic101', em:'🧩', t:'Logic Pattern', steps:[
+      'eliminate options before guessing',
+      'look for pairs of contradictions',
+      'work backwards from the answer',
+      'patience > speed in lights out and sudoku'
+    ], reward:{coin:80, brain:5}},
+    {id:'scripture101', em:'✝️', t:'Scripture Wisdom', steps:[
+      'verses repeat themes: hope, faith, love · learn theme not just words',
+      'connect Old → New: prophecy → fulfillment',
+      'memorize ONE verse per week',
+      'apply it in Coach DMs · ground decisions in word'
+    ], reward:{coin:80, faith:8}},
+    {id:'frenzy101', em:'🔥', t:'Frenzy Strategy', steps:[
+      'spotlight round = 2x score · save energy for it',
+      'gauntlet (5 rounds) = ~70% more reward per minute',
+      'streak bonus stacks daily · don\'t skip',
+      'combo XP starts round 2 · keep pace'
+    ], reward:{coin:100, gem:1}},
+  ],
+  isDone(id){ return (State.data.coachLessonsDone||[]).includes(id); },
+  start(id){
+    const lesson = this.LESSONS.find(l=>l.id===id);
+    if(!lesson){ Toast.show('lesson not found'); return; }
+    if(this.isDone(id)){ Toast.show('already mastered · pick another'); return; }
+    let step = 0;
+    const showStep = ()=>{
+      if(step>=lesson.steps.length){
+        // mark done · reward
+        State.data.coachLessonsDone = State.data.coachLessonsDone||[];
+        State.data.coachLessonsDone.push(id);
+        Wallet.add(lesson.reward);
+        Coach.bumpXp(30);
+        Save.write();
+        Modal.show(`<div style="text-align:center;padding:8px">
+          <div style="font-size:64px">${lesson.em}</div>
+          <h3 style="margin:8px 0;color:var(--gold-bright)">LESSON LEARNED</h3>
+          <p style="font-size:13px;margin:8px 0">${lesson.t} · ${lesson.steps.length} steps complete</p>
+          <p style="font-size:12px">${Object.entries(lesson.reward).map(([k,n])=>`+${n} ${{coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||k}`).join(' · ')}</p>
+          <p class="dim" style="font-size:11px">Coach +30 XP · learned with you</p>
+          <button class="btn-primary" style="margin-top:14px" onclick="Modal.close();App.openCoachLessons()">↩ more lessons</button>
+        </div>`);
+        return;
+      }
+      const t = Coach.tier();
+      Modal.show(`<div style="text-align:center;padding:8px">
+        <div style="font-size:42px">${lesson.em}</div>
+        <h3 style="margin:8px 0;color:${t.color}">${lesson.t}</h3>
+        <div class="dim" style="font-size:11px;margin-bottom:10px">step ${step+1}/${lesson.steps.length} · ${State.data.coachName||'Bud'} teaching</div>
+        <div style="font-size:14px;margin:14px 0;line-height:1.6;background:rgba(0,0,0,.18);padding:14px;border-radius:10px">"${lesson.steps[step]}"</div>
+        <button class="btn-primary" style="margin-top:8px" onclick="Modal.close();setTimeout(()=>CoachLessons._cont(${step+1},'${id}'),200)">${step+1===lesson.steps.length?'✨ FINISH':'next →'}</button>
+      </div>`);
+    };
+    showStep.bind(this);
+    this._cont = (s, lid)=>{ const l=this.LESSONS.find(x=>x.id===lid); if(!l) return; step=s; if(step>=l.steps.length){ this._finish(l); } else { showStep(); } };
+    showStep();
+  },
+  _finish(lesson){
+    State.data.coachLessonsDone = State.data.coachLessonsDone||[];
+    if(!State.data.coachLessonsDone.includes(lesson.id)) State.data.coachLessonsDone.push(lesson.id);
+    Wallet.add(lesson.reward);
+    Coach.bumpXp(30);
+    Save.write();
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:64px">${lesson.em}</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">LESSON LEARNED</h3>
+      <p style="font-size:13px;margin:8px 0">${lesson.t}</p>
+      <p style="font-size:12px">${Object.entries(lesson.reward).map(([k,n])=>`+${n} ${{coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||k}`).join(' · ')}</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close();App.openCoachLessons()">↩ more</button>
+    </div>`);
+  },
+  renderHub(){
+    const t = Coach.tier();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),${t.color}33)">
+      <div style="font-size:42px">🎓</div>
+      <b style="color:${t.color};font-size:16px">${State.data.coachName||'Bud'}'s Lessons</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">${(State.data.coachLessonsDone||[]).length}/${this.LESSONS.length} mastered</div>
+    </div>`;
+    html += `<div style="margin-top:14px">`;
+    this.LESSONS.forEach(l=>{
+      const done = this.isDone(l.id);
+      html += `<div onclick="${done?'':`CoachLessons.start('${l.id}')`}" style="background:rgba(0,0,0,.18);border-radius:10px;padding:12px;margin-bottom:6px;${done?'opacity:.5':'cursor:pointer'};display:flex;align-items:center;gap:10px">
+        <div style="font-size:28px">${l.em}</div>
+        <div style="flex:1">
+          <b style="font-size:13px">${l.t}</b>
+          <div class="dim" style="font-size:11px">${l.steps.length} steps · ${Object.entries(l.reward).map(([k,n])=>`+${n}${{coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||''}`).join(' · ')}</div>
+        </div>
+        <div style="font-size:18px">${done?'✅':'▶'}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🏆 v0.49 · COACH LEADERBOARD · global ranking of Coach tiers (seeded)
+// ====================================================================
+const CoachLB = {
+  seed(){
+    // deterministic seed by week so leaderboard is "stable" but rotates
+    const wk = WeeklyTourney.weekId();
+    let s = 0;
+    for(let i=0;i<wk.length;i++) s = (s*31+wk.charCodeAt(i)) & 0xffffffff;
+    return s;
+  },
+  rng(s){let x=s; return ()=>{x=(x*9301+49297)%233280; return x/233280;};},
+  renderHub(){
+    const myTier = Coach.tier();
+    const myIq = Coach.iq();
+    const myName = State.data.coachName || 'Bud';
+    const userName = State.data.name || 'You';
+    const r = this.rng(this.seed());
+    const botCoachNames = ['Sage','Ember','Pip','Rho','Quill','Echo','Zeph','Vela','Mara','Onyx','Pixel','Lumen','Cipher','Tessa','Ari'];
+    const playerNames = ['Aaron','Mary','David','Ruth','John','Esther','Paul','Lydia','Daniel','Sarah'];
+    const bots = [];
+    for(let i=0;i<15;i++){
+      const cIq = Math.max(60, Math.round(myIq * (0.4 + r()*1.8) + Math.floor(r()*60)));
+      const cName = botCoachNames[Math.floor(r()*botCoachNames.length)] + (i>5?String(Math.floor(r()*99)):'');
+      const pName = playerNames[Math.floor(r()*playerNames.length)];
+      // find tier
+      let tier = Coach.TIERS[0];
+      for(let j=Coach.TIERS.length-1;j>=0;j--){ const xp=(cIq-50)*3; if(xp>=Coach.TIERS[j].min){tier=Coach.TIERS[j];break;} }
+      bots.push({coachName:cName, userName:pName, iq:cIq, tier});
+    }
+    bots.push({coachName:myName, userName, iq:myIq, tier:myTier, me:true});
+    bots.sort((a,b)=>b.iq-a.iq);
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18))">
+      <div style="font-size:42px">🏆</div>
+      <b style="color:var(--gold-bright);font-size:16px">Coach Leaderboard · this week</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">global rank by Coach IQ · resets weekly</div>
+    </div>`;
+    html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;margin-top:14px;font-size:12px">`;
+    bots.forEach((b,i)=>{
+      const medal = i<3?['🥇','🥈','🥉'][i]:`${i+1}.`;
+      const bg = b.me?'background:rgba(245,158,11,.22);border-radius:6px;padding:5px 6px':'padding:5px 6px';
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;${bg}">
+        <span><b>${medal}</b> ${b.tier.em} <b style="color:${b.tier.color}">${b.coachName}</b> <span class="dim" style="font-size:10px">w/ ${b.userName}${b.me?' (you)':''}</span></span>
+        <span><b>${b.iq}</b> IQ</span>
+      </div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🌀 v0.49 · COACH FUSION · combine 2 tier emojis into a unique vibe
+// ====================================================================
+const CoachFusion = {
+  pairs: {
+    '🥚🦉':{em:'🪺',name:'Nesthood'},
+    '🐣🦉':{em:'🐤',name:'Quickwing'},
+    '🦉📚':{em:'📖',name:'Studied Owl'},
+    '📚🧙':{em:'🔮',name:'Old Scholar'},
+    '🧙🌟':{em:'☄️',name:'Star Sage'},
+    '🌟✝️':{em:'⚡',name:'Holy Light'},
+    '🥚✝️':{em:'🕊️',name:'Newborn Spirit'},
+    '🦉🌟':{em:'🦅',name:'Owl of Glory'},
+  },
+  available(){
+    const t = Coach.tier();
+    return Coach.TIERS.slice(0, t.idx+1); // can fuse from unlocked tiers
+  },
+  isUnlocked(){ return Coach.tier().idx >= 2; },
+  fuse(emA, emB){
+    if(!this.isUnlocked()){ Toast.show('reach Apprentice tier to unlock fusion'); return; }
+    if(emA===emB){ Toast.show('pick 2 different tiers'); return; }
+    const k1 = emA+emB, k2 = emB+emA;
+    const result = this.pairs[k1] || this.pairs[k2];
+    if(!result){
+      Toast.show(`🌀 ${emA}+${emB} = ${emA}${emB} · new combo!`);
+      State.data.coachFusion = {a:emA, b:emB, em:emA+emB, name:'Custom Fusion'};
+    } else {
+      Toast.show(`🌀 fused into ${result.em} ${result.name}!`);
+      State.data.coachFusion = {a:emA, b:emB, em:result.em, name:result.name};
+    }
+    Save.write();
+    Ach.unlock('coach_fused');
+  },
+  current(){ return State.data.coachFusion || null; },
+  renderHub(){
+    const t = Coach.tier();
+    const cur = this.current();
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">${cur?.em||'🌀'}</div>
+      <b style="color:${t.color};font-size:16px">Coach Fusion</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">${cur?`active: ${cur.em} ${cur.name}`:'combine 2 tier emojis into a unique vibe'}</div>
+    </div>`;
+    if(!this.isUnlocked()){
+      html += `<div class="dim" style="padding:14px;text-align:center;font-size:12px">🔒 unlocked at Coach tier 3 (Apprentice 🦉)</div>`;
+      return html;
+    }
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🔧 PICK TWO TIER EMOJIS</h3>`;
+    const av = this.available();
+    html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${av.map((tier,i)=>`<button class="av-tool-btn" onclick="CoachFusion._pick('${tier.em}')" style="font-size:22px">${tier.em}</button>`).join('')}</div>`;
+    html += `<div id="fusion-picks" style="margin-top:14px;text-align:center;font-size:24px;min-height:36px"></div>`;
+    html += `<button class="btn-primary" style="margin-top:14px;width:100%;padding:14px" onclick="CoachFusion._do()">🌀 FUSE</button>`;
+    if(cur){
+      html += `<button class="btn-secondary" style="margin-top:6px;width:100%" onclick="CoachFusion._reset()">↩ reset to tier default</button>`;
+    }
+    return html;
+  },
+  _picks:[],
+  _pick(em){
+    this._picks.push(em);
+    if(this._picks.length>2) this._picks = this._picks.slice(-2);
+    const el = document.getElementById('fusion-picks');
+    if(el) el.textContent = this._picks.join(' + ');
+  },
+  _do(){
+    if(this._picks.length<2){ Toast.show('pick 2 first'); return; }
+    this.fuse(this._picks[0], this._picks[1]);
+    this._picks = [];
+    App.openCoachFusion();
+  },
+  _reset(){
+    State.data.coachFusion = null;
+    Save.write();
+    Toast.show('🌀 fusion reset');
+    App.openCoachFusion();
+  }
+};
+
+// ====================================================================
+// 🎁 v0.49 · COACH GIFTS · auto-gift every 100 XP threshold
+// ====================================================================
+const CoachGift = {
+  GIFTS: [
+    {em:'💡', name:'Hint', apply:()=>{State.data.powerups=State.data.powerups||{}; State.data.powerups.hint=(State.data.powerups.hint||0)+1;}},
+    {em:'⏭', name:'Skip', apply:()=>{State.data.powerups=State.data.powerups||{}; State.data.powerups.skip=(State.data.powerups.skip||0)+1;}},
+    {em:'2️⃣', name:'2x Boost', apply:()=>{State.data.powerups=State.data.powerups||{}; State.data.powerups.double=(State.data.powerups.double||0)+1;}},
+    {em:'⏸', name:'Freeze', apply:()=>{State.data.powerups=State.data.powerups||{}; State.data.powerups.freeze=(State.data.powerups.freeze||0)+1;}},
+    {em:'↩', name:'Undo', apply:()=>{State.data.powerups=State.data.powerups||{}; State.data.powerups.undo=(State.data.powerups.undo||0)+1;}},
+    {em:'🔥', name:'Holy Fire', apply:()=>{State.data.powerups=State.data.powerups||{}; State.data.powerups.fire=(State.data.powerups.fire||0)+1;}},
+    {em:'🛡️', name:'Streak Shield', apply:()=>{State.data.streakShield=(State.data.streakShield||0)+1;}},
+  ],
+  checkDispense(){
+    const xp = State.data.coachXp || 0;
+    const lastGift = State.data.coachLastGiftXp || 0;
+    if(xp - lastGift < 100) return;
+    // dispense one gift per 100xp crossed
+    const tiers = Math.floor((xp - lastGift) / 100);
+    for(let i=0;i<tiers;i++){
+      const gift = this.GIFTS[Math.floor(Math.random()*this.GIFTS.length)];
+      gift.apply();
+      State.data.coachLastGiftXp = lastGift + (i+1)*100;
+      setTimeout(()=>{
+        const name = State.data.coachName||'Bud';
+        Modal.show(`<div style="text-align:center;padding:8px">
+          <div style="font-size:64px;animation:cineLogoZoom .8s cubic-bezier(.2,1.4,.5,1)">${gift.em}</div>
+          <h3 style="margin:8px 0;color:var(--gold-bright)">${name.toUpperCase()} GIFTED YOU</h3>
+          <p style="font-size:13px;margin:8px 0">+1 ${gift.name}</p>
+          <p class="dim" style="font-size:11px">100 Coach XP gift drop</p>
+          <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ THANK YOU</button>
+        </div>`);
+      }, i*1200);
+    }
+    Save.write();
+  }
+};
+
+// ====================================================================
 // 💾 SAVE / LOAD
 // ====================================================================
 const Save = {
@@ -6352,6 +6731,8 @@ const App = {
     Lang.autoDetect();
     // v0.43 · weekly tournament check (payout previous-week standing if rollover)
     try{ WeeklyTourney.checkPayout(); }catch(e){}
+    // v0.49 · ensure today's Coach DM is pushed
+    try{ CoachDM.ensureDailyDM(); }catch(e){}
     // v0.41 · help pulse · until user taps it once
     const pulse = document.getElementById('help-pulse');
     if(pulse) pulse.style.display = State.data.helpHubSeen ? 'none' : 'block';
@@ -7602,11 +7983,12 @@ const App = {
     const moodEm = Coach.mood();
     const xpPct = nextT ? Math.round(((tier.xp-tier.min)/(nextT.min-tier.min))*100) : 100;
     document.getElementById('aux-title').innerHTML = '🧠 Coach AI';
+    const fuseEm = State.data.coachFusion?.em || tier.em;
     let html = `<div class="settings-list">
       <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.25),${tier.color}33);border-color:${tier.color}66">
-        <div style="font-size:64px">${tier.em}</div>
-        <b style="color:${tier.color};font-size:18px;display:block">${State.data.coachName||'Bud'} · ${tier.name}</b>
-        <div class="dim" style="font-size:11px;margin-top:4px">${moodEm} Coach IQ <b>${coachIq}</b> · your IQ <b>${d.iq}</b> · we grow together</div>
+        <div style="font-size:64px">${fuseEm}</div>
+        <b style="color:${tier.color};font-size:18px;display:block">${State.data.coachName||'Bud'} · IQ ${coachIq}</b>
+        <div class="dim" style="font-size:11px;margin-top:4px">${moodEm} ${tier.name} · your IQ <b>${d.iq}</b> · we grow together</div>
         ${nextT?`<div style="background:rgba(255,255,255,.08);height:6px;border-radius:99px;margin-top:8px;overflow:hidden">
           <div style="background:linear-gradient(90deg,${tier.color},${nextT.color});height:100%;width:${xpPct}%"></div>
         </div>
@@ -7620,7 +8002,14 @@ const App = {
         <div style="font-style:italic;margin-top:6px">"${Coach.tipForTier()}"</div>
       </div>
       <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎯 WEEKLY SKILL TARGET</h3>
-      ${SkillTarget.renderCard()}`;
+      ${SkillTarget.renderCard()}
+      <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🧠 MORE WITH ${State.data.coachName||'BUD'}</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachDms()">💬 DMs${CoachDM.unreadCount()?` · <span style="color:#FBBF24">${CoachDM.unreadCount()} new</span>`:''}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLessons()">🎓 Lessons · ${(State.data.coachLessonsDone||[]).length}/${CoachLessons.LESSONS.length}</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachLB()">🏆 LB</button>
+        <button class="btn-secondary" style="padding:12px" onclick="App.openCoachFusion()">🌀 Fusion${State.data.coachFusion?.em?' '+State.data.coachFusion.em:''}</button>
+      </div>`;
     if(!b || b.totalPlays<3){
       html += `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:14px;text-align:center;margin-top:14px;font-size:13px">
         play <b>${Math.max(0,3-(b?b.totalPlays:0))}</b> more game${(b?.totalPlays??0)===2?'':'s'} for Coach to start tuning recommendations · keep going!
@@ -7797,6 +8186,27 @@ const App = {
       Toast.show(`✓ Coach now: ${State.data.coachName}`);
       App.openCoach();
     }
+  },
+  // v0.49 Coach hubs
+  openCoachDms(){
+    document.getElementById('aux-title').innerHTML = '💬 Coach DMs';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachDM.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
+    UI.show('aux');
+  },
+  openCoachLessons(){
+    document.getElementById('aux-title').innerHTML = '🎓 Coach Lessons';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachLessons.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
+    UI.show('aux');
+  },
+  openCoachLB(){
+    document.getElementById('aux-title').innerHTML = '🏆 Coach LB';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachLB.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
+    UI.show('aux');
+  },
+  openCoachFusion(){
+    document.getElementById('aux-title').innerHTML = '🌀 Coach Fusion';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CoachFusion.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.openCoach()">← back to Coach</button></div>`;
+    UI.show('aux');
   },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
