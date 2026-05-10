@@ -1198,7 +1198,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.18.0 · friends · messaging · live clock · 🙏</div>
+  <div class="splash-foot">v0.19.0 · Brain Rank tiers · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1242,7 +1242,7 @@ button{
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
         <span id="p-em">🙏</span>
         <span id="p-name">Saint</span>
-        <span style="opacity:.7">· IQ <span id="p-iq">1000</span></span>
+        <span style="opacity:.7">· <span id="p-rank-tier">📖</span> <span id="p-iq">1000</span></span>
       </button>
       <div class="dim" id="lobby-clock" style="font-size:11px;opacity:.85">⏱ —</div>
       <div class="dim">🔥 <span id="p-streak">0</span></div>
@@ -1348,7 +1348,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.18.0';
+const VERSION = '0.19.0';
 
 // ----- STATE -----
 const State = {
@@ -1903,6 +1903,39 @@ const VisibilityGuard = {
   }
 };
 
+// ===== v0.19 BRAIN RANK TIERS =====
+// Renamed from "IQ" — uses Elo-style numbers (1000 = entry, 2400 = max)
+// Internal data field stays State.data.iq for save compat · displayed as "BR"
+const RANK_TIERS = [
+  {min:800, max:899,  em:'🌱', name:'Sprout',    color:'#10B981'},
+  {min:900, max:999,  em:'🐑', name:'Lamb',      color:'#A78BFA'},
+  {min:1000,max:1149, em:'📖', name:'Scholar',   color:'#22D3EE'},  // ← starting tier
+  {min:1150,max:1299, em:'🦉', name:'Sage',      color:'#7C3AED'},
+  {min:1300,max:1499, em:'🌟', name:'Saint',     color:'#F59E0B'},
+  {min:1500,max:1699, em:'✝️', name:'Apostle',   color:'#FBBF24'},
+  {min:1700,max:1899, em:'👑', name:'Sovereign', color:'#EF4444'},
+  {min:1900,max:2099, em:'⚡', name:'Legend',    color:'#A855F7'},
+  {min:2100,max:2400, em:'🔥', name:'Mythic',    color:'#FF0080'},
+];
+function getRankTier(rank){
+  rank = rank||1000;
+  return RANK_TIERS.find(t=>rank>=t.min && rank<=t.max) || RANK_TIERS[0];
+}
+function rankProgressToNext(rank){
+  rank = rank||1000;
+  const tier = getRankTier(rank);
+  const idx = RANK_TIERS.indexOf(tier);
+  const next = RANK_TIERS[idx+1];
+  if(!next) return {pct:100, next:null, tier};
+  const range = next.min - tier.min;
+  const into = rank - tier.min;
+  return {pct:Math.round((into/range)*100), next, tier};
+}
+function rankBadge(rank){
+  const t = getRankTier(rank||1000);
+  return `<span style="color:${t.color};font-weight:700">${t.em} ${t.name}</span>`;
+}
+
 // ===== v0.12 QUESTS + COMBOS + PRs =====
 const QUEST_TEMPLATES = [
   {id:'win_3_word', em:'📖', t:'Win 3 word games', need:3, room:'word', reward:{coin:200,brain:5}},
@@ -2168,6 +2201,13 @@ const ACHIEVEMENTS = [
   {id:'five_friends',em:'👥',t:'Squad',d:'Add 5 friends'},
   {id:'first_message',em:'💬',t:'Connected',d:'Send your first message'},
   {id:'chatty',em:'💬',t:'Chatty Saint',d:'Send 20 messages'},
+  // v0.19 rank tier promotions
+  {id:'rank_sage',em:'🦉',t:'Sage Tier',d:'Reach Brain Rank 1150 · Sage'},
+  {id:'rank_saint',em:'🌟',t:'Saint Tier',d:'Reach Brain Rank 1300 · Saint'},
+  {id:'rank_apostle',em:'✝️',t:'Apostle Tier',d:'Reach Brain Rank 1500 · Apostle'},
+  {id:'rank_sovereign',em:'👑',t:'Sovereign Tier',d:'Reach Brain Rank 1700 · Sovereign'},
+  {id:'rank_legend',em:'⚡',t:'Legend Tier',d:'Reach Brain Rank 1900 · Legend'},
+  {id:'rank_mythic',em:'🔥',t:'Mythic Tier',d:'Reach Brain Rank 2100 · Mythic'},
 ];
 
 // ====================================================================
@@ -2323,6 +2363,12 @@ const Ach = {
     if(sum('speed')>=5) Ach.unlock('speed_5');
     if(sum('speed')>=25) Ach.unlock('speed_25');
     if(d.iq>=2000) Ach.unlock('iq_2000');
+    if(d.iq>=1150) Ach.unlock('rank_sage');
+    if(d.iq>=1300) Ach.unlock('rank_saint');
+    if(d.iq>=1500) Ach.unlock('rank_apostle');
+    if(d.iq>=1700) Ach.unlock('rank_sovereign');
+    if(d.iq>=1900) Ach.unlock('rank_legend');
+    if(d.iq>=2100) Ach.unlock('rank_mythic');
     // BP-based
     if((d.bp?.claimed?.length||0)>=3) Ach.unlock('bp_tier3');
     if((d.bp?.claimed?.length||0)>=10) Ach.unlock('bp_tier10');
@@ -2509,6 +2555,9 @@ const UI = {
     const aw = document.getElementById('aux-wallet');
     if(aw) aw.innerHTML = renderMiniWallet();
     setText('p-iq', fmt(State.data?.iq||1000));
+    const rankTier = getRankTier(State.data?.iq||1000);
+    const rt = document.getElementById('p-rank-tier');
+    if(rt) rt.textContent = rankTier.em;
     const streakEl = document.getElementById('p-streak');
     const streak = State.data?.streak||0;
     if(streakEl){
@@ -2747,7 +2796,7 @@ const App = {
         <div class="dim" style="font-size:11px;margin-bottom:12px">${timeStr} · ${tz.split('/').pop().replace('_',' ')}</div>
         <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px">
           ${streak>=1?`<span class="reward-chip flame-streak">🔥 ${streak}-day streak</span>`:''}
-          <span class="reward-chip">📊 IQ ${d.iq||1000}</span>
+          <span class="reward-chip">${rankBadge(d.iq||1000)} · ${d.iq||1000}</span>
           <span class="reward-chip">🏆 ${stats.wins||0} wins</span>
         </div>
         <div style="max-width:320px;margin:0 auto 18px;padding:10px 14px;background:rgba(245,158,11,.08);border-left:3px solid var(--gold);border-radius:8px;font-size:12px;font-style:italic;line-height:1.5;text-align:center">
@@ -3514,7 +3563,7 @@ const App = {
     document.getElementById('aux-title').innerHTML = '🏆 Stats';
     const top = `
       <div class="stats-grid">
-        <div class="stat-card"><div class="lbl">IQ Rank</div><div class="val">${d.iq}</div></div>
+        <div class="stat-card"><div class="lbl">Brain Rank</div><div class="val" style="font-size:18px">${d.iq}<br><span style="font-size:11px;opacity:.85">${rankBadge(d.iq)}</span></div></div>
         <div class="stat-card"><div class="lbl">streak</div><div class="val">🔥 ${d.streak}</div></div>
         <div class="stat-card"><div class="lbl">total wins</div><div class="val">${d.totals.wins}</div></div>
         <div class="stat-card"><div class="lbl">games played</div><div class="val">${d.totals.games}</div></div>
