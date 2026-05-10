@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.38.0 · 54 games · push to 10 per room · 🙏</div>
+  <div class="splash-foot">v0.39.0 · 66 games · ALL rooms 10+ · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.38.0';
+const VERSION = '0.39.0';
 
 // ----- STATE -----
 const State = {
@@ -2671,6 +2671,20 @@ const ACHIEVEMENTS = [
   {id:'rank_sovereign',em:'👑',t:'Sovereign Tier',d:'Reach 1100 · Sovereign'},
   {id:'rank_legend',em:'⚡',t:'Legend Tier',d:'Reach 1500 · Legend'},
   {id:'rank_mythic',em:'🔥',t:'Mythic Tier',d:'Reach 2000 · Mythic'},
+  // v0.39 · ALL ROOMS 10+ achievements
+  {id:'lateral_solve',em:'🦉',t:'Outside the Box',d:'Win a Lateral Thinking round'},
+  {id:'optical_eye',em:'👁️',t:'Sharp Eye',d:'Win Optical Illusion'},
+  {id:'knight_logic',em:'♟️',t:'Pure Logic',d:'Solve Knight & Knave'},
+  {id:'audio_recall',em:'🎵',t:'Tonal Memory',d:'Win Audio Memory'},
+  {id:'word_recall_5',em:'📝',t:'Vault Memory',d:'5/5 in Word Recall'},
+  {id:'eq_solver',em:'🔣',t:'X Marks the Spot',d:'Win Equation Solve'},
+  {id:'decimal_match',em:'🔢',t:'Fraction Master',d:'Win Decimal Match'},
+  {id:'calc_race',em:'⚡',t:'Speed Calculator',d:'Win Calc Race'},
+  {id:'beatitudes_8',em:'🙏',t:'All 8 Blessings',d:'Win Beatitudes'},
+  {id:'psalm23',em:'🐑',t:'The Shepherd Knows',d:'Win Psalm 23'},
+  {id:'lights4_clear',em:'💡',t:'Master Electrician',d:'Clear Lights 4×4'},
+  {id:'wordquiz',em:'📚',t:'Grammar Sage',d:'Win Word Quiz'},
+  {id:'all_rooms_10',em:'🏆',t:'Full House',d:'Every room hosts 10+ games'},
 ];
 
 // ====================================================================
@@ -3345,6 +3359,7 @@ const ROOMS = {
     {id:'wordbuild',em:'🔨',name:'Word Build',sub:'build words from 7 random letters · 90s',launch:()=>WordBuildGame.start()},
     {id:'antonym',em:'🔄',name:'Antonym Sprint',sub:'pick the opposite · 45s · 10 rounds',launch:()=>AntonymGame.start()},
     {id:'spelling',em:'🐝',name:'Spelling Bee',sub:'pick correct spelling · 45 sec',launch:()=>SpellingGame.start()},
+    {id:'wordquiz',em:'📚',name:'Word Quiz',sub:'mixed grammar + vocab · 60 sec',launch:()=>NewWordQuizGame.start()},
   ]},
   brain:{em:'🧠',name:'Brain Gym',sub:'memory · reflex · pattern',games:[
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
@@ -3354,6 +3369,8 @@ const ROOMS = {
     {id:'pattern',em:'🟦',name:'Pattern Match',sub:'find the missing color · 45s · 10 rounds',launch:()=>PatternMatchGame.start()},
     {id:'imagerecall',em:'🖼️',name:'Image Recall',sub:'memorize 5 emojis · pick the one shown',launch:()=>ImageRecallGame.start()},
     {id:'cardsort',em:'🃏',name:'Card Sort',sub:'sort 4 numbers ascending · 8 rounds',launch:()=>CardSortGame.start()},
+    {id:'audio',em:'🎵',name:'Audio Memory',sub:'memorize note sequence · recall by index',launch:()=>NewAudioMemoryGame.start()},
+    {id:'wordrecall',em:'📝',name:'Word Recall',sub:'memorize 4 words · recall by position',launch:()=>NewWordRecallGame.start()},
   ]},
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
@@ -3372,6 +3389,9 @@ const ROOMS = {
     {id:'roman',em:'🏛️',name:'Roman Numeral',sub:'pick the value · 10 rounds · 45 sec',launch:()=>RomanGame.start()},
     {id:'ordersort',em:'📊',name:'Order Sort',sub:'sort 5 numbers ascending · 8 rounds',launch:()=>OrderSortGame.start()},
     {id:'pyramid',em:'🔺',name:'Pyramid Add',sub:'top = sum of 2 below · find missing',launch:()=>PyramidGame.start()},
+    {id:'equation',em:'🔣',name:'Equation Solve',sub:'solve for x · 10 rounds · 60 sec',launch:()=>NewEquationGame.start()},
+    {id:'decimal',em:'🔢',name:'Decimal Match',sub:'decimal → fraction · 60 sec',launch:()=>NewDecimalGame.start()},
+    {id:'calcrace',em:'⚡',name:'Calc Race',sub:'rapid mental math · 12 Qs · 45 sec',launch:()=>NewCalcRaceGame.start()},
   ]},
   script:{em:'✝️',name:'Scripture Room',sub:'verses · books · parables',games:[
     {id:'verse',em:'📜',name:'Verse Fill-In',sub:'fill the blank with the right word',launch:()=>VerseGame.start()},
@@ -3381,6 +3401,8 @@ const ROOMS = {
     {id:'commandments',em:'📜',name:'10 Commandments',sub:'match number to commandment',launch:()=>CommandmentsGame.start()},
     {id:'disciple',em:'⚓',name:'Disciple Match',sub:'match disciple to their fact · 60 sec',launch:()=>DiscipleGame.start()},
     {id:'prophecy',em:'🕊️',name:'Prophecy Match',sub:'OT prophecy → NT fulfillment',launch:()=>ProphecyGame.start()},
+    {id:'beatitudes',em:'🙏',name:'Beatitudes',sub:'finish the blessing · Matthew 5 · 90 sec',launch:()=>NewBeatitudesGame.start()},
+    {id:'psalm23',em:'🐑',name:'Psalm 23',sub:'fill the blank · KJV · 60 sec',launch:()=>NewPsalm23Game.start()},
   ]},
   logic:{em:'🧩',name:'Logic Lab',sub:'puzzles · patterns · deduction',games:[
     {id:'lights',em:'💡',name:'Lights Out',sub:'turn off all 9 lights · neighbors flip',launch:()=>LightsGame.start()},
@@ -3390,6 +3412,7 @@ const ROOMS = {
     {id:'odd',em:'🔍',name:'Odd One Out',sub:'find the number that breaks the pattern',launch:()=>OddOneGame.start()},
     {id:'dropfour',em:'🟡',name:'Drop Four',sub:'connect 4 in a row · vs CPU · 7x6 grid',launch:()=>DropFourGame.start()},
     {id:'dotsboxes',em:'📦',name:'Dots & Boxes',sub:'3×3 grid · capture more boxes than CPU',launch:()=>DotsBoxesGame.start()},
+    {id:'lights4',em:'💡',name:'Lights 4×4',sub:'turn off all 16 lights · clear in ≤15 moves',launch:()=>NewLights4Game.start()},
   ]},
   speed:{em:'⚡',name:'Speed Wing',sub:'reflex · color · code · whack',games:[
     {id:'colormatch',em:'🎨',name:'Color Match',sub:'tap the named color · 30 sec',launch:()=>ColorMatchGame.start()},
@@ -9604,8 +9627,471 @@ const ProphecyGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 55 · DAILY (rotating mini)
+// v0.39 · GENERIC MULTI-CHOICE GAME FACTORY · for fast game creation
 // ====================================================================
+function makeMultiChoiceGame(opts){
+  return {
+    start(){
+      State.gameInst=this;
+      this.score=0; this.timeLeft=opts.timeLeft||45; this.q=0;
+      this.questions=[...opts.pool].sort(()=>Math.random()-.5).slice(0,opts.perRun||10);
+      this.next();
+      this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+      UI.show('game');
+    },
+    next(){if(this.q>=this.questions.length){this.end();return;}
+      this.current=this.questions[this.q];
+      this.options=[...this.current.o].sort(()=>Math.random()-.5);
+      this.q++; this._answered=false; this.render();
+    },
+    pick(o){if(this._answered)return; this._answered=true;
+      if(o===this.current.a){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+      setTimeout(()=>this.next(),200);
+    },
+    render(){
+      document.getElementById('g-stats').innerHTML=`<b>${opts.em} ${opts.title}</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+      const area=document.getElementById('g-area'); area.innerHTML='';
+      const wrap=el('div','stroop-area');
+      wrap.appendChild(el('div','dim',opts.prompt||'pick the answer'));
+      const w=el('div',opts.qStyle||'verse-card'); w.innerHTML=this.current.q; w.style.fontSize=opts.qSize||'15px';
+      if(opts.qColor) w.style.color=opts.qColor;
+      wrap.appendChild(w);
+      const grid=el('div','verse-options');
+      this.options.forEach(o=>{
+        const b=el('button','verse-opt',o);
+        if(opts.optStyle) b.style.cssText=opts.optStyle;
+        b.onclick=()=>this.pick(o); grid.appendChild(b);
+      });
+      wrap.appendChild(grid); area.appendChild(wrap);
+    },
+    end(){clearInterval(this.timer);
+      const t=Coach.adjustThreshold(opts.room,opts.id,opts.winThresh||7);
+      const won=this.score>=t;
+      const r=won?(opts.winReward||{coin:35+this.score*5,brain:3}):(opts.loseReward||{coin:Math.max(15,this.score*2)});
+      recordResult(opts.room,opts.id,won,r);
+      if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:opts.em,retry:()=>opts.gameInst.start(),lobby:()=>App.toLobby()});
+      else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>opts.gameInst.start(),lobby:()=>App.toLobby()});
+    },
+    cleanup(){if(this.timer) clearInterval(this.timer);}
+  };
+}
+
+// ====================================================================
+// 🎮 GAMES 55-66 · 12 NEW games via factory pattern
+// ====================================================================
+const LATERAL_THINKING = [
+  {q:'A man walks into a bar and asks for water. The bartender pulls a gun. The man thanks the bartender and leaves. Why?',o:['He had hiccups','He was thirsty','He won a bet','He was hot'],a:'He had hiccups'},
+  {q:'A woman shoots her husband, holds him underwater for 5 min, then hangs him. Yet they go to dinner. How?',o:['She is a photographer','He is fictional','She used props','It was a dream'],a:'She is a photographer'},
+  {q:'What gets wetter as it dries?',o:['A towel','A sponge','A washcloth','A mop'],a:'A towel'},
+  {q:"Two doctors walk into a room. They are siblings, but they aren't brothers. How?",o:['They are sisters','One is adopted','One is fake','They are twins'],a:'They are sisters'},
+  {q:'A man pushes a car, stops at a hotel, and goes bankrupt. What is happening?',o:['Playing Monopoly','A real story','A car race','A toy game'],a:'Playing Monopoly'},
+  {q:'What can you keep after giving it to someone?',o:['Your word','A gift','A secret','A promise'],a:'Your word'},
+  {q:'I have cities but no houses, mountains but no trees. What am I?',o:['A map','A globe','A book','A puzzle'],a:'A map'},
+  {q:"What has 88 keys but can't open a single door?",o:['A piano','A typewriter','A computer','A cabinet'],a:'A piano'},
+];
+function _quizGame(cfg){
+  // cfg: {room, id, em, title, prompt, pool, perRun, timeLeft, winThresh}
+  const game = {};
+  game.start = function(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=cfg.timeLeft||45; this.q=0;
+    this.questions=[...cfg.pool].sort(()=>Math.random()-.5).slice(0,cfg.perRun||10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  };
+  game.next = function(){
+    if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort(()=>Math.random()-.5);
+    this.q++; this._answered=false; this.render();
+  };
+  game.pick = function(o){
+    if(this._answered)return; this._answered=true;
+    if(o===this.current.a){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  };
+  game.render = function(){
+    document.getElementById('g-stats').innerHTML=`<b>${cfg.em} ${cfg.title}</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim',cfg.prompt||'pick the answer'));
+    const w=el('div','verse-card'); w.innerHTML=this.current.q; w.style.fontSize=cfg.qSize||'14px';
+    wrap.appendChild(w);
+    const grid=el('div','verse-options');
+    this.options.forEach(o=>{
+      const b=el('button','verse-opt',o);
+      b.style.fontFamily="'Inter',sans-serif"; b.style.fontSize='12px'; b.style.padding='10px';
+      b.onclick=()=>this.pick(o); grid.appendChild(b);
+    });
+    wrap.appendChild(grid); area.appendChild(wrap);
+  };
+  game.end = function(){
+    clearInterval(this.timer);
+    const t=Coach.adjustThreshold(cfg.room,cfg.id,cfg.winThresh||7);
+    const won=this.score>=t;
+    const r=won?(cfg.winReward||{coin:35+this.score*5,brain:3,faith:cfg.faith||0}):(cfg.loseReward||{coin:Math.max(15,this.score*2)});
+    recordResult(cfg.room,cfg.id,won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:cfg.em,retry:()=>game.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>game.start(),lobby:()=>App.toLobby()});
+  };
+  game.cleanup = function(){ if(this.timer) clearInterval(this.timer); };
+  return game;
+}
+
+// MIND GAMES · Lateral Thinking
+const NewLateralGame = _quizGame({room:'mind',id:'lateral',em:'🦉',title:'Lateral Thinking',prompt:'think outside the box',pool:LATERAL_THINKING,perRun:6,timeLeft:90,winThresh:4});
+
+// MIND GAMES · Optical Illusion (text-based · pick which is "different")
+const OPTICAL = [
+  {q:'Which line is longer? <br>A: ▬▬▬▬<br>B: ▬▬▬▬',o:['Same length','A','B','Neither exists'],a:'Same length'},
+  {q:'Which color is darker?<br>🔴 vs 🔴',o:['Same','Left','Right','Neither'],a:'Same'},
+  {q:'Are the parallel lines really parallel?<br>════',o:['Yes always','No they curve','Sometimes','Depends on viewer'],a:'Yes always'},
+  {q:'How many fingers on the symbol? 🖐️',o:['5','4','6','3'],a:'5'},
+  {q:'Is the dot ⚫ in the center?<br>(    ⚫    )',o:['Yes','Slightly off','No','Cannot tell'],a:'Yes'},
+  {q:'Which is bigger: 🌕 or 🌑?',o:['Same size','Moon emoji is bigger','New moon is bigger','Cannot compare'],a:'Same size'},
+  {q:'Look at this: the brain often sees motion in static images. True?',o:['True','False','Sometimes','Only color images'],a:'True'},
+  {q:'How many circles in: ⭕⭕⭕?',o:['3','2','4','5'],a:'3'},
+];
+const NewOpticalGame = _quizGame({room:'mind',id:'optical',em:'👁️',title:'Optical Illusion',prompt:'observe carefully',pool:OPTICAL,perRun:6,timeLeft:60,winThresh:4});
+
+// MIND GAMES · Knight & Knave
+const KNIGHTS = [
+  {q:'A says: "I am a knight." B says: "A is a knave." Who is the knight?',o:['A','B','Both','Neither'],a:'A'},
+  {q:'A says: "We are both knaves." Who is what?',o:['A is knave, B is knight','Both knights','Both knaves','A is knight'],a:'A is knave, B is knight'},
+  {q:'Knights always tell the truth. Knaves always lie. A says: "I am a knave." Possible?',o:['No · paradox','Yes','Only if alone','Only if B agrees'],a:'No · paradox'},
+  {q:'A says: "B is a knight." B says: "A is a knight." If true, what are they?',o:['Both knights or both knaves','Both knights only','Both knaves only','Impossible'],a:'Both knights or both knaves'},
+  {q:'Three brothers: only one tells truth. Eldest: "I am the truth-teller." Middle: "Eldest lies." Youngest: "I am the truth-teller." Who?',o:['Middle','Eldest','Youngest','Cannot tell'],a:'Middle'},
+  {q:'A guard says: "If I am a knight, then I am a knave." What does this prove?',o:['He is a knave','He is a knight','He is both','Paradox · impossible'],a:'He is a knave'},
+];
+const NewKnightGame = _quizGame({room:'mind',id:'knight',em:'♟️',title:'Knight & Knave',prompt:'logic puzzle',pool:KNIGHTS,perRun:5,timeLeft:90,winThresh:3});
+
+// BRAIN GYM · Audio Memory (text proxy · sequence of notes shown briefly · recall the order)
+const NewAudioMemoryGame = (()=>{
+  const game={};
+  game.start=function(){
+    State.gameInst=this;
+    this.notes=['🎵','🎶','🎼','🎹'];
+    this.round=0; this.maxRounds=5; this.score=0;
+    this.next();
+    UI.show('game');
+  };
+  game.next=function(){
+    if(this.round>=this.maxRounds){this.end();return;}
+    this.round++;
+    const len = 3+this.round; // grows
+    this.sequence=[];
+    for(let i=0;i<len;i++) this.sequence.push(Math.floor(Math.random()*4));
+    this.targetIdx=Math.floor(Math.random()*len);
+    this.target=this.sequence[this.targetIdx];
+    this.phase='show';
+    this.render();
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2500);
+  };
+  game.pick=function(i){
+    if(this.phase!=='ask')return;
+    if(i===this.target){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),300);
+  };
+  game.render=function(){
+    document.getElementById('g-stats').innerHTML=`<b>🎵 Audio Memory</b> · round <b>${this.round}/${this.maxRounds}</b> · score <b>${this.score}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    if(this.phase==='show'){
+      wrap.appendChild(el('div','dim','memorize the sequence · 2.5 sec'));
+      const row=el('div',''); row.style.cssText='display:flex;gap:6px;margin:14px 0;font-size:32px;flex-wrap:wrap;justify-content:center;max-width:340px';
+      this.sequence.forEach((n,i)=>{
+        const sp=el('div',''); sp.style.cssText='width:50px;height:50px;background:rgba(124,58,237,.3);border:2px solid #7C3AED;border-radius:10px;display:grid;place-items:center';
+        sp.innerHTML=`<div style="text-align:center"><div>${this.notes[n]}</div><div style="font-size:9px;opacity:.6">#${i+1}</div></div>`;
+        row.appendChild(sp);
+      });
+      wrap.appendChild(row);
+    }else{
+      wrap.appendChild(el('div','dim',`what was at position #${this.targetIdx+1}?`));
+      const grid=el('div','stroop-grid');
+      [0,1,2,3].forEach(i=>{
+        const b=el('button','stroop-btn', this.notes[i]);
+        b.style.fontSize='28px';
+        b.onclick=()=>this.pick(i);
+        grid.appendChild(b);
+      });
+      wrap.appendChild(grid);
+    }
+    area.appendChild(wrap);
+  };
+  game.end=function(){
+    const won=this.score>=3;
+    const r=won?{coin:50+this.score*15,brain:4}:{coin:Math.max(15,this.score*8)};
+    recordResult('brain','audio',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/5 recalled!`,emoji:'🎵',retry:()=>game.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/5`,msg:'aim for 3+!',retry:()=>game.start(),lobby:()=>App.toLobby()});
+  };
+  game.cleanup=function(){if(this.showT) clearTimeout(this.showT);};
+  return game;
+})();
+
+// BRAIN GYM · Word Recall · flash 4 words, recall by index
+const WORD_RECALL_POOL = ['LION','CHAIR','RIVER','PIANO','BREAD','STAR','WHEEL','LEAF','BOOK','CLOUD','TIGER','ROCK','GLASS','FLAME','PEARL','HORSE','EAGLE','OCEAN','APPLE','MOUNTAIN'];
+const NewWordRecallGame = (()=>{
+  const game={};
+  game.start=function(){
+    State.gameInst=this;
+    this.round=0; this.maxRounds=5; this.score=0;
+    this.next();
+    UI.show('game');
+  };
+  game.next=function(){
+    if(this.round>=this.maxRounds){this.end();return;}
+    this.round++;
+    const pool=[...WORD_RECALL_POOL].sort(()=>Math.random()-.5);
+    this.shown=pool.slice(0,4);
+    this.targetIdx=Math.floor(Math.random()*4);
+    this.target=this.shown[this.targetIdx];
+    const distract=[];
+    while(distract.length<3){
+      const w=pool[Math.floor(Math.random()*pool.length)];
+      if(!this.shown.includes(w) && !distract.includes(w)) distract.push(w);
+    }
+    this.options=[this.target,...distract].sort(()=>Math.random()-.5);
+    this.phase='show';
+    this.render();
+    this.showT=setTimeout(()=>{this.phase='ask';this.render();},2500);
+  };
+  game.pick=function(o){
+    if(this.phase!=='ask')return;
+    if(o===this.target){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),300);
+  };
+  game.render=function(){
+    document.getElementById('g-stats').innerHTML=`<b>🧠 Word Recall</b> · round <b>${this.round}/${this.maxRounds}</b> · score <b>${this.score}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    if(this.phase==='show'){
+      wrap.appendChild(el('div','dim','memorize 4 words · 2.5 sec'));
+      const row=el('div',''); row.style.cssText='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0;max-width:300px';
+      this.shown.forEach((w,i)=>{
+        const c=el('div',''); c.style.cssText='padding:14px;background:rgba(124,58,237,.25);border:2px solid #7C3AED;border-radius:10px;font-size:18px;font-weight:800;font-family:"Cinzel",serif;text-align:center';
+        c.innerHTML=`${w}<div style="font-size:10px;opacity:.6;font-weight:600;margin-top:4px">#${i+1}</div>`;
+        row.appendChild(c);
+      });
+      wrap.appendChild(row);
+    }else{
+      wrap.appendChild(el('div','dim',`which word was at #${this.targetIdx+1}?`));
+      const grid=el('div','verse-options');
+      this.options.forEach(o=>{const b=el('button','verse-opt',o); b.onclick=()=>this.pick(o); grid.appendChild(b);});
+      wrap.appendChild(grid);
+    }
+    area.appendChild(wrap);
+  };
+  game.end=function(){
+    const won=this.score>=3;
+    const r=won?{coin:50+this.score*12,brain:4}:{coin:Math.max(15,this.score*6)};
+    recordResult('brain','wordrecall',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/5 recalled!`,emoji:'🧠',retry:()=>game.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/5`,msg:'aim for 3+!',retry:()=>game.start(),lobby:()=>App.toLobby()});
+  };
+  game.cleanup=function(){if(this.showT) clearTimeout(this.showT);};
+  return game;
+})();
+
+// NUMBER CRUNCH · Equation Solve (find x)
+const EQUATIONS = [
+  {q:'x + 5 = 12',o:[7,5,8,17],a:7},
+  {q:'2x = 14',o:[7,12,5,28],a:7},
+  {q:'x - 8 = 3',o:[11,5,8,24],a:11},
+  {q:'15 - x = 7',o:[8,22,7,2],a:8},
+  {q:'3x = 24',o:[8,21,7,9],a:8},
+  {q:'x / 4 = 5',o:[20,9,1,1.25],a:20},
+  {q:'x + x = 10',o:[5,10,2,20],a:5},
+  {q:'2x + 3 = 11',o:[4,8,7,5.5],a:4},
+  {q:'x² = 25',o:[5,4,6,12.5],a:5},
+  {q:'x + 7 = 7',o:[0,7,14,1],a:0},
+  {q:'4x - 1 = 11',o:[3,4,12,2],a:3},
+  {q:'x · 6 = 30',o:[5,6,4,24],a:5},
+];
+const NewEquationGame = (()=>{
+  const game={};
+  game.start=function(){
+    State.gameInst=this;
+    this.score=0; this.timeLeft=60; this.q=0;
+    this.questions=[...EQUATIONS].sort(()=>Math.random()-.5).slice(0,10);
+    this.next();
+    this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
+    UI.show('game');
+  };
+  game.next=function(){if(this.q>=this.questions.length){this.end();return;}
+    this.current=this.questions[this.q];
+    this.options=[...this.current.o].sort((a,b)=>a-b);
+    this.q++; this._answered=false; this.render();
+  };
+  game.pick=function(v){if(this._answered)return; this._answered=true;
+    if(v===this.current.a){this.score++;SFX.correct();haptic(8);}else{SFX.wrong();haptic(20);}
+    setTimeout(()=>this.next(),200);
+  };
+  game.render=function(){
+    document.getElementById('g-stats').innerHTML=`<b>🔢 Equation Solve</b> · score: <b>${this.score}/${this.q}</b> · ⏱ <b>${this.timeLeft}s</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','solve for x'));
+    const w=el('div','math-q',this.current.q); w.style.color='var(--gold-bright)'; wrap.appendChild(w);
+    const grid=el('div','stroop-grid');
+    this.options.forEach(v=>{const b=el('button','stroop-btn',String(v)); b.style.background='linear-gradient(135deg,#0E7490,#0C4A6E)'; b.onclick=()=>this.pick(v); grid.appendChild(b);});
+    wrap.appendChild(grid); area.appendChild(wrap);
+  };
+  game.end=function(){clearInterval(this.timer);
+    const t=Coach.adjustThreshold('num','equation',7);
+    const won=this.score>=t;
+    const r=won?{coin:35+this.score*6,brain:3}:{coin:Math.max(15,this.score*3)};
+    recordResult('num','equation',won,r);
+    if(won) Modal.win({rewards:r,title:`${this.score}/${this.questions.length}!`,emoji:'🔢',retry:()=>game.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`${this.score}/${this.questions.length}`,msg:`aim for ${t}+!`,retry:()=>game.start(),lobby:()=>App.toLobby()});
+  };
+  game.cleanup=function(){if(this.timer) clearInterval(this.timer);};
+  return game;
+})();
+
+// NUMBER CRUNCH · Decimal Match · decimal → fraction
+const DECIMALS = [
+  {q:'0.5',o:['1/2','1/3','1/4','3/4'],a:'1/2'},
+  {q:'0.25',o:['1/4','1/2','3/4','1/3'],a:'1/4'},
+  {q:'0.75',o:['3/4','1/2','2/3','7/8'],a:'3/4'},
+  {q:'0.1',o:['1/10','1/5','1/8','1/100'],a:'1/10'},
+  {q:'0.2',o:['1/5','2/5','1/4','1/2'],a:'1/5'},
+  {q:'0.333...',o:['1/3','1/4','1/5','1/2'],a:'1/3'},
+  {q:'0.625',o:['5/8','3/8','3/4','1/2'],a:'5/8'},
+  {q:'0.4',o:['2/5','1/4','3/8','3/4'],a:'2/5'},
+  {q:'0.05',o:['1/20','1/10','5/100','1/5'],a:'1/20'},
+  {q:'0.125',o:['1/8','1/4','1/16','1/12'],a:'1/8'},
+];
+const NewDecimalGame = _quizGame({room:'num',id:'decimal',em:'🔢',title:'Decimal Match',prompt:'pick the matching fraction',pool:DECIMALS,perRun:8,timeLeft:60,winThresh:6});
+
+// NUMBER CRUNCH · Calc Race · mixed mental math
+const CALC_POOL = (()=>{
+  const arr=[];
+  for(let i=0;i<40;i++){
+    const a=Math.floor(Math.random()*15)+5, b=Math.floor(Math.random()*15)+5;
+    const ops=['+','-','×'];
+    const op=ops[Math.floor(Math.random()*3)];
+    let answer;
+    if(op==='+') answer=a+b;
+    else if(op==='-') answer=a-b;
+    else answer=a*b;
+    const distract=[];
+    while(distract.length<3){
+      const d=answer+(Math.random()<.5?-1:1)*(Math.floor(Math.random()*5)+1);
+      if(d!==answer && !distract.includes(d)) distract.push(d);
+    }
+    arr.push({q:`${a} ${op} ${b}`, o:[answer,...distract].sort((a,b)=>a-b), a:answer});
+  }
+  return arr;
+})();
+const NewCalcRaceGame = _quizGame({room:'num',id:'calcrace',em:'⚡',title:'Calc Race',prompt:'rapid mental math',pool:CALC_POOL,perRun:12,timeLeft:45,winThresh:9});
+
+// SCRIPTURE · Beatitudes
+const BEATITUDES = [
+  {q:'Blessed are the poor in spirit, for...',o:['theirs is the kingdom of heaven','they shall be filled','they shall see God','they shall be called sons of God'],a:'theirs is the kingdom of heaven'},
+  {q:'Blessed are those who mourn, for...',o:['they shall be comforted','they shall inherit the earth','they shall obtain mercy','theirs is the kingdom'],a:'they shall be comforted'},
+  {q:'Blessed are the meek, for...',o:['they shall inherit the earth','theirs is the kingdom','they shall see God','they shall be filled'],a:'they shall inherit the earth'},
+  {q:'Blessed are those who hunger and thirst for righteousness, for...',o:['they shall be filled','they shall obtain mercy','theirs is the kingdom','they shall be called peacemakers'],a:'they shall be filled'},
+  {q:'Blessed are the merciful, for...',o:['they shall obtain mercy','they shall see God','they shall be called sons of God','theirs is the kingdom'],a:'they shall obtain mercy'},
+  {q:'Blessed are the pure in heart, for...',o:['they shall see God','they shall be filled','they shall inherit the earth','they shall be comforted'],a:'they shall see God'},
+  {q:'Blessed are the peacemakers, for...',o:['they shall be called sons of God','they shall obtain mercy','theirs is the kingdom','they shall see God'],a:'they shall be called sons of God'},
+  {q:'Blessed are those persecuted for righteousness, for...',o:['theirs is the kingdom of heaven','they shall be comforted','they shall inherit the earth','they shall obtain mercy'],a:'theirs is the kingdom of heaven'},
+];
+const NewBeatitudesGame = _quizGame({room:'script',id:'beatitudes',em:'🙏',title:'Beatitudes',prompt:'finish the blessing (Matthew 5)',pool:BEATITUDES,perRun:6,timeLeft:90,winThresh:4,faith:5});
+
+// SCRIPTURE · Psalm 23 fill
+const PSALM23 = [
+  {q:'The Lord is my ___',o:['shepherd','father','king','rock'],a:'shepherd'},
+  {q:'I shall not ___',o:['want','fear','sin','fall'],a:'want'},
+  {q:'He maketh me lie down in green ___',o:['pastures','meadows','fields','valleys'],a:'pastures'},
+  {q:'He leadeth me beside the still ___',o:['waters','rivers','ponds','streams'],a:'waters'},
+  {q:'He restoreth my ___',o:['soul','heart','body','spirit'],a:'soul'},
+  {q:'Yea, though I walk through the valley of the shadow of ___',o:['death','sin','doubt','fear'],a:'death'},
+  {q:'I will fear no ___',o:['evil','danger','foe','enemy'],a:'evil'},
+  {q:'Thy rod and thy staff they ___ me',o:['comfort','protect','strengthen','guide'],a:'comfort'},
+  {q:'Thou anointest my head with ___',o:['oil','water','wine','honey'],a:'oil'},
+  {q:'Surely goodness and ___ shall follow me all the days of my life',o:['mercy','grace','peace','love'],a:'mercy'},
+];
+const NewPsalm23Game = _quizGame({room:'script',id:'psalm23',em:'🐑',title:'Psalm 23',prompt:'fill the blank · Psalm 23 KJV',pool:PSALM23,perRun:8,timeLeft:60,winThresh:6,faith:5});
+
+// LOGIC LAB · Lights Out 4×4
+const NewLights4Game = (()=>{
+  const game={};
+  game.start=function(){
+    State.gameInst=this;
+    this.size=4;
+    this.grid=Array(this.size*this.size).fill(false);
+    const taps=4+Math.floor(Math.random()*4);
+    const used=new Set();
+    while(used.size<taps){
+      const i=Math.floor(Math.random()*this.size*this.size);
+      if(used.has(i))continue;
+      used.add(i); this._toggle(i);
+    }
+    this.moves=0; this.done=false; this.startMs=Date.now();
+    this.render();
+    UI.show('game');
+  };
+  game._toggle=function(i){
+    const flip=idx=>{if(idx>=0&&idx<this.size*this.size) this.grid[idx]=!this.grid[idx];};
+    flip(i);
+    const r=Math.floor(i/this.size), c=i%this.size;
+    if(c>0) flip(i-1);
+    if(c<this.size-1) flip(i+1);
+    if(r>0) flip(i-this.size);
+    if(r<this.size-1) flip(i+this.size);
+  };
+  game.tap=function(i){
+    if(this.done) return;
+    SFX.tap(); haptic(8);
+    this._toggle(i); this.moves++;
+    if(this.grid.every(x=>!x)){
+      this.done=true;
+      const won=this.moves<=15;
+      const reward=won?{coin:80+(16-this.moves)*8,brain:4}:{coin:30,brain:1};
+      recordResult('logic','lights4',true,reward);
+      this.render();
+      setTimeout(()=>Modal.win({rewards:reward,title:`Cleared 4×4 in ${this.moves} moves!`,emoji:'💡',retry:()=>game.start(),lobby:()=>App.toLobby()}),400);
+      return;
+    }
+    this.render();
+  };
+  game.render=function(){
+    document.getElementById('g-stats').innerHTML=`<b>🧩 Lights 4×4</b> · moves: <b>${this.moves}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','clear all 16 lights · neighbors flip'));
+    const grid=el('div',''); grid.style.cssText='display:grid;grid-template-columns:repeat(4,60px);gap:6px;margin:14px 0';
+    for(let i=0;i<this.size*this.size;i++){
+      const on=this.grid[i];
+      const c=el('div','');
+      c.style.cssText=`aspect-ratio:1;border-radius:10px;background:${on?'linear-gradient(135deg,#FBBF24,#F59E0B)':'rgba(255,255,255,.08)'};border:2px solid ${on?'#FBBF24':'rgba(255,255,255,.2)'};display:grid;place-items:center;font-size:24px;cursor:pointer;box-shadow:${on?'0 0 16px rgba(245,158,11,.5)':'none'}`;
+      c.textContent=on?'💡':'';
+      c.onclick=()=>this.tap(i);
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  };
+  game.cleanup=function(){};
+  return game;
+})();
+
+// WORD LAB · Word Quiz · mixed
+const WORD_QUIZ = [
+  {q:'Which word means "very large"?',o:['Massive','Tiny','Quick','Calm'],a:'Massive'},
+  {q:'Which is a verb?',o:['Run','Apple','Loud','Tree'],a:'Run'},
+  {q:'Plural of "child"?',o:['Children','Childs','Childes','Childer'],a:'Children'},
+  {q:'Past tense of "go"?',o:['Went','Goed','Goned','Gone-ed'],a:'Went'},
+  {q:'Which is a noun?',o:['Book','Quickly','Run','Loud'],a:'Book'},
+  {q:'Which means "happy"?',o:['Joyful','Gloomy','Tired','Cold'],a:'Joyful'},
+  {q:'Synonym for "begin"?',o:['Start','End','Pause','Stop'],a:'Start'},
+  {q:'Past tense of "swim"?',o:['Swam','Swimmed','Swum-ed','Swimed'],a:'Swam'},
+  {q:'Which is an adjective?',o:['Bright','Run','Quickly','Tree'],a:'Bright'},
+  {q:'Plural of "mouse" (animal)?',o:['Mice','Mouses','Mouss','Meece'],a:'Mice'},
+];
+const NewWordQuizGame = _quizGame({room:'word',id:'wordquiz',em:'📚',title:'Word Quiz',prompt:'mixed grammar + vocab',pool:WORD_QUIZ,perRun:8,timeLeft:60,winThresh:6});
 const DailyGame = {
   start(){
     const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
