@@ -1256,7 +1256,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.35.0 · RICH MUSIC · 4-layer · 3 new games · all-pass · 🙏</div>
+  <div class="splash-foot">v0.36.0 · 43 games · Twenty Q · Wild Stack · Mini Golf · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1408,7 +1408,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.35.0';
+const VERSION = '0.36.0';
 
 // ----- STATE -----
 const State = {
@@ -3327,6 +3327,7 @@ const ROOMS = {
     {id:'memory',em:'🃏',name:'Memory Match',sub:'flip cards to find pairs · 4×4 grid',launch:()=>MemoryGame.start()},
     {id:'simon',em:'🎼',name:'Simon Says',sub:'repeat the sequence · gets longer',launch:()=>SimonGame.start()},
     {id:'nummemory',em:'🔢',name:'Number Memory',sub:'memorize 5 numbers · recall by position',launch:()=>NumberMemoryGame.start()},
+    {id:'wildstack',em:'🃏',name:'Wild Stack',sub:'match color or number · go out first',launch:()=>WildStackGame.start()},
   ]},
   mind:{em:'🎯',name:'Mind Games',sub:'riddles · stroop · logic',games:[
     {id:'stroop',em:'🌈',name:'Stroop Sprint',sub:'tap the COLOR · not the word · 30 sec',launch:()=>StroopGame.start()},
@@ -3335,6 +3336,7 @@ const ROOMS = {
     {id:'tf',em:'✅',name:'True or False',sub:'12 questions · 45 sec · trivia + bible',launch:()=>TFGame.start()},
     {id:'capitals',em:'🌍',name:'Capital Cities',sub:'geography · 10 random capitals · 45 sec',launch:()=>CapitalsGame.start()},
     {id:'seabattle',em:'🚢',name:'Sea Battle',sub:'find 4 ships in 5×5 grid · 15 shots',launch:()=>SeaBattleGame.start()},
+    {id:'tq',em:'❓',name:'Twenty Questions',sub:'I guess your animal · 7 questions',launch:()=>TQGame.start()},
   ]},
   num:{em:'🔢',name:'Number Crunch',sub:'math · sequence · 24',games:[
     {id:'math',em:'➕',name:'Math Sprint',sub:'solve as many as you can · 30 sec',launch:()=>MathGame.start()},
@@ -3367,6 +3369,7 @@ const ROOMS = {
     {id:'knockout',em:'🏀',name:'Knockout',sub:'basketball · tap on sweet spot · 10 shots',launch:()=>KnockoutGame.start()},
     {id:'cuppong',em:'🥤',name:'Cup Pong',sub:'sink 4+ of 6 cups · 10 shots',launch:()=>CupPongGame.start()},
     {id:'darts',em:'🎯',name:'Darts',sub:'aim crosshair · 8 throws · 120+ wins',launch:()=>DartsGame.start()},
+    {id:'minigolf',em:'⛳',name:'Mini Golf',sub:'angle + power · sink in par or less',launch:()=>MiniGolfGame.start()},
   ]},
   daily:{em:'🎲',name:'Daily Court',sub:'spotlight · 2x rewards',games:[
     {id:'dotd',em:'⭐',name:'Game of the Day',sub:'rotates daily · 2x rewards',launch:()=>DailyGame.start()},
@@ -8463,7 +8466,380 @@ const DotsBoxesGame = {
 };
 
 // ====================================================================
-// 🎮 GAME 41 · DAILY (rotating mini)
+// 🎮 GAME 41 · TWENTY QUESTIONS (Mind Games) · binary animal guesser
+// ====================================================================
+const TQ_ANIMALS = [
+  {n:'Lion',mammal:1,big:1,water:0,fly:0,wild:1,fur:1,sound:'roars'},
+  {n:'Elephant',mammal:1,big:1,water:0,fly:0,wild:1,fur:0,sound:'trumpets'},
+  {n:'Dolphin',mammal:1,big:1,water:1,fly:0,wild:1,fur:0,sound:'clicks'},
+  {n:'Eagle',mammal:0,big:0,water:0,fly:1,wild:1,fur:0,sound:'screeches'},
+  {n:'Penguin',mammal:0,big:0,water:1,fly:0,wild:1,fur:0,sound:'squawks'},
+  {n:'Whale',mammal:1,big:1,water:1,fly:0,wild:1,fur:0,sound:'sings'},
+  {n:'Shark',mammal:0,big:1,water:1,fly:0,wild:1,fur:0,sound:'silent'},
+  {n:'Cat',mammal:1,big:0,water:0,fly:0,wild:0,fur:1,sound:'meows'},
+  {n:'Dog',mammal:1,big:0,water:0,fly:0,wild:0,fur:1,sound:'barks'},
+  {n:'Owl',mammal:0,big:0,water:0,fly:1,wild:1,fur:0,sound:'hoots'},
+  {n:'Snake',mammal:0,big:0,water:0,fly:0,wild:1,fur:0,sound:'hisses'},
+  {n:'Bear',mammal:1,big:1,water:0,fly:0,wild:1,fur:1,sound:'growls'},
+  {n:'Bee',mammal:0,big:0,water:0,fly:1,wild:1,fur:0,sound:'buzzes'},
+  {n:'Frog',mammal:0,big:0,water:1,fly:0,wild:1,fur:0,sound:'croaks'},
+  {n:'Hamster',mammal:1,big:0,water:0,fly:0,wild:0,fur:1,sound:'squeaks'},
+  {n:'Crocodile',mammal:0,big:1,water:1,fly:0,wild:1,fur:0,sound:'silent'},
+];
+const TQ_QUESTIONS = [
+  {q:'is it a mammal?',k:'mammal'},
+  {q:'is it big?',k:'big'},
+  {q:'does it live in water?',k:'water'},
+  {q:'can it fly?',k:'fly'},
+  {q:'is it wild (not a pet)?',k:'wild'},
+  {q:'does it have fur?',k:'fur'},
+];
+const TQGame = {
+  start(){
+    State.gameInst=this;
+    this.candidates = [...TQ_ANIMALS];
+    this.qIdx = 0;
+    this.guesses = [];
+    this.maxQuestions = 7;
+    this.done = false;
+    this.render();
+    UI.show('game');
+  },
+  answer(yes){
+    const q = this._nextQuestion();
+    if(!q){ this._guess(); return; }
+    const v = yes ? 1 : 0;
+    this.candidates = this.candidates.filter(a=>a[q.k]===v);
+    this.guesses.push({q:q.q, a:yes});
+    if(this.candidates.length<=1 || this.guesses.length>=this.maxQuestions){
+      setTimeout(()=>this._guess(), 400);
+      return;
+    }
+    this.render();
+  },
+  _nextQuestion(){
+    // Pick the question that best splits remaining candidates
+    let best = null, bestScore = Infinity;
+    for(const q of TQ_QUESTIONS){
+      if(this.guesses.some(g=>g.q===q.q)) continue;
+      const yesC = this.candidates.filter(a=>a[q.k]===1).length;
+      const noC = this.candidates.length - yesC;
+      const score = Math.abs(yesC - noC);
+      if(score < bestScore){ bestScore = score; best = q; }
+    }
+    return best;
+  },
+  _guess(){
+    this.done = true;
+    if(this.candidates.length===0){ this.guess = '???'; }
+    else this.guess = this.candidates[0].n;
+    this.render();
+    setTimeout(()=>this._reveal(),1200);
+  },
+  _reveal(){
+    Modal.show(`<div class="big">🤔</div>
+      <h3>is it the ${this.guess}?</h3>
+      <p class="dim" style="margin:8px 0">I asked ${this.guesses.length} questions</p>
+      <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:12px">
+        <button class="btn-primary" onclick="App._tqResult(true)">✅ YES · you got me</button>
+        <button class="btn-secondary" onclick="App._tqResult(false)">❌ NO · I won</button>
+      </div>`);
+  },
+  cleanup(){}
+};
+App._tqResult = function(correct){
+  Modal.close();
+  const aiWon = correct;
+  const r = aiWon?{coin:30}:{coin:60+TQGame.guesses.length*5, brain:3};
+  recordResult('mind','tq',!aiWon,r);
+  if(!aiWon) Modal.win({rewards:r,title:'🧠 You stumped me!',emoji:'🧠',retry:()=>TQGame.start(),lobby:()=>App.toLobby()});
+  else Modal.lose({title:'🤖 AI guessed correctly',msg:'tougher animal next time!',retry:()=>TQGame.start(),lobby:()=>App.toLobby()});
+};
+TQGame.render = function(){
+  document.getElementById('g-stats').innerHTML=`<b>❓ Twenty Questions</b> · Q ${this.guesses.length+1}/${this.maxQuestions}${this.done?' · guessing...':''}`;
+  const area=document.getElementById('g-area'); area.innerHTML='';
+  const wrap=el('div','stroop-area');
+  wrap.appendChild(el('div','dim','think of an animal · I\'ll guess'));
+  if(this.done){
+    const w=el('div','math-q','🤔 thinking...'); w.style.color='var(--gold-bright)'; wrap.appendChild(w);
+  }else{
+    const q = this._nextQuestion();
+    if(!q){ this._guess(); return; }
+    const w=el('div','verse-card'); w.innerHTML = q.q; w.style.fontSize='18px'; wrap.appendChild(w);
+    const grid=el('div','stroop-grid');
+    const y=el('button','stroop-btn','✅ YES'); y.style.background='linear-gradient(135deg,#10B981,#059669)'; y.onclick=()=>this.answer(true); grid.appendChild(y);
+    const n=el('button','stroop-btn','❌ NO'); n.style.background='linear-gradient(135deg,#EF4444,#B91C1C)'; n.onclick=()=>this.answer(false); grid.appendChild(n);
+    wrap.appendChild(grid);
+  }
+  // History
+  if(this.guesses.length){
+    const hist=el('div',''); hist.style.cssText='margin-top:14px;font-size:11px;opacity:.7;max-width:300px;text-align:left';
+    hist.innerHTML = this.guesses.map(g=>`${g.a?'✅':'❌'} ${g.q}`).join('<br>');
+    wrap.appendChild(hist);
+  }
+  area.appendChild(wrap);
+};
+
+// ====================================================================
+// 🎮 GAME 42 · WILD STACK (Brain Gym) · Uno-style match game
+// ====================================================================
+const WS_COLORS = ['🔴','🔵','🟢','🟡'];
+const WildStackGame = {
+  start(){
+    State.gameInst=this;
+    // Build deck: 4 colors × 10 number cards (0-9)
+    this.deck = [];
+    WS_COLORS.forEach(c=>{
+      for(let n=0;n<10;n++) this.deck.push({c,n});
+    });
+    this.deck.sort(()=>Math.random()-.5);
+    this.you = this._drawN(7);
+    this.cpu = this._drawN(7);
+    this.discard = this.deck.pop();
+    this.turn = 'you';
+    this.done = false;
+    this.render();
+    UI.show('game');
+  },
+  _drawN(n){
+    const out=[];
+    for(let i=0;i<n;i++) if(this.deck.length) out.push(this.deck.pop());
+    return out;
+  },
+  _canPlay(card){
+    return card.c===this.discard.c || card.n===this.discard.n;
+  },
+  playCard(i){
+    if(this.turn!=='you' || this.done) return;
+    const card = this.you[i];
+    if(!this._canPlay(card)){ Toast.show('must match color or number'); SFX.wrong(); return; }
+    this.you.splice(i,1);
+    this.discard = card;
+    SFX.tap(); haptic(8);
+    if(this.you.length===0){ this.done=true; this._win(); return; }
+    this.turn='cpu';
+    this.render();
+    setTimeout(()=>this._cpuTurn(),700);
+  },
+  draw(){
+    if(this.turn!=='you' || this.done) return;
+    if(this.deck.length===0){ this.done=true; this._end(); return; }
+    this.you.push(this.deck.pop());
+    SFX.tap(); haptic(5);
+    this.turn='cpu';
+    this.render();
+    setTimeout(()=>this._cpuTurn(),700);
+  },
+  _cpuTurn(){
+    // Try to play a card
+    const playable = this.cpu.filter(c=>this._canPlay(c));
+    if(playable.length>0){
+      const card = playable[Math.floor(Math.random()*playable.length)];
+      const idx = this.cpu.indexOf(card);
+      this.cpu.splice(idx,1);
+      this.discard = card;
+      SFX.tap();
+      if(this.cpu.length===0){ this.done=true; this._lose(); return; }
+    }else if(this.deck.length>0){
+      this.cpu.push(this.deck.pop());
+    }
+    this.turn='you';
+    this.render();
+  },
+  _win(){
+    const r={coin:80,brain:5};
+    recordResult('brain','wildstack',true,r);
+    Modal.win({rewards:r,title:'You went out!',emoji:'🃏',retry:()=>WildStackGame.start(),lobby:()=>App.toLobby()});
+  },
+  _lose(){
+    recordResult('brain','wildstack',false,{coin:20});
+    Modal.lose({title:'CPU went out',msg:'try again!',retry:()=>WildStackGame.start(),lobby:()=>App.toLobby()});
+  },
+  _end(){
+    const won = this.you.length < this.cpu.length;
+    const r=won?{coin:50,brain:3}:{coin:15};
+    recordResult('brain','wildstack',won,r);
+    if(won) Modal.win({rewards:r,title:`Fewer cards! ${this.you.length} vs ${this.cpu.length}`,emoji:'🃏',retry:()=>WildStackGame.start(),lobby:()=>App.toLobby()});
+    else Modal.lose({title:`More cards · ${this.you.length} vs ${this.cpu.length}`,msg:'deck ran out!',retry:()=>WildStackGame.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>🃏 Wild Stack</b> · you: <b>${this.you.length}</b> · CPU: <b>${this.cpu.length}</b> · ${this.turn==='you'?'your turn':'CPU thinking...'}`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim','match COLOR or NUMBER of top card'));
+    // Discard pile
+    const disc=el('div',''); disc.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;margin:14px 0';
+    const top=el('div',''); top.style.cssText='width:80px;height:120px;border-radius:14px;background:linear-gradient(135deg,#fff,#e5e7eb);color:var(--ink);display:grid;place-items:center;font-size:38px;font-weight:900;border:3px solid #FBBF24;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+    top.innerHTML = `<div style="text-align:center"><div>${this.discard.c}</div><div style="font-size:32px;font-family:'Cinzel',serif">${this.discard.n}</div></div>`;
+    disc.appendChild(top);
+    disc.appendChild(el('div','dim','top card'));
+    wrap.appendChild(disc);
+    // Your hand
+    const hand=el('div',''); hand.style.cssText='display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:340px;margin:10px 0';
+    this.you.forEach((card,i)=>{
+      const c=el('div','');
+      const can=this._canPlay(card);
+      c.style.cssText=`width:54px;height:80px;border-radius:10px;background:linear-gradient(135deg,#fff,#e5e7eb);color:var(--ink);display:grid;place-items:center;font-size:18px;font-weight:800;cursor:${this.turn==='you'?'pointer':'default'};border:2px solid ${can?'#10B981':'rgba(0,0,0,.2)'};opacity:${can?'1':'.6'}`;
+      c.innerHTML = `<div style="text-align:center"><div style="font-size:22px">${card.c}</div><div style="font-family:'Cinzel',serif;font-size:22px">${card.n}</div></div>`;
+      c.onclick=()=>this.playCard(i);
+      hand.appendChild(c);
+    });
+    wrap.appendChild(hand);
+    if(this.turn==='you' && !this.done){
+      const dr=el('button','btn-secondary','📥 DRAW'); dr.style.padding='10px 24px'; dr.onclick=()=>this.draw();
+      wrap.appendChild(dr);
+    }
+    area.appendChild(wrap);
+  },
+  cleanup(){}
+};
+
+// ====================================================================
+// 🎮 GAME 43 · MINI GOLF (Speed Wing) · angle + power
+// ====================================================================
+const MiniGolfGame = {
+  start(){
+    State.gameInst=this;
+    this.par=3;
+    this.shots=0;
+    this.maxShots=5;
+    // Ball at left (10%) · hole at right (90%) · ball Y bounces with arc
+    this.ballX=10;
+    this.ballY=70;
+    this.holeX=90;
+    this.holeY=70;
+    this.angle=45; // degrees
+    this.power=50; // 0-100
+    this.flying=false;
+    this.done=false;
+    this.startAimAngle();
+    this.render();
+    UI.show('game');
+  },
+  startAimAngle(){
+    this.aimMode='angle';
+    this.angleSweep=0;
+    this.angleSweepDir=1;
+    this.aimInt=setInterval(()=>{
+      this.angleSweep += this.angleSweepDir * 2;
+      if(this.angleSweep>=90){this.angleSweep=90;this.angleSweepDir=-1;}
+      if(this.angleSweep<=0){this.angleSweep=0;this.angleSweepDir=1;}
+      this.render();
+    },20);
+  },
+  setAngle(){
+    clearInterval(this.aimInt);
+    this.angle = this.angleSweep;
+    this.aimMode='power';
+    this.powerSweep=0;
+    this.powerSweepDir=1;
+    this.aimInt=setInterval(()=>{
+      this.powerSweep += this.powerSweepDir * 3;
+      if(this.powerSweep>=100){this.powerSweep=100;this.powerSweepDir=-1;}
+      if(this.powerSweep<=0){this.powerSweep=0;this.powerSweepDir=1;}
+      this.render();
+    },20);
+  },
+  shoot(){
+    if(this.aimMode!=='power') return;
+    clearInterval(this.aimInt);
+    this.power = this.powerSweep;
+    this.aimMode='flying';
+    this.shots++;
+    this._fly();
+  },
+  _fly(){
+    // Simulate ball trajectory · land based on angle + power
+    const distance = (this.power/100) * 80; // 0-80% screen width
+    const landX = this.ballX + distance;
+    const arcHeight = 30 * Math.sin(this.angle*Math.PI/180);
+    let t=0;
+    this.flyInt=setInterval(()=>{
+      t+=0.05;
+      if(t>=1){
+        clearInterval(this.flyInt);
+        this.ballX = Math.min(95, landX);
+        this.ballY = 70;
+        // Check if in hole
+        const dist = Math.abs(this.ballX - this.holeX);
+        if(dist < 5){ this.done=true; this._sink(); return; }
+        // Resume aim if shots left
+        if(this.shots>=this.maxShots){ this.done=true; this._end(); return; }
+        this.aimMode='angle';
+        this.ballX = Math.min(95, landX);
+        this.startAimAngle();
+        this.render();
+        return;
+      }
+      this.ballX = 10 + (landX - 10) * t;
+      this.ballY = 70 - arcHeight * Math.sin(t * Math.PI);
+      this.render();
+    },30);
+  },
+  _sink(){
+    SFX.holy(); haptic(40); confetti();
+    const ace = this.shots===1;
+    const underPar = this.shots <= this.par;
+    if(ace) Ach.unlock('minigolf_ace');
+    const r = underPar ? {coin:60 + (this.par-this.shots+1)*25, brain:3} : {coin:30};
+    recordResult('speed','minigolf',true,r);
+    setTimeout(()=>Modal.win({rewards:r,title:ace?'⛳ HOLE IN ONE!':`In ${this.shots} shots · ${underPar?'under':'over'} par`,emoji:'⛳',retry:()=>MiniGolfGame.start(),lobby:()=>App.toLobby()}),400);
+  },
+  _end(){
+    recordResult('speed','minigolf',false,{coin:15});
+    Modal.lose({title:'Out of shots',msg:'aim for the hole next time',retry:()=>MiniGolfGame.start(),lobby:()=>App.toLobby()});
+  },
+  render(){
+    document.getElementById('g-stats').innerHTML=`<b>⛳ Mini Golf</b> · shot <b>${this.shots+1}/${this.maxShots}</b> · par <b>${this.par}</b>`;
+    const area=document.getElementById('g-area'); area.innerHTML='';
+    const wrap=el('div','stroop-area');
+    wrap.appendChild(el('div','dim',this.aimMode==='angle'?'tap to SET angle':this.aimMode==='power'?'tap to SHOOT':this.flying?'flying...':'aim & shoot'));
+    // Course
+    const course=el('div',''); course.style.cssText='position:relative;width:340px;height:160px;background:linear-gradient(180deg,#10B981 0%,#064E3B 100%);border-radius:14px;border:3px solid #FBBF24;margin:14px 0;overflow:hidden';
+    // Hole
+    const hole=el('div',''); hole.style.cssText=`position:absolute;left:${this.holeX}%;top:${this.holeY}%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:#0F172A;border:2px solid #FBBF24`;
+    course.appendChild(hole);
+    // Flag
+    const flag=el('div',''); flag.style.cssText=`position:absolute;left:${this.holeX}%;top:${this.holeY-25}%;transform:translateX(-50%);font-size:24px`;
+    flag.textContent='⛳';
+    course.appendChild(flag);
+    // Ball
+    const ball=el('div',''); ball.style.cssText=`position:absolute;left:${this.ballX}%;top:${this.ballY}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.4);transition:none`;
+    course.appendChild(ball);
+    // Angle indicator (line from ball)
+    if(this.aimMode==='angle' || this.aimMode==='power'){
+      const ang = this.aimMode==='angle' ? this.angleSweep : this.angle;
+      const arrow=el('div',''); arrow.style.cssText=`position:absolute;left:${this.ballX}%;top:${this.ballY}%;width:50px;height:3px;background:#FBBF24;transform-origin:left center;transform:translate(0,-50%) rotate(${-ang}deg);pointer-events:none`;
+      course.appendChild(arrow);
+    }
+    wrap.appendChild(course);
+    // Bars
+    if(this.aimMode==='angle'){
+      const bar=el('div',''); bar.style.cssText='position:relative;width:300px;height:24px;background:rgba(255,255,255,.1);border-radius:12px;margin:8px 0';
+      bar.appendChild(el('div',''));
+      const m=el('div',''); m.style.cssText=`position:absolute;top:-2px;bottom:-2px;left:${this.angleSweep}%;width:4px;background:#FBBF24;transform:translateX(-2px)`;
+      bar.appendChild(m);
+      wrap.appendChild(el('div','dim','angle: '+Math.round(this.angleSweep)+'°'));
+      wrap.appendChild(bar);
+      const b=el('button','btn-primary','SET ANGLE'); b.style.padding='12px 28px'; b.onclick=()=>this.setAngle(); wrap.appendChild(b);
+    }else if(this.aimMode==='power'){
+      const bar=el('div',''); bar.style.cssText='position:relative;width:300px;height:24px;background:linear-gradient(90deg,#10B981,#FBBF24,#EF4444);border-radius:12px;margin:8px 0';
+      const m=el('div',''); m.style.cssText=`position:absolute;top:-2px;bottom:-2px;left:${this.powerSweep}%;width:4px;background:#fff;transform:translateX(-2px)`;
+      bar.appendChild(m);
+      wrap.appendChild(el('div','dim','power: '+Math.round(this.powerSweep)+'%'));
+      wrap.appendChild(bar);
+      const b=el('button','btn-primary','⛳ SHOOT'); b.style.padding='12px 28px'; b.onclick=()=>this.shoot(); wrap.appendChild(b);
+    }
+    area.appendChild(wrap);
+  },
+  cleanup(){
+    if(this.aimInt) clearInterval(this.aimInt);
+    if(this.flyInt) clearInterval(this.flyInt);
+  }
+};
+
+// ====================================================================
+// 🎮 GAME 44 · DAILY (rotating mini)
 // ====================================================================
 const DailyGame = {
   start(){
