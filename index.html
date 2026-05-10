@@ -53,6 +53,48 @@ body.color-blind .room-mind,
 body.color-blind .room-script{filter:hue-rotate(20deg)}
 body.color-blind .word-cell.green{background:#0066CC !important}
 body.color-blind .word-cell.yellow{background:#FFC107 !important}
+
+/* v0.23 PRO POLISH · consistent micro-anims · mobile-tight */
+@media (max-width:540px){
+  .lobby-foot{ grid-template-columns:repeat(3,1fr) !important; }
+  .lobby-foot .foot-btn{ font-size:10px; padding:10px 4px; }
+  .lobby-foot .foot-btn .em{ font-size:18px; }
+  .hud{ padding:8px 10px; }
+  .hud-row{ gap:6px; flex-wrap:wrap; }
+  .wallet-chip{ padding:4px 7px; font-size:11px; }
+  .mini-chip{ font-size:9px; padding:2px 5px; }
+  .lobby-content{ padding:12px; gap:10px; }
+  .room-door{ padding:14px 12px; min-height:100px; }
+  .room-door .em{ font-size:28px; }
+  .room-door .name{ font-size:14px; }
+  .room-door .sub{ font-size:10px; }
+  .modal-card{ padding:18px 14px; }
+  .modal-card h3{ font-size:18px; }
+  .stats-grid{ grid-template-columns:1fr 1fr !important; }
+  .game-card{ padding:12px; }
+  .game-card .em{ font-size:34px; }
+  .splash-emoji{ font-size:64px !important; }
+  .splash-title{ font-size:42px !important; }
+  .splash-tagline{ font-size:13px !important; margin-bottom:24px !important; }
+  .splash-cta{ padding:14px 28px; font-size:15px; }
+}
+@media (max-width:380px){
+  .lobby-foot{ grid-template-columns:repeat(3,1fr) !important; }
+  .room-door{ min-height:88px; }
+  .splash-title{ font-size:36px !important; }
+  .splash-emoji{ font-size:54px !important; }
+}
+/* v0.23 lift + smoothness on interactive elements */
+.room-door,.foot-btn,.game-card,.btn-primary,.btn-secondary{
+  transition:transform .15s cubic-bezier(.34,1.5,.64,1), box-shadow .15s, opacity .15s;
+}
+.room-door:hover,.game-card:hover{transform:translateY(-2px)}
+.btn-primary:hover{box-shadow:var(--glow-gold),0 12px 28px rgba(0,0,0,.4)}
+/* v0.23 scrollbar polish */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:rgba(245,158,11,.5)}
 body{
   padding-top:env(safe-area-inset-top);
   padding-bottom:env(safe-area-inset-bottom);
@@ -1204,7 +1246,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.22.0 · humble rank · Coach AI · 🙏</div>
+  <div class="splash-foot">v0.23.0 · POLISH SUPREME · pro-team feel · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1354,7 +1396,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.22.0';
+const VERSION = '0.23.0';
 
 // ----- STATE -----
 const State = {
@@ -2358,6 +2400,10 @@ const ACHIEVEMENTS = [
   {id:'coach_consulted',em:'🧠',t:'Coachable',d:'View Coach AI tip in Stats'},
   {id:'rank_humble',em:'🌱',t:'Sprout Saint',d:'Start fresh in Sprout tier'},
   {id:'climbed_5_tiers',em:'⛰️',t:'Climber',d:'Climb 5 tiers from Sprout'},
+  // v0.23 polish + new mechanics
+  {id:'pro_polish',em:'✨',t:'Polish Saint',d:'Reach v0.23 — feels pro now'},
+  {id:'mobile_master',em:'📱',t:'Mobile Master',d:'Play on a phone-sized screen'},
+  {id:'dynamic_3',em:'🎮',t:'Dynamic Soul',d:'Win on 3 different difficulty modes'},
   // v0.20
   {id:'difficulty_set',em:'🎮',t:'Calibrated',d:'Pick a difficulty mode'},
   {id:'casual_50',em:'😊',t:'Easygoing',d:'Win 50 games on Casual'},
@@ -2533,6 +2579,9 @@ const Ach = {
     // v0.20 difficulty achievements
     if(d.settings?.difficulty==='casual' && d.totals.wins>=50) Ach.unlock('casual_50');
     if(d.settings?.difficulty==='hardcore' && d.totals.wins>=25) Ach.unlock('hardcore_25');
+    // v0.23 reaching v0.23 = pro polish
+    Ach.unlock('pro_polish');
+    if(window.innerWidth<=540) Ach.unlock('mobile_master');
     // BP-based
     if((d.bp?.claimed?.length||0)>=3) Ach.unlock('bp_tier3');
     if((d.bp?.claimed?.length||0)>=10) Ach.unlock('bp_tier10');
@@ -2971,6 +3020,13 @@ const App = {
       const greeting = h<5 ? 'late night' : h<12 ? 'good morning' : h<17 ? 'good afternoon' : h<21 ? 'good evening' : 'late night';
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const timeStr = now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+      // v0.23 spotlight game preview
+      const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
+      const spotName = ['📖 5-Letter','🧠 Memory','🎯 Stroop','🔢 Math','✝️ Verse','📜 Anagram','🎼 Simon','⚡ Reaction','🧮 Sequence','📖 Books','💡 Lights','🔍 Spot','🔢 Hunt','🎨 Color','🌟 Whack','🔑 Code','🧠 Trivia','📚 Define','🔢 Tap','🪢 Hangman','🦉 Riddle','🧩 Sudoku','🕊️ Parable'][day%23] || '⭐ Daily';
+      // v0.23 quest count
+      Quests.ensureToday();
+      const questsLeft = (d.quests?.list||[]).filter(q=>q.progress<q.need && !(d.quests.claimed||[]).includes(q.id)).length;
+      const tier = getRankTier(d.iq||50);
       personal.innerHTML = `
         <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(245,158,11,.3);border-radius:99px;margin-bottom:6px;font-size:14px;font-weight:600;color:var(--cream)">
           ${renderAvatarStack(d.avatar,d.avatarHue,'S')}
@@ -2979,8 +3035,12 @@ const App = {
         <div class="dim" style="font-size:11px;margin-bottom:12px">${timeStr} · ${tz.split('/').pop().replace('_',' ')}</div>
         <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px">
           ${streak>=1?`<span class="reward-chip flame-streak">🔥 ${streak}-day streak</span>`:''}
-          <span class="reward-chip">${rankBadge(d.iq||1000)} · ${d.iq||1000}</span>
+          <span class="reward-chip" style="border-color:${tier.color}40">${rankBadge(d.iq||50)} · ${d.iq||50}</span>
           <span class="reward-chip">🏆 ${stats.wins||0} wins</span>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;font-size:11px">
+          <span class="reward-chip" style="background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.3)">🎲 today: <b>${spotName}</b> 2x</span>
+          ${questsLeft>0?`<span class="reward-chip" style="background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.3)">📋 ${questsLeft} quests</span>`:''}
         </div>
         <div style="max-width:320px;margin:0 auto 18px;padding:10px 14px;background:rgba(245,158,11,.08);border-left:3px solid var(--gold);border-radius:8px;font-size:12px;font-style:italic;line-height:1.5;text-align:center">
           "${v.t}"<br><span style="color:var(--gold-bright);font-size:11px;font-weight:700">— ${v.r}</span>
@@ -4932,7 +4992,8 @@ const AnagramGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=8;
+    const threshold = Coach.adjustThreshold('word','anagram',8);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:30+this.score*4, brain:3} : {coin:Math.max(10,this.score*2)};
     recordResult('word','anagram',won,rewards);
     if(won) Modal.win({rewards, title:`Score: ${this.score}!`, emoji:'📜',
@@ -5225,7 +5286,8 @@ const BooksGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=10;
+    const threshold = Coach.adjustThreshold('script','books',10);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:30+this.score*4, faith:3, brain:2} : {coin:Math.max(10,this.score*2), faith:1};
     recordResult('script','books',won,rewards);
     if(won) Modal.win({rewards, title:`${this.score} books!`, emoji:'🙏',
@@ -5356,7 +5418,8 @@ const SpotGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=10;
+    const threshold = Coach.adjustThreshold('logic','spot',10);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:30+this.score*4, brain:2} : {coin:Math.max(10,this.score*2)};
     recordResult('logic','spot',won,rewards);
     if(won) Modal.win({rewards, title:`Spotted ${this.score}!`, emoji:'🔍',
@@ -5507,7 +5570,8 @@ const ColorMatchGame = {
   },
   end(){
     clearInterval(this.timer);
-    const won = this.score>=15;
+    const threshold = Coach.adjustThreshold('speed','colormatch',15);
+    const won = this.score>=threshold;
     const rewards = won ? {coin:30+this.score*3, brain:3} : {coin:Math.max(10,this.score*2)};
     recordResult('speed','colormatch',won,rewards);
     if(won) Modal.win({rewards, title:`Matched ${this.score}!`, emoji:'🎨',
