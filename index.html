@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.46.0 · 🎤 karaoke · 👻 ghost · 🛡️ shield · 🌟 chain · 🎪 carnival · 🎁 mystery · 🐛 splash fix · 🙏</div>
+  <div class="splash-foot">v0.47.0 · 🔄 SW network-first · 🛡️ tour skip · 🃏 card pack · 🌊 wave · 📊 graphs · 💸 trader · 🌟 favorites · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.46.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.47.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.46.0';
+const VERSION = '0.47.0';
 
 // ----- STATE -----
 const State = {
@@ -1506,6 +1506,11 @@ const DEFAULT_SAVE = {
   mysteryDrops:[], // [{ts, em, reward}]
   carnivalBest:0, // best carnival score
   ghostRuns:{}, // {gameKey: bestRunSnapshot}
+  // v0.47 NEW
+  cardPack:{lastClaim:0, collected:[]}, // daily card pack · cosmetic cards
+  favorites:[], // [`${rid}:${gid}`,...] · quick-launch shelf in lobby
+  waveModeBest:{}, // {gameKey: rounds survived}
+  traderHistory:[], // [{from, to, amount, ts}]
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -3500,7 +3505,7 @@ const Tour = {
     tip.className='tour-tip';
     const top = Math.min(window.innerHeight-160, rect.bottom+12);
     tip.style.cssText=`position:fixed;left:${Math.max(12,Math.min(window.innerWidth-280,rect.left))}px;top:${top}px;width:260px;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#1a1a1a;padding:10px 14px;border-radius:14px;font-family:"Cinzel",serif;font-size:13px;z-index:9998;box-shadow:0 8px 28px rgba(0,0,0,.5);animation:tourPop .35s ease-out`;
-    tip.innerHTML = `<b style="font-size:14px">${s.t}</b><div style="font-size:11px;margin-top:4px;line-height:1.45">${s.d}</div><div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:10px;opacity:.65">${i+1}/${Tour.steps.length}</span><button style="background:rgba(0,0,0,.18);color:inherit;border:none;border-radius:99px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700" onclick="Tour._next(${i})">${i+1===Tour.steps.length?'DONE ✓':'NEXT →'}</button></div>`;
+    tip.innerHTML = `<b style="font-size:14px">${s.t}</b><div style="font-size:11px;margin-top:4px;line-height:1.45">${s.d}</div><div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:6px"><button style="background:transparent;color:inherit;border:none;font-size:10px;opacity:.7;cursor:pointer" onclick="Tour._skip()">skip ✕</button><span style="font-size:10px;opacity:.65">${i+1}/${Tour.steps.length}</span><button style="background:rgba(0,0,0,.18);color:inherit;border:none;border-radius:99px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700" onclick="Tour._next(${i})">${i+1===Tour.steps.length?'DONE ✓':'NEXT →'}</button></div>`;
     // arrow highlight ring on target
     const ring = document.createElement('div');
     ring.className='tour-ring';
@@ -3509,6 +3514,7 @@ const Tour = {
     this._cleanup = ()=>{ tip.remove(); ring.remove(); };
   },
   _next(i){ if(this._cleanup) this._cleanup(); this._step(i+1); },
+  _skip(){ if(this._cleanup) this._cleanup(); Toast.show('tour skipped · find it in Settings'); },
   _done(){
     Toast.show('🎓 tour complete · earned 25 coins');
     Wallet.add({coin:25});
@@ -3930,6 +3936,12 @@ const MedalHunt = {
     const game = ROOMS[mh.roomId]?.games.find(g=>g.id===mh.gameId);
     return {game, room:ROOMS[mh.roomId], runs:mh.runs, wins:mh.wins};
   },
+  playCurrent(){
+    const mh = State.data.medalHunt;
+    if(!mh?.active) return;
+    const game = ROOMS[mh.roomId]?.games.find(g=>g.id===mh.gameId);
+    if(game) GameIntro.show(mh.roomId, game);
+  },
   bumpRun(won){
     if(!State.data.medalHunt?.active) return;
     State.data.medalHunt.runs++;
@@ -3953,7 +3965,7 @@ const MedalHunt = {
         <div style="font-size:13px;margin-top:4px">${st.game?.em} ${st.game?.name}</div>
         <div class="dim" style="font-size:11px">runs: ${st.runs} · wins: ${st.wins}</div>
         <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
-          <button class="btn-primary" style="padding:6px 12px;font-size:11px" onclick="GameIntro.show('${st.room ? Object.keys(ROOMS).find(k=>ROOMS[k]===st.room) : ''}', ROOMS['${Object.keys(ROOMS).find(k=>ROOMS[k]===st.room)}'].games.find(g=>g.id==='${State.data.medalHunt.gameId}'))">▶ play</button>
+          <button class="btn-primary" style="padding:6px 12px;font-size:11px" onclick="MedalHunt.playCurrent()">▶ play</button>
           <button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="MedalHunt.end(false)">🚪 end</button>
         </div>
       </div>`;
@@ -3999,6 +4011,10 @@ const Calendar = {
     const games = Object.entries(ROOMS).flatMap(([rid,r])=>r.games.map(g=>({rid,g})));
     return games[(day-1)%games.length];
   },
+  playToday(){
+    const ch = this.todayChallengeGame();
+    if(ch?.g) GameIntro.show(ch.rid, ch.g);
+  },
   claim(score){
     const k = this.todayKey();
     if(State.data.dailyCal?.[k]?.claimed) return;
@@ -4032,7 +4048,7 @@ const Calendar = {
       <div style="font-size:24px;margin:4px 0">${ch.g.em}</div>
       <b>${ch.g.name}</b>
       <div class="dim" style="font-size:11px;margin:4px 0">${ROOMS[ch.rid].em} ${ROOMS[ch.rid].name}</div>
-      ${todayClaimed?'<div style="font-size:13px;color:#10B981;margin-top:6px">✅ claimed today</div>':`<button class="btn-primary" style="margin-top:6px;padding:8px 14px;font-size:12px" onclick="GameIntro.show('${ch.rid}', ROOMS['${ch.rid}'].games.find(g=>g.id==='${ch.g.id}'))">▶ play challenge</button>`}
+      ${todayClaimed?'<div style="font-size:13px;color:#10B981;margin-top:6px">✅ claimed today</div>':`<button class="btn-primary" style="margin-top:6px;padding:8px 14px;font-size:12px" onclick="Calendar.playToday()">▶ play challenge</button>`}
     </div>`;
     // grid
     html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">📋 GRID</h3>
@@ -4393,6 +4409,251 @@ const Mystery = {
       <p style="font-size:13px;margin:8px 0">${Object.entries(t.reward||{}).map(([k,n])=>`+${n} ${{coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||k}`).join(' · ')||(t.special?`+1 ${t.special}`:'')}</p>
       <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
     </div>`);
+  }
+};
+
+// ====================================================================
+// 🃏 v0.47 · DAILY CARD PACK · collect cosmetic cards
+// ====================================================================
+const CardPack = {
+  CARDS: [
+    {id:'lion',em:'🦁',name:'Lion of Judah',rarity:'rare'},
+    {id:'lamb',em:'🐑',name:'Lamb',rarity:'common'},
+    {id:'eagle',em:'🦅',name:'Eagle',rarity:'rare'},
+    {id:'cross',em:'✝️',name:'Cross',rarity:'common'},
+    {id:'crown',em:'👑',name:'Crown',rarity:'epic'},
+    {id:'olive',em:'🫒',name:'Olive Branch',rarity:'common'},
+    {id:'flame',em:'🔥',name:'Holy Fire',rarity:'rare'},
+    {id:'star',em:'⭐',name:'Star of Bethlehem',rarity:'epic'},
+    {id:'dove',em:'🕊️',name:'Dove',rarity:'common'},
+    {id:'trumpet',em:'📯',name:'Jubilee Trumpet',rarity:'rare'},
+    {id:'scroll',em:'📜',name:'Scroll',rarity:'common'},
+    {id:'water',em:'💧',name:'Living Water',rarity:'epic'},
+  ],
+  canClaim(){
+    const last = State.data.cardPack?.lastClaim || 0;
+    return Date.now() - last >= 20*3600000; // 20-hour cooldown
+  },
+  claim(){
+    if(!this.canClaim()){
+      const wait = Math.ceil((20*3600000-(Date.now()-State.data.cardPack.lastClaim))/3600000);
+      Toast.show(`🃏 next pack in ${wait}h`);
+      return;
+    }
+    State.data.cardPack = State.data.cardPack || {lastClaim:0, collected:[]};
+    // Roll 3 cards · rarity weighted
+    const drawn = [];
+    for(let i=0;i<3;i++){
+      const r = Math.random();
+      const rarity = r<0.05?'epic':r<0.25?'rare':'common';
+      const pool = this.CARDS.filter(c=>c.rarity===rarity);
+      drawn.push(pool[Math.floor(Math.random()*pool.length)]);
+    }
+    State.data.cardPack.lastClaim = Date.now();
+    drawn.forEach(c=>{
+      if(!State.data.cardPack.collected.includes(c.id)) State.data.cardPack.collected.push(c.id);
+    });
+    Save.write();
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:32px">🃏</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">DAILY PACK</h3>
+      <div style="display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap">
+      ${drawn.map(c=>{
+        const bg=c.rarity==='epic'?'linear-gradient(135deg,#FBBF24,#F59E0B)':c.rarity==='rare'?'linear-gradient(135deg,#7C3AED,#5B21B6)':'rgba(255,255,255,.08)';
+        return `<div style="background:${bg};padding:14px;border-radius:10px;min-width:90px"><div style="font-size:36px">${c.em}</div><b style="font-size:11px;display:block;margin-top:4px">${c.name}</b><span style="font-size:10px;opacity:.85;text-transform:uppercase">${c.rarity}</span></div>`;
+      }).join('')}
+      </div>
+      <p class="dim" style="font-size:11px">collected: ${State.data.cardPack.collected.length}/${this.CARDS.length}</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+    </div>`);
+    Wallet.add({coin:25}); // small coin bonus
+  },
+  renderHub(){
+    const c = State.data.cardPack || {collected:[]};
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(245,158,11,.18))">
+      <div style="font-size:42px">🃏</div>
+      <b style="color:var(--gold-bright);font-size:16px">Daily Card Pack</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">collect cosmetic cards · 3 drawn per day · ${c.collected.length}/${this.CARDS.length} collected</div>
+    </div>`;
+    html += this.canClaim()
+      ? `<button class="btn-primary" style="margin-top:14px;width:100%;padding:14px;font-size:14px" onclick="CardPack.claim()">🎁 OPEN TODAY'S PACK</button>`
+      : `<div class="dim" style="text-align:center;margin-top:14px;font-size:12px">⏱ next pack in ${Math.ceil((20*3600000-(Date.now()-c.lastClaim))/3600000)}h</div>`;
+    html += `<h3 style="margin:14px 0 6px;font-size:12px;color:var(--gold-bright)">📚 YOUR COLLECTION</h3>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px">${this.CARDS.map(card=>{
+      const got = c.collected.includes(card.id);
+      const bg = card.rarity==='epic'?'linear-gradient(135deg,#FBBF24,#F59E0B)':card.rarity==='rare'?'linear-gradient(135deg,#7C3AED,#5B21B6)':'rgba(255,255,255,.06)';
+      return `<div style="background:${got?bg:'rgba(255,255,255,.04)'};padding:8px;border-radius:8px;text-align:center;${got?'':'opacity:.35'}">
+        <div style="font-size:22px">${got?card.em:'❔'}</div>
+        <div style="font-size:9px">${got?card.name:'???'}</div>
+      </div>`;
+    }).join('')}</div>`;
+    return html;
+  }
+};
+
+// ====================================================================
+// 🌟 v0.47 · QUICK-LAUNCH FAVORITES · pin up to 3 games as lobby shelf
+// ====================================================================
+const Favorites = {
+  toggle(roomId, gameId){
+    const k = `${roomId}:${gameId}`;
+    State.data.favorites = State.data.favorites || [];
+    const idx = State.data.favorites.indexOf(k);
+    if(idx>=0) State.data.favorites.splice(idx,1);
+    else{
+      if(State.data.favorites.length>=3) State.data.favorites.shift();
+      State.data.favorites.push(k);
+    }
+    Save.write();
+    Toast.show(idx>=0?'★ removed favorite':'★ pinned · max 3');
+  },
+  is(roomId, gameId){
+    return (State.data.favorites||[]).includes(`${roomId}:${gameId}`);
+  },
+  renderShelf(){
+    const favs = (State.data.favorites||[]).map(k=>{
+      const [rid,gid] = k.split(':');
+      return {rid, g:ROOMS[rid]?.games.find(g=>g.id===gid)};
+    }).filter(x=>x.g);
+    if(!favs.length) return '';
+    return `<div style="background:rgba(0,0,0,.18);border:1px solid rgba(245,158,11,.4);border-radius:14px;padding:10px 14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;margin-bottom:6px">⭐ QUICK LAUNCH</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${favs.map(f=>`<button onclick="Favorites.launch('${f.rid}','${f.g.id}')" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px;color:inherit;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:6px"><span style="font-size:20px">${f.g.em}</span><span>${f.g.name}</span></button>`).join('')}
+      </div>
+    </div>`;
+  },
+  launch(rid, gid){
+    const g = ROOMS[rid]?.games.find(x=>x.id===gid);
+    if(g) GameIntro.show(rid, g);
+  }
+};
+
+// ====================================================================
+// 🌊 v0.47 · WAVE MODE · endless · how far can you survive
+// ====================================================================
+const Wave = {
+  _round:0, _score:0, _state:null,
+  start(){
+    State.gameInst=this;
+    this._round=0; this._score=0; this._state={timers:[]};
+    UI.show('game');
+    this._next();
+  },
+  _next(){
+    this._round++;
+    const pool = Frenzy.POOL;
+    const pick = pool[Math.floor(Math.random()*pool.length)];
+    const area=document.getElementById('g-area'); if(!area)return;
+    area.innerHTML='';
+    document.getElementById('g-stats').innerHTML=`<b>🌊 WAVE</b> · round <b>${this._round}</b> · score <b>${Math.round(this._score)}</b>`;
+    // each wave reduces duration by ~1s · gets harder
+    const origDur = pick.duration;
+    pick.duration = Math.max(6, origDur - Math.floor(this._round/2));
+    pick.run(area, this._state, (s)=>{
+      pick.duration = origDur; // restore
+      // need to score at least 30 to survive · wave 5+ needs more
+      const required = 30 + Math.max(0, this._round-5)*10;
+      if(s<required){ this.end(); return; }
+      this._score += s + this._round*5;
+      setTimeout(()=>this._next(), 400);
+    });
+  },
+  end(){
+    if(this._state) this._state.timers.forEach(t=>{clearInterval(t); clearTimeout(t);});
+    const best = State.data.waveModeBest || {};
+    if((best.endless||0) < this._round) best.endless = this._round;
+    State.data.waveModeBest = best;
+    Save.write();
+    const reward = {coin: 50+this._round*30, gem: this._round>=5?2:0, brain:this._round};
+    Wallet.add(reward);
+    Modal.show(`<div style="text-align:center;padding:8px">
+      <div style="font-size:64px">🌊</div>
+      <h3 style="margin:8px 0;color:var(--gold-bright)">WAVE ${this._round}</h3>
+      <p style="font-size:13px;margin:8px 0">score: <b>${Math.round(this._score)}</b></p>
+      <p class="dim" style="font-size:11px">best: ${best.endless||0} waves</p>
+      <button class="btn-primary" style="margin-top:14px;margin-right:6px" onclick="Modal.close();Wave.start()">↻ retry</button>
+      <button class="btn-secondary" style="margin-top:14px" onclick="Modal.close();App.toLobby()">🚪 exit</button>
+    </div>`);
+  },
+  cleanup(){ if(this._state) this._state.timers.forEach(t=>{clearInterval(t); clearTimeout(t);}); }
+};
+
+// ====================================================================
+// 📊 v0.47 · GAME STATS GRAPH · ASCII bar graph of wins-over-time per game
+// ====================================================================
+const StatsGraph = {
+  renderForGame(roomId, gameId){
+    const k = `${roomId}:${gameId}`;
+    const lb = State.data.leaderboards?.[k]?.allTime?.filter(e=>e.me) || [];
+    if(!lb.length) return '<div class="dim" style="text-align:center;padding:10px;font-size:11px">play this game more to see graph</div>';
+    const scores = lb.slice(-10).map(e=>e.score);
+    const max = Math.max(...scores, 1);
+    const bars = scores.map(s=>Math.round((s/max)*40));
+    return `<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px 12px;font-family:monospace;font-size:10px;line-height:1.4">
+      <div style="color:var(--gold-bright);font-weight:700;margin-bottom:6px">📊 last ${scores.length} runs · max ${max}</div>
+      ${bars.map((b,i)=>{
+        const bar = '█'.repeat(b) || '·';
+        return `<div style="display:flex;justify-content:space-between"><span style="color:#FBBF24">${bar}</span><span>${scores[i]}</span></div>`;
+      }).join('')}
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 💸 v0.47 · CURRENCY TRADER · convert coins ↔ gems ↔ brain ↔ faith
+// ====================================================================
+const Trader = {
+  RATES: {
+    'coin->gem': 100, // 100c = 1 gem
+    'gem->coin': 50,  // 1 gem = 50c
+    'coin->brain': 20,
+    'brain->coin': 8,
+    'coin->faith': 30,
+    'faith->coin': 12,
+    'gem->brain': 1,  // 1 gem = 1 brain
+    'gem->faith': 2,
+    'brain->faith': 1,
+  },
+  exchange(from, to, fromAmount){
+    const rate = this.RATES[`${from}->${to}`];
+    if(!rate){ Toast.show('exchange not available'); return; }
+    if((State.data.wallet[from]||0) < fromAmount){ Toast.show('not enough '+from); return; }
+    let toAmount;
+    if(from==='coin'){ toAmount = Math.floor(fromAmount / rate); }
+    else { toAmount = fromAmount * rate; }
+    if(toAmount<1){ Toast.show('amount too small'); return; }
+    State.data.wallet[from] -= fromAmount;
+    State.data.wallet[to] = (State.data.wallet[to]||0) + toAmount;
+    State.data.traderHistory = State.data.traderHistory || [];
+    State.data.traderHistory.push({from, to, fromAmount, toAmount, ts:Date.now()});
+    Save.write();
+    UI.updateWallet();
+    Toast.show(`💱 ${fromAmount} ${from} → ${toAmount} ${to}`);
+  },
+  renderHub(){
+    const w = State.data.wallet || {};
+    const ems = {coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'};
+    let html = `<div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(16,185,129,.22),rgba(245,158,11,.18))">
+      <div style="font-size:42px">💸</div>
+      <b style="color:var(--gold-bright);font-size:16px">Currency Trader</b>
+      <div class="dim" style="font-size:11px;margin-top:4px">exchange between coins · gems · brain · faith</div>
+    </div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px;font-size:11px">
+      ${['coin','gem','brain','faith'].map(c=>`<div style="background:rgba(255,255,255,.06);padding:8px;border-radius:8px;text-align:center"><div style="font-size:18px">${ems[c]}</div><b>${w[c]||0}</b></div>`).join('')}
+    </div>`;
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">⇄ EXCHANGES</h3>`;
+    Object.entries(this.RATES).forEach(([k,rate])=>{
+      const [from, to] = k.split('->');
+      const has = w[from]||0;
+      let amount = from==='coin'?rate:1;
+      const label = from==='coin'?`${rate} ${ems[from]} → 1 ${ems[to]}`:`1 ${ems[from]} → ${rate} ${ems[to]}`;
+      html += `<div class="setting-row">
+        <span>${label}</span>
+        <button class="btn-primary" style="padding:4px 10px;font-size:11px;width:auto;${has>=amount?'':'opacity:.4'}" onclick="Trader.exchange('${from}','${to}',${amount})">trade</button>
+      </div>`;
+    });
+    return html;
   }
 };
 
@@ -5955,6 +6216,8 @@ const App = {
         </div>
       </div>`;
     }
+    // v0.47 · favorites quick-launch shelf
+    try{ exHtml = Favorites.renderShelf() + exHtml; }catch(e){}
     extras.innerHTML = exHtml;
     // v0.32 RECENTLY PLAYED widget
     const recent = (State.data.activityLog||[]).filter(a=>a.type==='win'||a.type==='loss').slice(0,3);
@@ -6560,6 +6823,10 @@ const App = {
           <button class="btn-secondary" onclick="App.startCarnival()">🎪 carnival mode</button>
           <button class="btn-secondary" onclick="App.rollMystery()">🎁 roll mystery (free)</button>
           <button class="btn-secondary" onclick="App.buyShield()">🛡️ buy streak shield (5💎) · have ${State.data.streakShield||0}</button>
+          <button class="btn-secondary" onclick="App.openCardPack()">🃏 daily card pack</button>
+          <button class="btn-secondary" onclick="App.openTrader()">💸 currency trader</button>
+          <button class="btn-secondary" onclick="App.startWave()">🌊 wave mode (endless)</button>
+          <button class="btn-secondary" style="background:rgba(245,158,11,.2);border-color:#FBBF24" onclick="App.forceUpdate()">🔄 FORCE UPDATE · clear cache + reload</button>
         </div>
         <p class="dim text-center" style="font-size:11px;margin:8px 0 0">scripture stays bold in scripture room · toggle controls other rooms</p>
         <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -7273,6 +7540,31 @@ const App = {
   startCarnival(){ Carnival.start(); },
   rollMystery(){ Mystery.roll(); },
   buyShield(){ Shield.buy(); App.openShop(); },
+  forceUpdate(){
+    Toast.show('🔄 clearing cache · reloading...');
+    try{
+      if(navigator.serviceWorker){
+        navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));
+      }
+      if(window.caches){
+        caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
+      }
+    }catch(e){}
+    setTimeout(()=>location.href = location.origin + location.pathname + '?_=' + Date.now(), 800);
+  },
+  // v0.47 hubs
+  openCardPack(){
+    document.getElementById('aux-title').innerHTML = '🃏 Card Pack';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${CardPack.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back</button></div>`;
+    UI.show('aux');
+  },
+  openTrader(){
+    document.getElementById('aux-title').innerHTML = '💸 Trader';
+    document.getElementById('aux-body').innerHTML = `<div class="settings-list">${Trader.renderHub()}<button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back</button></div>`;
+    UI.show('aux');
+  },
+  startWave(){ Wave.start(); },
+  toggleFavorite(rid, gid){ Favorites.toggle(rid, gid); App.openRoom(rid); },
   // v0.41 · HELP HUB · full how-to-play tour
   openHelpHub(){
     State.data.helpHubSeen = true;
@@ -12609,11 +12901,39 @@ function _purgeOrphanTimers(){
 // Run purge every 30s when idle
 setInterval(_purgeOrphanTimers, 30000);
 
-// v0.15 PWA service worker registration (only when served via http(s), not file://)
+// v0.46 PWA service worker registration · auto-update on new version detect
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW register failed:', err));
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      // check for updates every 30 sec while open
+      setInterval(()=>{ reg.update().catch(()=>{}); }, 30000);
+      reg.addEventListener('updatefound', ()=>{
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', ()=>{
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            // new version installed · show toast prompting reload
+            try{ Toast.show('🔄 new version ready · tap to reload', 8000); }catch(e){}
+            // auto-reload once after 5 sec if user hasn't
+            setTimeout(()=>{ try{location.reload();}catch(e){} }, 5000);
+          }
+        });
+      });
+    }).catch(err=>console.warn('SW register failed:', err));
   });
+}
+// v0.46 Hard cache buster · open with ?nuke to force-clear all SW caches
+if(location.search.includes('nuke')){
+  try{
+    if(navigator.serviceWorker){
+      navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));
+      navigator.serviceWorker.controller?.postMessage('CLEAR_CACHE');
+    }
+    if(window.caches){
+      caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
+    }
+    setTimeout(()=>{ location.href = location.origin+location.pathname+'?cleared'; }, 500);
+  }catch(e){}
 }
 
 // v0.15 PWA install prompt capture
