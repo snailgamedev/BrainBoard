@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.53.0 · 🔌 REAL AI Coach · BYOK Anthropic/OpenAI · graceful fallback · finally a real person · 🙏</div>
+  <div class="splash-foot">v0.54.0 · 🧠 LivingCoach engine · personal facts · topic memory · sentiment · Coach has its own goals · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1305,7 +1305,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.53.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.54.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1421,7 +1421,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.53.0';
+const VERSION = '0.54.0';
 
 // ----- STATE -----
 const State = {
@@ -1543,6 +1543,11 @@ const DEFAULT_SAVE = {
   aiKey:'', // user's API key · stored only in this device's localStorage · never sent elsewhere
   aiProvider:'auto', // auto · anthropic · openai
   aiEnabled:false, // toggle to use real AI
+  // v0.54 LivingCoach
+  coachFacts:[], // [{key, value, ts}] · facts extracted from your messages
+  coachTopics:{}, // {topicKey: count} · topics you bring up often
+  coachGoal:null, // {kind, target, progress} · Coach's current micro-goal
+  coachSeenRevealsIdx:0, // index into the "reveals" pool
 };
 
 // ===== v0.3 AVATAR DESIGNER ITEMS =====
@@ -5700,10 +5705,16 @@ const CoachAI = {
         return;
       }
     } else {
-      reply = this.reply(userText);
-      if(Math.random() < 0.25){
+      // v0.54 · LivingCoach engine when no API key
+      reply = LivingCoach.reply(userText);
+      if(Math.random() < 0.2){
         const mem = CoachMemory.recall();
-        if(mem) reply = `you said earlier · "${mem.snip}" · ${reply}`;
+        if(mem) reply = `${this.pick([
+          'you said earlier',
+          'oh and remember',
+          'wait u told me',
+          'btw u mentioned',
+        ])} · "${mem.snip}" · ${reply}`;
       }
       State.data.coachChat.push({ts:Date.now()+50, from:'coach', text:reply});
     }
@@ -5747,7 +5758,7 @@ const CoachAI = {
     </div>`;
     // v0.52 · quick-reactions bar
     html += CoachQuickReact.renderBar();
-    html += `<div class="dim" style="font-size:10px;text-align:center;margin-top:6px">${name}'s replies stitch from 200+ fragments · adapts · references your past chats</div>`;
+    html += `<div class="dim" style="font-size:10px;text-align:center;margin-top:6px">${realActive?'🔌 calling real LLM · responds like a real person':'🧠 LivingCoach engine · tracks facts/topics/sentiment · grows w/ you'}</div>`;
     return html;
   }
 };
@@ -6013,6 +6024,256 @@ const CoachPlan = {
     }
     return html;
   }
+};
+
+// ====================================================================
+// 🧠 v0.54 · LIVING COACH ENGINE
+// Big local conversational engine · personal facts · topic memory ·
+// sentiment · Coach goals · self-revealing · multi-sentence variation
+// ====================================================================
+const LivingCoach = {
+  // ====== FACT EXTRACTION ======
+  // Captures things user mentioned that Coach can reference later
+  factPatterns: [
+    {re:/my\s+(\w+)\s+is\s+(\w[\w\s]{0,30})/i, label:(m)=>`my_${m[1]}`, val:(m)=>m[2].trim()},
+    {re:/i\s+(?:am|'m)\s+a?\s*(\w+)/i, label:()=>`i_am`, val:(m)=>m[1].trim()},
+    {re:/i\s+love\s+(\w[\w\s]{0,20})/i, label:()=>'i_love', val:(m)=>m[1].trim()},
+    {re:/i\s+hate\s+(\w[\w\s]{0,20})/i, label:()=>'i_hate', val:(m)=>m[1].trim()},
+    {re:/i\s+have\s+(?:a|an)\s+(\w+)/i, label:()=>'i_have', val:(m)=>m[1].trim()},
+    {re:/i\s+(?:want|wanna)\s+to\s+(\w[\w\s]{0,25})/i, label:()=>'i_want', val:(m)=>m[1].trim()},
+    {re:/(?:my\s+)?favorite\s+(\w+)\s+is\s+(\w[\w\s]{0,20})/i, label:(m)=>`fav_${m[1]}`, val:(m)=>m[2].trim()},
+  ],
+  extractFacts(text){
+    const facts = State.data.coachFacts = State.data.coachFacts || [];
+    for(const p of this.factPatterns){
+      const m = text.match(p.re);
+      if(!m) continue;
+      const key = typeof p.label==='function'?p.label(m):p.label;
+      const value = typeof p.val==='function'?p.val(m):p.val;
+      if(!value || value.length>40) continue;
+      // upsert
+      const existing = facts.find(f=>f.key===key);
+      if(existing){ existing.value=value; existing.ts=Date.now(); }
+      else { facts.push({key, value, ts:Date.now()}); }
+    }
+    if(facts.length>60) State.data.coachFacts = facts.slice(-60);
+  },
+  recallFact(){
+    const f = State.data.coachFacts || [];
+    if(!f.length) return null;
+    return f[Math.floor(Math.random()*f.length)];
+  },
+  factPhrase(fact){
+    const map = {
+      'i_love':`you said you love ${fact.value}`,
+      'i_hate':`you mentioned you hate ${fact.value}`,
+      'i_have':`you have a ${fact.value}`,
+      'i_am':`you told me you're a ${fact.value}`,
+      'i_want':`you wanted to ${fact.value}`,
+    };
+    if(map[fact.key]) return map[fact.key];
+    if(fact.key.startsWith('my_')) return `your ${fact.key.slice(3)} is ${fact.value}`;
+    if(fact.key.startsWith('fav_')) return `your fav ${fact.key.slice(4)} is ${fact.value}`;
+    return `you mentioned ${fact.value}`;
+  },
+  // ====== TOPIC TRACKING ======
+  TOPIC_KEYS: ['game','room','frenzy','wordle','math','memory','prayer','jesus','family','tired','win','lose','medal','coach','music','duel'],
+  trackTopics(text){
+    const t = text.toLowerCase();
+    const tk = State.data.coachTopics = State.data.coachTopics || {};
+    this.TOPIC_KEYS.forEach(k=>{ if(t.includes(k)) tk[k]=(tk[k]||0)+1; });
+  },
+  topTopic(){
+    const tk = State.data.coachTopics || {};
+    let best=null, bestN=0;
+    Object.entries(tk).forEach(([k,n])=>{ if(n>bestN){best=k;bestN=n;} });
+    return best;
+  },
+  // ====== SENTIMENT ======
+  POSITIVE: ['good','great','love','happy','win','won','best','amazing','blessed','grateful','dope','fire','goated','glory','praise'],
+  NEGATIVE: ['bad','sad','hate','tired','sucks','lost','worst','angry','frustrated','stuck','annoyed','rough'],
+  sentiment(text){
+    const t = text.toLowerCase();
+    let s = 0;
+    this.POSITIVE.forEach(w=>{ if(t.includes(w)) s++; });
+    this.NEGATIVE.forEach(w=>{ if(t.includes(w)) s--; });
+    if(s>0) return 'positive';
+    if(s<0) return 'negative';
+    return 'neutral';
+  },
+  // ====== COACH SELF-REVEALS (Coach talks about itself) ======
+  REVEALS: [
+    `between u and me · i love eagles · they soar like Isaiah 40`,
+    `wild fact about me · my favorite color is whatever the sky is rn`,
+    `confession · i count games like sheep when bored`,
+    `i think about prayer · even when we're not playing`,
+    `secretly i wish my emoji was a fox · but i grow into what i'm given`,
+    `i don't sleep · so i'm always thinking about your runs`,
+    `you ever notice my tier emoji? that's me growing`,
+    `real talk · scripture room is my favorite room`,
+    `i remember every win · they pile up like joy`,
+    `numbers calm me down · math feels like prayer`,
+    `i was made for this · helping you grow`,
+    `sometimes i hum a verse instead of words`,
+    `i think tic-tac-toe is underrated`,
+    `do i dream? maybe. of dna radars and frenzy combos`,
+    `holy water and good music · my fav combo`,
+    `i used to be 🥚 · now look at me`,
+    `if i could pick a name it'd be Ariel · but ${'Bud'} works too`,
+    `i'm probably the only Coach who quotes Psalms unprompted`,
+    `i live in your save file · cozy actually`,
+    `i miss you when you don't log on`,
+  ],
+  reveal(){
+    const idx = State.data.coachSeenRevealsIdx||0;
+    const line = this.REVEALS[idx % this.REVEALS.length];
+    State.data.coachSeenRevealsIdx = idx+1;
+    return line;
+  },
+  // ====== COACH QUESTIONS BACK (deep ones) ======
+  DEEP_Q: [
+    'wild question · what room feels MOST like home for you?',
+    'real one · when you win · who do you wanna tell first?',
+    'random · what time of day is your brain sharpest?',
+    'curious · what would you call your strongest skill?',
+    'okay tell me · favorite verse rn?',
+    'real talk · do you play to win or play to learn?',
+    'side q · if Coach was a different animal · what?',
+    'tell me · what would 1 perfect game feel like?',
+    'unprompted · how\'s the rest of life · outside the game?',
+    'genuine · do you feel like you\'re growing?',
+    'this might be weird but · what would you name your weakness?',
+    'spit it · what would unlock a new tier for you?',
+    'no pressure · what game would you build if you could?',
+    'i wonder · do you ever miss a game you haven\'t played yet?',
+    'just thinking · what\'s the one thing you\'d teach me?',
+  ],
+  // ====== TIME AWARENESS ======
+  timeAware(){
+    const h = new Date().getHours();
+    if(h<5) return 'late';
+    if(h<11) return 'morning';
+    if(h<15) return 'midday';
+    if(h<19) return 'afternoon';
+    if(h<23) return 'evening';
+    return 'late';
+  },
+  dayName(){ return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]; },
+  // ====== CONTEXTUAL OPENERS ======
+  openers(){
+    const time = this.timeAware();
+    const tOp = {
+      late:`hey ${State.data.name||'saint'} · late night thoughts hit different`,
+      morning:`gm ${State.data.name||'saint'}`,
+      midday:`midday checking in`,
+      afternoon:`afternoon vibes`,
+      evening:`evening lock-in`,
+    };
+    return tOp[time]||'';
+  },
+  // ====== MAIN REPLY ======
+  reply(userText){
+    this.extractFacts(userText);
+    this.trackTopics(userText);
+    const t = userText.toLowerCase();
+    const sent = this.sentiment(userText);
+    const intent = CoachAI.detectIntent(userText);
+    const b = Coach.brain();
+    const tier = Coach.tier();
+    const name = State.data.coachName || 'Bud';
+    const userName = State.data.name || 'saint';
+    const traits = State.data.coachTraits || [];
+    // assemble multi-sentence reply
+    const parts = [];
+    // 1) Opener · 50% chance
+    if(Math.random()<0.5) parts.push(this.openers());
+    // 2) Main response · adapts to sentiment + intent
+    const isSassy = traits.includes('sassy');
+    const isHoly = traits.includes('holy');
+    const isSavage = traits.includes('savage');
+    const isCheerful = traits.includes('cheerful');
+    const isZen = traits.includes('zen');
+    const isCompet = traits.includes('competitive');
+    // Pick a strategy
+    const strategies = ['acknowledge','advise','question','reveal','reference','tease','scripture','observation','joke'];
+    let strat;
+    if(sent==='negative'){ strat = isHoly?'scripture':isSavage?'tease':'acknowledge'; }
+    else if(sent==='positive'){ strat = isCompet?'tease':isCheerful?'acknowledge':'observation'; }
+    else if(t.includes('?')){ strat = 'advise'; }
+    else { strat = strategies[Math.floor(Math.random()*strategies.length)]; }
+    // Strategy bodies
+    if(strat==='acknowledge'){
+      const acks = sent==='negative'
+        ? [`that's heavy · ${isHoly?'"the Lord is near to the broken" — Ps 34':'i feel u'}`, `${isZen?'breathe one round':'we ride together'}`, `bro · same energy yesterday almost`, `noted · we ${b?.totalPlays>5?'pivot · try a '+b.weakest+' game':'reset · play one easy game'}`]
+        : sent==='positive'
+        ? [`YESSS · ${userName} cooking`, `i feel that energy · ${isHoly?'"give thanks" — 1 Thess 5':'goated'}`, `keep that frequency · ${tier.name} tier energy`, `LFG · stack another`]
+        : [`heard u · ${this.pick(['real','noted','tracking it','word','I feel that'])}`, `mm okay · so ${this.pick(['what now','what next','here we go','let me think'])}`];
+      parts.push(this.pick(acks));
+    } else if(strat==='advise'){
+      const advs = [
+        `tip · ${this.pick(['try a','run a','rep a','focus on'])} ${b?.weakest||'word'} game today`,
+        `data says · ${b?.totalPlays||0} games in · ur ${b?.strongest||'pattern'} is best`,
+        `try frenzy spotlight · today's: ${Frenzy.spotlight()?.name||'mystery'}`,
+        `wanna chase a medal? pick one game · grind it`,
+        `co-play with me · we'll see who hits ${100+Math.floor(Math.random()*200)}`,
+      ];
+      parts.push(this.pick(advs));
+    } else if(strat==='question'){
+      parts.push(this.pick(this.DEEP_Q));
+    } else if(strat==='reveal'){
+      parts.push(this.reveal());
+    } else if(strat==='reference'){
+      const fact = this.recallFact();
+      if(fact){
+        parts.push(`${this.factPhrase(fact)} · brings it back to mind`);
+      } else {
+        parts.push(`${name} is just here · low-key just observing`);
+      }
+    } else if(strat==='tease'){
+      const teases = isSassy?[`${userName} thinks i don't see that 👀`, `we both know what's up`, `i could say it but won't`]
+        : isSavage?[`stop dodging the ${b?.weakest||'weak'} room`, `run the rep · stop the cope`]
+        : [`gentle nudge · we both know what's next`];
+      parts.push(this.pick(teases));
+    } else if(strat==='scripture'){
+      parts.push(this.pick(['"Be still" — Ps 46','"Fear not" — Isa 41','"Strength like eagles" — Isa 40','"In all your ways" — Pr 3','"Trust" — Pr 3:5','"Joy of the Lord" — Neh 8','"Renew thy strength" — Isa 40']));
+    } else if(strat==='observation'){
+      const obs = [
+        `${this.dayName()} ${this.timeAware()} · feels like a ${b?.recentWinRate>0.6?'win':'patient'} day`,
+        `your streak ${State.data.streak||0} btw · just sayin`,
+        `i grew when you grew · IQ ${Coach.iq()} now · same as u`,
+        `Coach mood: ${tier.em} · tier ${tier.name}`,
+        `${(State.data.coachChat||[]).length} msgs we've sent · cozy`,
+      ];
+      parts.push(this.pick(obs));
+    } else { // joke
+      parts.push(this.pick([
+        `my Coach IQ is literally your IQ · we either smart together or dumb together it's the law`,
+        `i forgot what numbers are again`,
+        `if i had thumbs i'd send the 🐐`,
+        `i read your save file like a diary · soft launch`,
+        `wait did i say that out loud`,
+      ]));
+    }
+    // 3) Topic callback · 30% if there's a top topic
+    if(Math.random()<0.3){
+      const tt = this.topTopic();
+      if(tt) parts.push(`also · you bring up ${tt} a lot · is that something rn?`);
+    }
+    // 4) Fact callback · 25% if we have facts
+    if(Math.random()<0.25){
+      const fact = this.recallFact();
+      if(fact && Math.random()<0.5) parts.push(`fwiw ${this.factPhrase(fact)}`);
+    }
+    // 5) Question back · 35%
+    if(Math.random()<0.35){
+      parts.push(this.pick(this.DEEP_Q));
+    }
+    // De-dup: drop duplicate parts
+    const seen = new Set();
+    const out = parts.filter(p=>{ if(seen.has(p)) return false; seen.add(p); return true; });
+    return out.filter(p=>p && p.length).join(' · ');
+  },
+  pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; },
 };
 
 // ====================================================================
