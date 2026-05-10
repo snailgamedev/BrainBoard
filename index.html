@@ -1246,7 +1246,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.26.0 · FILL EVERY ROOM · 33 games · weekly report · cinematic · 🙏</div>
+  <div class="splash-foot">v0.27.0 · SHOP DELUXE · 36 games · power-ups LIVE · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1396,7 +1396,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.26.0';
+const VERSION = '0.27.0';
 
 // ----- STATE -----
 const State = {
@@ -1880,6 +1880,27 @@ const Account = {
 };
 
 // v0.15 ACCURATE TIMER · drift-corrected via Date.now() · resyncs on visibility
+// v0.27 FREEZE power-up · adds 10 sec to current timer
+function useFreeze(game){
+  if(!State.data.powerups?.freeze || State.data.powerups.freeze<1){
+    Toast.show('no Freeze · buy in Shop'); return false;
+  }
+  if(typeof game.timeLeft !== 'number'){
+    Toast.show('not a timed game'); return false;
+  }
+  State.data.powerups.freeze--;
+  State.data._powerupUses = (State.data._powerupUses||0)+1;
+  game.timeLeft += 10;
+  // Shift the start time so timer math stays accurate
+  if(game._timerStartMs) game._timerStartMs += 10000;
+  Save.write();
+  SFX.chime(); haptic(20);
+  Toast.show('❄️ +10 sec frozen');
+  Ach.unlock('freeze_used');
+  if(typeof game.render==='function') game.render();
+  return true;
+}
+
 function startGameTimer(game, durationSec, onTick, onEnd){
   game._timerStartMs = Date.now();
   game._timerDurationSec = durationSec;
@@ -2452,6 +2473,11 @@ const ACHIEVEMENTS = [
   {id:'cinematic_seen',em:'🎬',t:'First Watch',d:'See the first-launch cinematic'},
   {id:'weekly_first',em:'📊',t:'Sunday Saint',d:'View your first Weekly Brain Report'},
   {id:'event_play',em:'🎪',t:'Event Goer',d:'Play during a seasonal event'},
+  // v0.27 shop
+  {id:'deal_grabber',em:'🔥',t:'Deal Grabber',d:'Buy a daily deal'},
+  {id:'bundler',em:'🎁',t:'Bundler',d:'Buy a power-up bundle'},
+  {id:'exchanger',em:'💱',t:'Currency Master',d:'Use the exchange'},
+  {id:'freeze_used',em:'❄️',t:'Time Bender',d:'Use a Freeze in a game'},
   // v0.20
   {id:'difficulty_set',em:'🎮',t:'Calibrated',d:'Pick a difficulty mode'},
   {id:'casual_50',em:'😊',t:'Easygoing',d:'Win 50 games on Casual'},
@@ -4235,35 +4261,123 @@ const App = {
     UI.show('aux');
   },
   openShop(){
-    if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0};
-    document.getElementById('aux-title').innerHTML = '🛒 Power-up Shop';
+    if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0,streakSave:0};
+    document.getElementById('aux-title').innerHTML = '🛒 Shop';
+    const wallet = State.data.wallet||{};
+    // v0.27 daily deal · rotates by day · 30% off
+    const day = Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
+    const dealId = POWERUP_DEFS[day%POWERUP_DEFS.length].id;
     let html = `<div class="settings-list">
-      <div class="lobby-banner" style="text-align:center">
-        <b style="color:var(--gold-bright)">stockpile power-ups</b><br>
-        <span class="dim">use during games to break tough rounds</span>
+      <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18))">
+        <b style="color:var(--gold-bright);font-size:16px">🛒 BrainBoard Shop</b><br>
+        <span class="dim" style="font-size:11px">power-ups · bundles · exchange · all your gear</span>
       </div>`;
+    // === DAILY DEAL ===
+    const dealItem = POWERUP_DEFS.find(p=>p.id===dealId);
+    if(dealItem){
+      const dealCost = Object.fromEntries(Object.entries(dealItem.cost).map(([k,v])=>[k, Math.max(1, Math.round(v*0.7))]));
+      const dealCostStr = Object.entries(dealCost).map(([k,v])=>`${v} ${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'})[k]||k}`).join(' · ');
+      const canAfford = Object.entries(dealCost).every(([k,v])=>(wallet[k]||0)>=v);
+      html += `<div class="setting-row" style="background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(245,158,11,.25));border-color:#FBBF24">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:30px">${dealItem.em}</span>
+          <div>
+            <div style="font-size:10px;font-weight:800;color:#EF4444;letter-spacing:.1em">🔥 TODAY ONLY · 30% OFF</div>
+            <b style="display:block">${dealItem.name}</b>
+            <span style="font-size:11px;opacity:.85">${dealItem.desc}</span>
+          </div>
+        </div>
+        <button class="btn-primary" style="padding:8px 12px;font-size:12px;width:auto;${canAfford?'':'opacity:.4'}" onclick="App.buyDeal('${dealItem.id}')">${dealCostStr}</button>
+      </div>`;
+    }
+    // === POWER-UPS (categorized) ===
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">⚡ POWER-UPS</h3>`;
     POWERUP_DEFS.forEach(p=>{
       const owned = State.data.powerups[p.id]||0;
       const cost = p.cost;
       const costStr = Object.entries(cost).map(([k,v])=>`${v} ${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'})[k]||k}`).join(' · ');
-      const wallet = State.data.wallet||{};
       const canAfford = Object.entries(cost).every(([k,v])=>(wallet[k]||0)>=v);
+      const ownedChip = owned>0 ? `<span class="reward-chip" style="background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.5);font-size:10px;margin-left:6px">${owned} owned</span>` : '';
       html += `<div class="setting-row">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:30px">${p.em}</span>
           <div>
-            <b style="display:block">${p.name} <span style="opacity:.6;font-size:11px;font-weight:600">x${owned}</span></b>
+            <b style="display:block">${p.name}${ownedChip}</b>
             <span style="font-size:11px;opacity:.85">${p.desc}</span>
           </div>
         </div>
         <button class="btn-primary" style="padding:8px 12px;font-size:12px;width:auto;${canAfford?'':'opacity:.4'}" onclick="App.buyPowerup('${p.id}')">${costStr}</button>
       </div>`;
     });
-    html += `<p class="dim text-center" style="margin-top:14px;font-size:11px">power-up usage during games arrives v0.9 · stockpile for now</p>
-    <button class="btn-secondary" onclick="App.openAbout()" style="margin-top:8px">ℹ️ about brainboard</button>
+    // === BUNDLE DEALS ===
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">🎁 BUNDLES</h3>`;
+    const bundles = [
+      {id:'starter', em:'🌱', name:'Starter Pack', desc:'3× Hint · 3× Skip · 1× 2x', cost:{coin:600}, items:{hint:3,skip:3,double:1}},
+      {id:'survivor', em:'🛡️', name:'Survivor Pack', desc:'2× Freeze · 2× Undo · 1× Streak Save', cost:{coin:1200,gem:2}, items:{freeze:2,undo:2,streakSave:1}},
+      {id:'mythic', em:'🔥', name:'Mythic Pack', desc:'5× Holy Fire · 2× Streak Save · 5× of all basic', cost:{gem:10}, items:{fire:5,streakSave:2,hint:5,skip:5,double:5,freeze:5,undo:5}},
+    ];
+    bundles.forEach(b=>{
+      const costStr = Object.entries(b.cost).map(([k,v])=>`${v} ${({coin:'🪙',gem:'💎'})[k]||k}`).join(' · ');
+      const canAfford = Object.entries(b.cost).every(([k,v])=>(wallet[k]||0)>=v);
+      html += `<div class="setting-row" style="background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:28px">${b.em}</span>
+          <div>
+            <b style="display:block">${b.name}</b>
+            <span style="font-size:11px;opacity:.85">${b.desc}</span>
+          </div>
+        </div>
+        <button class="btn-primary" style="padding:8px 12px;font-size:12px;width:auto;${canAfford?'':'opacity:.4'}" onclick="App.buyBundle('${b.id}')">${costStr}</button>
+      </div>`;
+    });
+    // === CURRENCY EXCHANGE ===
+    html += `<h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px;text-align:center">💱 EXCHANGE</h3>
+      <div class="setting-row"><div><b>1 💎 → 100 🪙</b><div class="dim" style="font-size:11px">spend gems for coins</div></div>
+        <button class="btn-secondary" style="padding:6px 12px;font-size:11px;${(wallet.gem||0)>=1?'':'opacity:.4'}" onclick="App.exchangeCurrency('gem','coin',1,100)">EXCHANGE</button></div>
+      <div class="setting-row"><div><b>500 🪙 → 1 ✝️</b><div class="dim" style="font-size:11px">earn faith stars</div></div>
+        <button class="btn-secondary" style="padding:6px 12px;font-size:11px;${(wallet.coin||0)>=500?'':'opacity:.4'}" onclick="App.exchangeCurrency('coin','faith',500,1)">EXCHANGE</button></div>
+      <div class="setting-row"><div><b>200 🪙 → 1 🧠</b><div class="dim" style="font-size:11px">brain tokens</div></div>
+        <button class="btn-secondary" style="padding:6px 12px;font-size:11px;${(wallet.coin||0)>=200?'':'opacity:.4'}" onclick="App.exchangeCurrency('coin','brain',200,1)">EXCHANGE</button></div>`;
+    html += `<p class="dim text-center" style="margin-top:14px;font-size:11px">power-ups equip in game intro before starting</p>
+      <button class="btn-secondary" onclick="App.openAbout()" style="margin-top:8px">ℹ️ about brainboard</button>
     </div>`;
     document.getElementById('aux-body').innerHTML = html;
     UI.show('aux');
+  },
+  buyDeal(id){
+    const p = POWERUP_DEFS.find(x=>x.id===id); if(!p) return;
+    const dealCost = Object.fromEntries(Object.entries(p.cost).map(([k,v])=>[k, Math.max(1, Math.round(v*0.7))]));
+    if(!Wallet.spend(dealCost)){ Toast.show('not enough'); SFX.wrong(); return; }
+    State.data.powerups[id] = (State.data.powerups[id]||0)+1;
+    Save.write();
+    SFX.holy(); haptic(20); confetti();
+    Toast.show(`🔥 ${p.name} grabbed at 30% off!`);
+    Ach.unlock('deal_grabber');
+    App.openShop();
+  },
+  buyBundle(id){
+    const bundles = {
+      starter: {cost:{coin:600}, items:{hint:3,skip:3,double:1}, name:'Starter Pack'},
+      survivor: {cost:{coin:1200,gem:2}, items:{freeze:2,undo:2,streakSave:1}, name:'Survivor Pack'},
+      mythic: {cost:{gem:10}, items:{fire:5,streakSave:2,hint:5,skip:5,double:5,freeze:5,undo:5}, name:'Mythic Pack'},
+    };
+    const b = bundles[id]; if(!b) return;
+    if(!Wallet.spend(b.cost)){ Toast.show('not enough'); SFX.wrong(); return; }
+    if(!State.data.powerups) State.data.powerups = {hint:0,skip:0,double:0,freeze:0,undo:0,fire:0,streakSave:0};
+    Object.entries(b.items).forEach(([k,v])=>{ State.data.powerups[k] = (State.data.powerups[k]||0)+v; });
+    Save.write();
+    SFX.holy(); haptic(30); confetti();
+    Toast.show(`🎁 ${b.name} unpacked!`);
+    Ach.unlock('bundler');
+    App.openShop();
+  },
+  exchangeCurrency(from, to, fromAmt, toAmt){
+    if(!Wallet.spend({[from]:fromAmt})){ Toast.show('not enough'); return; }
+    Wallet.add({[to]:toAmt});
+    SFX.correct(); haptic(15);
+    Toast.show(`💱 exchanged · +${toAmt} ${({coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'})[to]}`);
+    Ach.unlock('exchanger');
+    App.openShop();
   },
   buyPowerup(id){
     const p = POWERUP_DEFS.find(x=>x.id===id); if(!p) return;
