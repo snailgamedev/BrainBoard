@@ -1092,6 +1092,89 @@ button{
 }
 .goal-type-btn:active{transform:scale(.96)}
 .goal-type-btn:hover{background:rgba(124,58,237,.22)}
+/* ==================== v0.65 · INSTALL HUB ==================== */
+.install-wrap{max-width:560px;margin:0 auto;width:100%}
+.install-hero{
+  background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(124,58,237,.18));
+  border:2px solid rgba(245,158,11,.45);
+  border-radius:18px;padding:16px;text-align:center;margin-bottom:16px;
+  animation:fadeUp .35s ease-out;
+}
+.install-hero-em{font-size:54px;line-height:1;animation:winBounce 2s ease-in-out infinite}
+.install-hero-title{font-family:'Cinzel',serif;font-size:15px;margin-top:6px;color:#FFF8E7}
+.install-hero-sub{font-size:11px;opacity:.85;margin-top:4px}
+.install-now-btn{
+  display:inline-block;margin-top:12px;padding:12px 22px;font-weight:800;
+  background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#0F0820;
+  border-radius:99px;font-size:14px;letter-spacing:.04em;
+  animation:pulseAgain 1.6s ease-in-out infinite;
+}
+.install-h3{
+  font-family:'Cinzel',serif;color:var(--gold-bright);
+  font-size:13px;margin:0 0 8px;letter-spacing:.06em;
+}
+.install-path{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:14px 16px;
+}
+.install-path.recommended{
+  background:rgba(16,185,129,.1);
+  border-color:rgba(16,185,129,.4);
+  box-shadow:0 0 24px rgba(16,185,129,.18);
+}
+.install-steps{margin:0;padding-left:22px;font-size:13px;line-height:1.7}
+.install-steps li{margin-bottom:6px}
+.install-steps li b{color:var(--gold-bright)}
+.install-steps li code{
+  background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px;
+  font-size:11px;color:#FBBF24;
+}
+.install-note{
+  margin-top:10px;padding-top:8px;border-top:1px dashed rgba(245,158,11,.3);
+  font-size:11px;opacity:.85;text-align:center;
+}
+.install-other{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:0;margin-bottom:8px;
+  overflow:hidden;
+}
+.install-other summary{
+  padding:11px 14px;cursor:pointer;font-weight:600;font-size:13px;
+  display:flex;align-items:center;gap:8px;list-style:none;
+}
+.install-other summary::-webkit-details-marker{display:none}
+.install-other summary::before{content:'▸ ';color:var(--gold-bright);transition:transform .2s;display:inline-block}
+.install-other[open] summary::before{transform:rotate(90deg)}
+.install-other[open] summary{
+  background:rgba(245,158,11,.1);
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.install-other .install-path{
+  border:none;border-radius:0;background:transparent;
+  padding:12px 16px 14px;
+}
+.install-share{
+  margin-top:18px;background:rgba(124,58,237,.12);
+  border:1px solid rgba(124,58,237,.4);
+  border-radius:14px;padding:14px;
+}
+.install-link-row{
+  display:flex;gap:8px;align-items:center;
+}
+.install-link{
+  flex:1;background:rgba(0,0,0,.3);padding:8px 10px;
+  border-radius:8px;font-size:11px;color:#FBBF24;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.install-copy{padding:8px 14px;font-size:12px;white-space:nowrap}
+.install-tips{
+  margin-top:16px;background:rgba(0,0,0,.18);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:12px 14px;
+}
+.install-tips ul li{margin-bottom:3px}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1527,7 +1610,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.64.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · installs anywhere · v0.65.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1568,7 +1651,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.64.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.65.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1632,6 +1715,7 @@ button{
       <button class="foot-btn" onclick="App.openFriendsHub()"><span class="em">🤝</span>FRIENDS</button>
       <button class="foot-btn" onclick="App.openFrenzy()"><span class="em">🔥</span>FRENZY</button>
       <button class="foot-btn" onclick="App.quickPlay()"><span class="em">⚡</span>QUICK PLAY</button>
+      <button class="foot-btn" onclick="App.openInstallHub()"><span class="em">📥</span>INSTALL</button>
     </div>
   </div>
 </section>
@@ -1686,7 +1770,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.64.0';
+const VERSION = '0.65.0';
 
 // ----- STATE -----
 const State = {
@@ -9789,8 +9873,95 @@ const App = {
         window._deferredPrompt = null;
       });
     }else{
-      Toast.show('add to home screen via your browser menu');
+      // No native prompt available · open the full Install Hub for manual instructions
+      App.openInstallHub();
     }
+  },
+  // v0.65 · FULL INSTALL HUB · every device · every OS · auto-detect + manual override
+  openInstallHub(){
+    const dev = InstallHub.detect();
+    const allPaths = InstallHub.PATHS;
+    document.getElementById('aux-title').innerHTML = '📥 Install BrainBoard';
+
+    const recommendedBlock = `
+      <div class="install-hero">
+        <div class="install-hero-em">${dev.emoji}</div>
+        <div class="install-hero-title">looks like ur on <b>${dev.label}</b></div>
+        <div class="install-hero-sub">recommended path below · or scroll for every other device</div>
+        ${window._deferredPrompt ? `<button class="btn-primary install-now-btn" onclick="App.installPWA()">⚡ INSTALL NOW · one tap</button>` : ''}
+      </div>
+      ${InstallHub.renderPath(dev.pathId, true)}
+    `;
+
+    const grid = allPaths.filter(p=>p.id!==dev.pathId).map(p=>`
+      <details class="install-other">
+        <summary>${p.em} ${p.label}</summary>
+        ${InstallHub.renderPath(p.id, false)}
+      </details>
+    `).join('');
+
+    const linkBlock = `
+      <div class="install-share">
+        <h3 class="install-h3">📲 send to another device</h3>
+        <p class="dim" style="font-size:11.5px;margin:4px 0 8px">copy this link or share QR · open on the device u wanna install on</p>
+        <div class="install-link-row">
+          <code class="install-link">https://snailgamedev.github.io/BrainBoard/</code>
+          <button class="btn-secondary install-copy" onclick="App._copyInstallLink()">📋 copy</button>
+        </div>
+        <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="App._shareInstallLink()">📤 share link · native sheet</button>
+        <div id="install-qr-slot" style="margin-top:12px;text-align:center"></div>
+        <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="App._renderInstallQR()">📱 show QR code · scan from phone</button>
+      </div>
+    `;
+
+    document.getElementById('aux-body').innerHTML = `
+      <div class="install-wrap">
+        ${recommendedBlock}
+        <h3 class="install-h3" style="margin-top:18px">🌐 other devices · tap any to expand</h3>
+        ${grid}
+        ${linkBlock}
+        <div class="install-tips">
+          <h3 class="install-h3">✨ tips after install</h3>
+          <ul style="font-size:12px;line-height:1.7;padding-left:18px;margin:4px 0">
+            <li>icon appears on home screen / app drawer / dock — no app store needed</li>
+            <li>works offline after first load · service worker caches everything</li>
+            <li>updates fetch on open · always latest version</li>
+            <li>uninstall like any app — long-press → remove · or right-click → uninstall</li>
+            <li>save data lives in browser localStorage · same site = same saves</li>
+          </ul>
+        </div>
+        <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button>
+      </div>
+    `;
+    UI.show('aux');
+    Ach.unlock('install_hub_seen');
+  },
+  _copyInstallLink(){
+    const url = 'https://snailgamedev.github.io/BrainBoard/';
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(()=>Toast.show('📋 copied · paste anywhere'));
+    } else {
+      Toast.show('clipboard not supported · long-press to copy: ' + url);
+    }
+    haptic(8); SFX.tap();
+  },
+  _shareInstallLink(){
+    const url = 'https://snailgamedev.github.io/BrainBoard/';
+    const text = `🧠 BrainBoard · 61 brain games · free forever · plays anywhere · ${url}`;
+    if(navigator.share){
+      navigator.share({title:'BrainBoard', text, url}).catch(()=>{});
+    } else {
+      App._copyInstallLink();
+    }
+    haptic(8);
+  },
+  _renderInstallQR(){
+    const slot = document.getElementById('install-qr-slot'); if(!slot) return;
+    const url = 'https://snailgamedev.github.io/BrainBoard/';
+    // Use Google Charts QR API (CDN-free fallback: open in new tab)
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&color=FBBF24&bgcolor=0F0820`;
+    slot.innerHTML = `<img alt="QR code · scan with phone camera" src="${qrSrc}" style="border-radius:14px;background:#0F0820;padding:8px;border:2px solid #FBBF24"><p class="dim" style="font-size:11px;margin-top:6px">scan w/ ur phone camera</p>`;
+    SFX.sparkle();
   },
   copyFriendCode(){
     const code = State.data.account?.friendCode;
@@ -11841,6 +12012,177 @@ const Tracker = {
         <div class="today-stat"><span class="today-em">🏆</span><span class="today-val">${d.peakStreak||0}</span><span class="today-lbl">best</span></div>
       </div>
       ${next ? `<div class="today-next">🎯 ${next.n} more to <b>${next.label}</b></div>` : `<div class="today-next">✨ all main milestones cleared!</div>`}
+    </div>`;
+  }
+};
+
+// ====================================================================
+// 📥 v0.65 · INSTALL HUB · every device · every OS · auto-detect + step-by-step
+// ====================================================================
+const InstallHub = {
+  detect(){
+    const ua = navigator.userAgent || '';
+    const plat = navigator.platform || '';
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const iOS = /iPhone|iPad|iPod/i.test(ua) || (plat === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const iPad = /iPad/i.test(ua) || (plat === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const android = /Android/i.test(ua);
+    const mac = /Macintosh|Mac OS X/i.test(ua) && !iOS;
+    const win = /Windows/i.test(ua);
+    const linux = /Linux/i.test(ua) && !android;
+    const cros = /CrOS/i.test(ua);
+    const chrome = /Chrome\//i.test(ua) && !/Edge?\//i.test(ua);
+    const edge = /Edge?\//i.test(ua) || /Edg\//i.test(ua);
+    const firefox = /Firefox/i.test(ua);
+    const safari = /Safari/i.test(ua) && !chrome && !edge && !firefox;
+    const samsung = /SamsungBrowser/i.test(ua);
+    const brave = navigator.brave?.isBrave?.() || /Brave/i.test(ua);
+
+    if(standalone) return {pathId:'already', label:'already installed', emoji:'✅'};
+    if(iOS && iPad)   return {pathId:'ipad',  label:'iPad', emoji:'📱'};
+    if(iOS)           return {pathId:'iphone',label:'iPhone', emoji:'📱'};
+    if(android && samsung) return {pathId:'android-samsung', label:'Android · Samsung Browser', emoji:'🤖'};
+    if(android && firefox) return {pathId:'android-firefox', label:'Android · Firefox', emoji:'🤖'};
+    if(android)       return {pathId:'android', label:'Android · Chrome', emoji:'🤖'};
+    if(cros)          return {pathId:'chromebook', label:'Chromebook', emoji:'💻'};
+    if(mac && safari) return {pathId:'mac-safari', label:'Mac · Safari', emoji:'💻'};
+    if(mac && firefox)return {pathId:'mac-firefox', label:'Mac · Firefox', emoji:'💻'};
+    if(mac)           return {pathId:'mac-chrome', label:'Mac · Chrome/Brave/Edge', emoji:'💻'};
+    if(win && firefox)return {pathId:'win-firefox', label:'Windows · Firefox', emoji:'🖥️'};
+    if(win && edge)   return {pathId:'win-edge', label:'Windows · Edge', emoji:'🖥️'};
+    if(win)           return {pathId:'win-chrome', label:'Windows · Chrome/Brave', emoji:'🖥️'};
+    if(linux && firefox) return {pathId:'linux-firefox', label:'Linux · Firefox', emoji:'🐧'};
+    if(linux)         return {pathId:'linux-chrome', label:'Linux · Chrome', emoji:'🐧'};
+    return {pathId:'fallback', label:'your device', emoji:'🌐'};
+  },
+  PATHS: [
+    {id:'iphone', em:'📱', label:'iPhone (iOS 14+)', steps:[
+      'open https://snailgamedev.github.io/BrainBoard/ in <b>Safari</b> (Chrome/Firefox on iOS can\'t install PWAs · Apple limitation)',
+      'tap the <b>Share button</b> at the bottom (looks like a box with an arrow ⬆)',
+      'scroll down → tap <b>"Add to Home Screen"</b>',
+      'tap <b>"Add"</b> in the top right',
+      'BrainBoard icon now lives on ur home screen · tap to play full-screen 🔥',
+    ], note:'works on iPhone 6s and newer · iOS 11.3+ for full PWA support'},
+
+    {id:'ipad', em:'📱', label:'iPad (iPadOS 14+)', steps:[
+      'open the link in <b>Safari</b>',
+      'tap the <b>Share button</b> top-right (square with up arrow)',
+      'scroll down → tap <b>"Add to Home Screen"</b>',
+      'name it (or keep "BrainBoard") → tap <b>"Add"</b>',
+      'icon appears on home screen · launches in own window',
+    ], note:'iPadOS 13+ for best experience · split-view supported'},
+
+    {id:'android', em:'🤖', label:'Android · Chrome', steps:[
+      'open the link in <b>Chrome</b>',
+      'tap the <b>three dots menu (⋮)</b> top right',
+      'tap <b>"Install app"</b> or <b>"Add to Home screen"</b>',
+      'confirm <b>"Install"</b>',
+      'icon shows in app drawer · works offline · feels native 🔥',
+    ], note:'Chrome will sometimes show a popup automatically · take it'},
+
+    {id:'android-samsung', em:'🤖', label:'Android · Samsung Internet', steps:[
+      'open the link in <b>Samsung Internet</b>',
+      'tap the <b>menu button</b> (three lines bottom right)',
+      'tap <b>"Add page to"</b> → <b>"Home screen"</b>',
+      'confirm <b>"Add"</b>',
+      'icon appears with native-feel launch',
+    ], note:'Samsung Internet 5.0+ supports full PWA install'},
+
+    {id:'android-firefox', em:'🦊', label:'Android · Firefox', steps:[
+      'open the link in <b>Firefox</b>',
+      'tap the <b>three dots menu (⋮)</b>',
+      'tap <b>"Install"</b> if shown · otherwise <b>"Add to Home screen"</b>',
+      'confirm',
+      'icon installed · launches without browser chrome',
+    ], note:'Firefox 79+ supports PWA install on Android'},
+
+    {id:'mac-chrome', em:'💻', label:'Mac · Chrome / Brave / Edge', steps:[
+      'open the link in <b>Chrome</b>, <b>Brave</b>, or <b>Edge</b>',
+      'look for the <b>install icon (⊕ or ⬇)</b> in the address bar — or click the three-dot menu',
+      'click <b>"Install BrainBoard..."</b>',
+      'confirm <b>"Install"</b>',
+      'app opens in own window · added to Launchpad · pin to Dock 🔥',
+    ], note:'macOS 10.15+ for best · works on M1/M2/M3 silicon natively'},
+
+    {id:'mac-safari', em:'🍎', label:'Mac · Safari (macOS 14 Sonoma+)', steps:[
+      'open the link in <b>Safari</b>',
+      'click <b>File menu</b> → <b>"Add to Dock..."</b>',
+      'edit name if u want → click <b>Add</b>',
+      'app pinned to Dock · click to launch in own window',
+    ], note:'requires macOS Sonoma (14) or later · older Macs use Chrome path above'},
+
+    {id:'mac-firefox', em:'🦊', label:'Mac · Firefox', steps:[
+      'Firefox on Mac doesn\'t support PWA install yet · workaround:',
+      'use <b>Chrome / Brave / Edge / Safari</b> for one-time install (see paths above)',
+      'OR bookmark the page (⌘+D) · use as web bookmark',
+      'OR run <code>open -a "Firefox" --args --new-window "https://snailgamedev.github.io/BrainBoard/"</code> for app-mode',
+    ], note:'Firefox PWA on Mac = roadmap item · use other browsers for now'},
+
+    {id:'win-chrome', em:'🖥️', label:'Windows · Chrome / Brave', steps:[
+      'open the link in <b>Chrome</b> or <b>Brave</b>',
+      'click the <b>install icon (⊕)</b> in the address bar (right side)',
+      'click <b>"Install"</b>',
+      'icon added to Start Menu · pin to taskbar for quick access',
+    ], note:'Windows 10 + 11 supported · works offline · creates desktop shortcut'},
+
+    {id:'win-edge', em:'🖥️', label:'Windows · Edge', steps:[
+      'open the link in <b>Edge</b>',
+      'click <b>three dots menu (...)</b> → <b>"Apps"</b> → <b>"Install BrainBoard"</b>',
+      'OR look for the <b>install icon in the address bar</b> · click it',
+      'confirm <b>"Install"</b>',
+      'app pinned to taskbar + Start · also shows in <code>edge://apps</code>',
+    ], note:'Edge has the smoothest PWA experience on Windows'},
+
+    {id:'win-firefox', em:'🦊', label:'Windows · Firefox', steps:[
+      'Firefox on Windows doesn\'t support PWA install · workaround:',
+      'use <b>Chrome / Edge / Brave</b> for proper install (see paths above)',
+      'OR bookmark (Ctrl+D) and pin to bookmarks bar',
+      'OR install <b>"Progressive Web Apps for Firefox"</b> extension for full install',
+    ], note:'or just use Edge — it\'s built in and works great'},
+
+    {id:'chromebook', em:'💻', label:'Chromebook (ChromeOS)', steps:[
+      'open the link in <b>Chrome</b> (only browser on ChromeOS by default)',
+      'click <b>install icon (⊕)</b> in address bar — OR three-dot menu',
+      'click <b>"Install BrainBoard"</b>',
+      'app added to launcher · shows in shelf · feels like a native app',
+    ], note:'Chromebook = PWA paradise · best install experience of any device'},
+
+    {id:'linux-chrome', em:'🐧', label:'Linux · Chrome / Chromium / Brave / Edge', steps:[
+      'open the link in <b>Chrome</b>, <b>Chromium</b>, <b>Brave</b>, or <b>Edge</b>',
+      'click <b>install icon (⊕)</b> in the address bar',
+      'click <b>"Install"</b>',
+      '.desktop file added to ~/.local/share/applications · run from app launcher',
+    ], note:'works on Ubuntu · Fedora · Arch · Debian · any distro w/ a Chromium-based browser'},
+
+    {id:'linux-firefox', em:'🦊', label:'Linux · Firefox', steps:[
+      'Firefox on Linux doesn\'t support PWA install yet · workarounds:',
+      'use Chrome / Chromium / Brave for install (see paths above)',
+      'OR pin as a bookmark (Ctrl+D)',
+      'OR install <b>firefoxpwa</b> package · adds install button',
+    ], note:'or use a Chromium-based browser for full install'},
+
+    {id:'fallback', em:'🌐', label:'any other device · web bookmark', steps:[
+      'open https://snailgamedev.github.io/BrainBoard/ in any browser',
+      'bookmark the page (usually Ctrl+D / Cmd+D)',
+      'add to home screen / desktop / start menu via browser menu',
+      'works in ANY modern browser · zero install needed to play',
+    ], note:'BrainBoard runs fully in the browser · install is just for icon + offline access'},
+
+    {id:'already', em:'✅', label:'looks like u already installed!', steps:[
+      'BrainBoard is currently running in standalone app mode',
+      'icon should already be on ur home screen / launcher / dock',
+      'tap or click it anytime to open without browser chrome',
+      'updates fetch automatically on open',
+    ], note:'thx for being installed boii 🙏 share the link to spread the cook'},
+  ],
+  renderPath(pathId, isRecommended){
+    const p = InstallHub.PATHS.find(x=>x.id===pathId);
+    if(!p) return '<p class="dim">device not detected · use the fallback below</p>';
+    const stepsHtml = p.steps.map((s,i)=>`<li>${s}</li>`).join('');
+    const wrapClass = isRecommended ? 'install-path recommended' : 'install-path';
+    return `<div class="${wrapClass}">
+      <ol class="install-steps">${stepsHtml}</ol>
+      ${p.note ? `<div class="install-note">💡 ${p.note}</div>` : ''}
     </div>`;
   }
 };
