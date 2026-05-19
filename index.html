@@ -890,6 +890,71 @@ button{
   align-items:center;justify-content:center;
   padding:14px 10px;font-size:13px;
 }
+/* ==================== v0.62 phase 4 · MILESTONE OVERLAY ==================== */
+.milestone-overlay{
+  position:fixed;inset:0;
+  background:radial-gradient(circle at 50% 50%,rgba(15,8,32,.7) 0%,rgba(15,8,32,.95) 100%);
+  display:flex;align-items:center;justify-content:center;
+  z-index:600;padding:20px;
+  animation:milestoneFadeIn .4s ease-out;
+}
+@keyframes milestoneFadeIn{from{opacity:0}to{opacity:1}}
+.milestone-card{
+  border-radius:24px;
+  padding:32px 28px;
+  text-align:center;
+  max-width:380px;width:100%;
+  box-shadow:0 24px 60px rgba(0,0,0,.7), 0 0 80px rgba(251,191,36,.3);
+  animation:milestonePop .7s cubic-bezier(.2,1.4,.4,1);
+  color:#fff;
+  position:relative;
+  overflow:hidden;
+}
+@keyframes milestonePop{
+  0%{opacity:0;transform:scale(.5) rotate(-3deg)}
+  60%{opacity:1;transform:scale(1.06) rotate(1deg)}
+  100%{opacity:1;transform:scale(1) rotate(0)}
+}
+.milestone-card::before{
+  content:'';position:absolute;inset:-50% -50%;
+  background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,.18) 90deg, transparent 180deg);
+  animation:milestoneShimmer 4s linear infinite;
+  pointer-events:none;
+}
+@keyframes milestoneShimmer{to{transform:rotate(360deg)}}
+.milestone-em{
+  font-size:88px;
+  margin-bottom:14px;
+  animation:milestoneBounce 1.4s ease-in-out infinite;
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,.4));
+  position:relative;z-index:1;
+}
+@keyframes milestoneBounce{
+  0%,100%{transform:scale(1) translateY(0)}
+  50%{transform:scale(1.1) translateY(-6px)}
+}
+.milestone-title{
+  font-family:'Cinzel',serif;
+  font-size:22px;font-weight:900;
+  margin:0 0 10px;letter-spacing:.04em;
+  text-shadow:0 2px 12px rgba(0,0,0,.5);
+  position:relative;z-index:1;
+}
+.milestone-desc{
+  font-size:14px;opacity:.92;
+  margin:0 0 22px;line-height:1.5;
+  position:relative;z-index:1;
+}
+.milestone-btn{
+  background:rgba(0,0,0,.45) !important;
+  border:2px solid rgba(255,255,255,.5) !important;
+  color:#fff !important;
+  padding:12px 24px !important;
+  font-weight:700;font-size:14px;
+  border-radius:99px !important;
+  position:relative;z-index:1;
+}
+.milestone-btn:hover{background:rgba(0,0,0,.6) !important}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1325,7 +1390,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.61.1 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.62.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1366,7 +1431,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.61.1</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.62.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1483,7 +1548,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.61.1';
+const VERSION = '0.62.0';
 
 // ----- STATE -----
 const State = {
@@ -2461,7 +2526,7 @@ const Coach = {
         <h3 style="margin:8px 0;color:${t.color}">COACH ${t.name.toUpperCase()}</h3>
         <p style="font-size:13px;margin:8px 0">your coach evolved!</p>
         <p class="dim" style="font-size:11px">tier ${cur+1}/${this.TIERS.length} · IQ ${this.iq()}</p>
-        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
       </div>`), 800);
       try{ Narrator.say(`Coach evolved to ${t.name}`, `Coach evolucionó a ${t.name}`); }catch(e){}
     } else this._lastTier = cur;
@@ -2591,7 +2656,7 @@ const SkillTarget = {
       <p style="font-size:13px;margin:8px 0">${st.axis} · ${st.target} wins · done!</p>
       <p style="font-size:12px">+${reward.coin}🪙 +${reward.gem}💎 +${reward.brain}🧠 +${reward.faith}✝️</p>
       <p class="dim" style="font-size:11px">Coach +${50+t.idx*20} XP · grew with you!</p>
-      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
     </div>`);
   },
   renderCard(){
@@ -4280,7 +4345,7 @@ const MedalHunt = {
         <h3 style="margin:8px 0;color:var(--gold-bright)">GOLD CLAIMED!</h3>
         <p style="font-size:13px;margin:8px 0">+200🪙 +5💎 +5🧠 +2✝️</p>
         <p class="dim" style="font-size:11px">runs: ${State.data.medalHunt.runs}</p>
-        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
       </div>`);
     } else {
       Toast.show('🥉 medal hunt ended · keep trying!');
@@ -4478,7 +4543,7 @@ const Bracket = {
       <h3 style="margin:8px 0;color:var(--gold-bright)">${youWon?'CHAMPION!':'tourney over'}</h3>
       <p style="font-size:13px;margin:8px 0">winner: <b>${champ}</b></p>
       <p style="font-size:12px">+${reward.coin}🪙 +${reward.gem}💎 +${reward.brain}🧠</p>
-      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
     </div>`);
   },
   renderHub(){
@@ -4774,7 +4839,7 @@ const Mystery = {
       <div style="font-size:64px;animation:cineLogoZoom .9s cubic-bezier(.2,1.4,.5,1)">${t.em}</div>
       <h3 style="margin:8px 0;color:var(--gold-bright)">${t.label.toUpperCase()}!</h3>
       <p style="font-size:13px;margin:8px 0">${Object.entries(t.reward||{}).map(([k,n])=>`+${n} ${{coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️'}[k]||k}`).join(' · ')||(t.special?`+1 ${t.special}`:'')}</p>
-      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
     </div>`);
   }
 };
@@ -4831,7 +4896,7 @@ const CardPack = {
       }).join('')}
       </div>
       <p class="dim" style="font-size:11px">collected: ${State.data.cardPack.collected.length}/${this.CARDS.length}</p>
-      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
     </div>`);
     Wallet.add({coin:25}); // small coin bonus
   },
@@ -5923,7 +5988,7 @@ const CoachCoplay = {
       <h3 style="margin:8px 0;color:var(--gold-bright)">CO-PLAY RESULT</h3>
       <p style="font-size:14px;margin:8px 0">you: <b>${playerTotal}</b> · ${name}: <b>${this._score}</b></p>
       <p style="font-size:13px;color:var(--gold-bright)">${winner==='tie'?'🤝 tied!':winner==='you'?'🏆 you won!':`${name} edged you 🤖`}</p>
-      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
     </div>`), 1500);
     if(winner==='you') Wallet.add({gem:3, coin:100});
   }
@@ -6289,7 +6354,7 @@ const CoachChallenge = {
         <h3 style="margin:8px 0;color:var(--gold-bright)">CHALLENGE BEATEN</h3>
         <p style="font-size:13px">${ch.em} ${ch.gameName} · ${score}≥${ch.target}</p>
         <p style="font-size:12px">+80🪙 +1💎 +2🧠 · Coach +20XP</p>
-        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+        <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
       </div>`), 800);
     }
   },
@@ -6801,7 +6866,7 @@ const CoachPhoto = {
       <h3 style="margin:8px 0;color:var(--gold-bright)">DAILY SNAPSHOT</h3>
       <img src="${dataUrl}" style="max-width:100%;border-radius:10px;margin:10px 0"/>
       <p class="dim" style="font-size:11px">+30🪙 +1✝️ · long-press image to save</p>
-      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ AMEN</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">✨ NICE</button>
     </div>`);
   }
 };
@@ -8579,8 +8644,8 @@ const App = {
       </div>
       <p style="margin-top:12px;font-size:13px">⭐ favorite: <b style="color:var(--gold-bright)">${favName}</b></p>
       <p class="dim" style="font-size:11px;margin:10px 0">💡 ${Coach.tip()}</p>
-      <button class="btn-primary" onclick="Modal.close()">🙏 amen</button>`);
-    SFX.holy(); confetti();
+      <button class="btn-primary" onclick="Modal.close()">📊 got it</button>`);
+    SFX.chime(); confetti();
   },
   showTutorial(){
     if(State.data.tutorialSeen) return;
@@ -11329,6 +11394,65 @@ const App = {
 };
 
 // ====================================================================
+// 🎉 v0.62 phase 4 · MILESTONES · celebrate threshold crossings (separate from achievement toasts)
+// ====================================================================
+const Milestones = (()=>{
+  const BANDS = [
+    // key, label, big emoji, description, gradient
+    {k:'wins10',  test:d=>d.totals.wins===10, em:'🎯', t:'10 WINS', d:'you are officially in the game',                              g:'linear-gradient(135deg,#10B981,#0F766E)'},
+    {k:'wins25',  test:d=>d.totals.wins===25, em:'🚀', t:'25 WINS', d:'climbing fast · sharp mind',                                    g:'linear-gradient(135deg,#3B82F6,#1E40AF)'},
+    {k:'wins50',  test:d=>d.totals.wins===50, em:'🏆', t:'HALF CENTURY · 50 WINS', d:'serious player territory',                       g:'linear-gradient(135deg,#FBBF24,#D97706)'},
+    {k:'wins100', test:d=>d.totals.wins===100, em:'💯', t:'CENTURION · 100 WINS', d:'a real champion now',                              g:'linear-gradient(135deg,#A78BFA,#6D28D9)'},
+    {k:'wins250', test:d=>d.totals.wins===250, em:'👑', t:'ROYAL · 250 WINS', d:'most players never get here',                          g:'linear-gradient(135deg,#FFD700,#B45309)'},
+    {k:'iq1200',  test:d=>d.iq>=300 && d.iq<320, em:'📈', t:'1000 IQ CLUB', d:'rank climbing · respect',                                g:'linear-gradient(135deg,#60A5FA,#1E3A8A)'},
+    {k:'iq1500',  test:d=>d.iq>=600 && d.iq<620, em:'🧠', t:'IQ 1500 · ELITE TIER', d:'top tier of brain power',                        g:'linear-gradient(135deg,#A78BFA,#5B21B6)'},
+    {k:'iq2000',  test:d=>d.iq>=900 && d.iq<920, em:'🌟', t:'IQ 2000 · APOSTLE SAGE', d:'rare air · highest rank',                       g:'linear-gradient(135deg,#FFD700,#7C3AED)'},
+    {k:'streak3', test:d=>d.streak===3,  em:'🔥', t:'3-DAY STREAK', d:'consistency is forming',                                          g:'linear-gradient(135deg,#FB923C,#C2410C)'},
+    {k:'streak7', test:d=>d.streak===7,  em:'🔥🔥', t:'7-DAY STREAK · ONE WEEK', d:'discipline locked in',                              g:'linear-gradient(135deg,#EF4444,#7F1D1D)'},
+    {k:'streak30',test:d=>d.streak===30, em:'🔥🔥🔥', t:'30-DAY STREAK · ONE MONTH', d:'rare commitment · top 5%',                       g:'linear-gradient(135deg,#FBBF24,#7C2D12)'},
+    {k:'all_rooms', test:d=>{
+       const wonRooms = new Set();
+       Object.keys(d.perGame||{}).forEach(k=>{ if((d.perGame[k].wins||0)>0) wonRooms.add(k.split(':')[0]); });
+       return wonRooms.size===8 && !d._milestoneFired?.all_rooms;
+    }, em:'🗺️', t:'ALL 8 ROOMS · MAPPED', d:'you have explored every wing',                                                              g:'linear-gradient(135deg,#10B981,#3B82F6)'},
+  ];
+  function check(){
+    const d = State.data;
+    d._milestoneFired = d._milestoneFired || {};
+    for(const b of BANDS){
+      if(d._milestoneFired[b.k]) continue;
+      if(b.test(d)){
+        d._milestoneFired[b.k] = Date.now();
+        Save.write();
+        return fire(b);
+      }
+    }
+  }
+  function fire(b){
+    // delay so it lands after the win modal closes naturally
+    setTimeout(()=>{
+      const overlay = document.createElement('div');
+      overlay.className = 'milestone-overlay';
+      overlay.innerHTML = `
+        <div class="milestone-card" style="background:${b.g}">
+          <div class="milestone-em">${b.em}</div>
+          <h2 class="milestone-title">${b.t}</h2>
+          <p class="milestone-desc">${b.d}</p>
+          <button class="btn-primary milestone-btn" onclick="this.closest('.milestone-overlay').remove()">▶ keep cooking</button>
+        </div>`;
+      overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+      epicConfetti();
+      try{ SFX.milestone(); setTimeout(()=>SFX.cheer(),200); }catch(e){}
+      haptic(40);
+      // auto-dismiss after 8s if user idle
+      setTimeout(()=>{ if(overlay.parentNode) overlay.remove(); }, 8000);
+    }, 1200);
+  }
+  return {check, BANDS};
+})();
+
+// ====================================================================
 // 🎮 RECORD WIN / LOSS HELPER
 // ====================================================================
 function recordResult(roomId, gameId, won, rewards={}){
@@ -11437,6 +11561,8 @@ function recordResult(roomId, gameId, won, rewards={}){
   }
   Save.write();
   Ach.check();
+  // v0.62 phase 4 · milestone celebrations · fires AFTER ach.check so toasts don't collide
+  try{ Milestones.check(); }catch(e){ console.warn('milestones err',e); }
   UI.updateWallet();
 }
 
