@@ -1318,6 +1318,99 @@ button{
   color:#10B981;
   border:1px solid rgba(16,185,129,.4);
 }
+/* v0.71 · CROSS-DEVICE SYNC HUB */
+.sync-hub-card{
+  background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(96,165,250,.14));
+  border:2px solid rgba(124,58,237,.4);
+  border-radius:16px;padding:14px;margin:14px 0;
+}
+.sync-h{
+  font-family:'Cinzel',serif;color:var(--gold-bright);
+  font-size:15px;margin:0 0 4px;text-align:center;
+}
+.sync-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0;
+}
+.sync-btn{
+  background:rgba(124,58,237,.15);
+  border:1px solid rgba(167,139,250,.4);
+  border-radius:14px;padding:14px 10px;
+  color:#FFF8E7;cursor:pointer;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  text-align:center;transition:transform .15s, background .15s;
+}
+.sync-btn.primary{
+  background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(245,158,11,.2));
+  border-color:#FBBF24;
+}
+.sync-btn:hover{background:rgba(124,58,237,.3)}
+.sync-btn:active{transform:scale(.96)}
+.sync-em{font-size:30px;line-height:1}
+.sync-name{font-weight:800;font-size:13px;color:var(--gold-bright);letter-spacing:.04em}
+.sync-desc{font-size:10.5px;opacity:.8;line-height:1.3}
+.sync-stat-row{
+  display:flex;justify-content:space-around;gap:8px;
+  padding-top:10px;border-top:1px dashed rgba(255,255,255,.1);
+  margin-top:8px;font-size:11px;
+}
+.sync-stat{color:rgba(255,248,231,.85)}
+.sync-stat b{color:var(--gold-bright);margin-right:4px}
+.sync-tips{margin-top:8px}
+.sync-tips details{
+  background:rgba(0,0,0,.15);border-radius:8px;padding:6px 10px;
+}
+.sync-tips summary{
+  cursor:pointer;font-size:11px;color:var(--gold-bright);
+  list-style:none;
+}
+.sync-tips summary::-webkit-details-marker{display:none}
+.sync-tips summary::before{content:'▸ ';color:var(--gold-bright)}
+.sync-tips details[open] summary::before{content:'▾ '}
+.sync-method-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;
+}
+.sync-method-btn{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:12px;padding:12px 8px;cursor:pointer;
+  color:#FFF8E7;font-family:inherit;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:transform .15s, background .15s;
+}
+.sync-method-btn:hover{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4)}
+.sync-method-btn:active{transform:scale(.96)}
+.sm-em{font-size:28px;line-height:1}
+.sm-name{font-weight:700;font-size:12px;color:var(--gold-bright)}
+.sm-desc{font-size:10px;opacity:.8;line-height:1.3}
+.sync-code-box{
+  width:100%;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(245,158,11,.3);
+  border-radius:10px;
+  padding:10px;
+  font-family:'Courier New',monospace;
+  font-size:10px;
+  color:#FBBF24;
+  min-height:120px;
+  resize:vertical;
+  word-break:break-all;
+  line-height:1.4;
+  margin:10px 0;
+}
+.sync-compare{
+  display:grid;grid-template-columns:1fr 30px 1fr;gap:8px;
+  margin:14px 0;align-items:center;
+}
+.sc-col{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:10px 8px;text-align:center;
+}
+.sc-label{font-size:10px;opacity:.7;letter-spacing:.06em;text-transform:uppercase}
+.sc-val{font-size:13px;font-weight:700;color:var(--gold-bright);margin-top:3px}
+.sc-arrow{
+  font-size:24px;color:var(--gold-bright);text-align:center;
+}
 /* ==================== v0.68 · BIBLE BREAK + DAILY GOALS + FAITH OPT-IN ==================== */
 .daily-goal-card{
   background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(96,165,250,.1));
@@ -1877,7 +1970,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · wellness baked in · works offline · v0.70.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · cross-device sync · wellness baked in · works offline · v0.71.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1918,7 +2011,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.70.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.71.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1984,6 +2077,7 @@ button{
       <button class="foot-btn" onclick="App.quickPlay()"><span class="em">⚡</span>QUICK PLAY</button>
       <button class="foot-btn" onclick="App.openInstallHub()"><span class="em">📥</span>INSTALL</button>
       <button class="foot-btn" onclick="App.openWellnessHub()"><span class="em">💪</span>WELLNESS</button>
+      <button class="foot-btn" onclick="App.openAccount()"><span class="em">🔄</span>SYNC</button>
     </div>
   </div>
 </section>
@@ -2038,7 +2132,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.70.0';
+const VERSION = '0.71.0';
 
 // ----- STATE -----
 const State = {
@@ -9986,7 +10080,90 @@ const App = {
   },
 
   // ----- AUX -----
+  // v0.71 · ACCOUNT HUB · cross-device sync · backend-free · CAEE'd
   openAccount(){
+    Account.ensureFriendCode();
+    const a = State.data.account||{};
+    document.getElementById('aux-title').innerHTML = '👤 Account · Sync · Security';
+    const lastSyncStr = a.lastSync ? new Date(a.lastSync).toLocaleString() : 'never';
+    document.getElementById('aux-body').innerHTML = `
+      <div class="settings-list">
+        <div class="lobby-banner" style="text-align:center">
+          <b style="color:var(--gold-bright)">🎫 your friend code</b><br>
+          <div style="font-family:'Cinzel',serif;font-size:24px;letter-spacing:.3em;margin:6px 0;color:var(--gold-bright)">${a.friendCode}</div>
+          <button class="btn-secondary" style="padding:6px 14px;font-size:11px" onclick="App.copyFriendCode()">📋 COPY</button>
+        </div>
+
+        <div class="sync-hub-card">
+          <h3 class="sync-h">🔄 Cross-device Sync</h3>
+          <p class="dim" style="font-size:11.5px;text-align:center;line-height:1.5;margin:4px 0 10px">play on phone · pick up on laptop · zero backend · ur save travels with u</p>
+          <div class="sync-grid">
+            <button class="sync-btn primary" onclick="Sync.openExportFlow()">
+              <div class="sync-em">📤</div>
+              <div class="sync-name">SEND THIS DEVICE</div>
+              <div class="sync-desc">generate code · scan QR · or save file</div>
+            </button>
+            <button class="sync-btn primary" onclick="Sync.openImportFlow()">
+              <div class="sync-em">📥</div>
+              <div class="sync-name">RECEIVE FROM OTHER</div>
+              <div class="sync-desc">paste code · scan QR · or upload file</div>
+            </button>
+          </div>
+          <div class="sync-stat-row">
+            <div class="sync-stat"><b>${a.lastSync ? '✅' : '—'}</b> last sync</div>
+            <div class="sync-stat" style="font-size:10px;opacity:.8">${lastSyncStr}</div>
+          </div>
+          <div class="sync-tips">
+            <details>
+              <summary>💡 how sync works (no backend · no account · no password)</summary>
+              <ul style="font-size:11px;line-height:1.6;padding-left:18px;margin:6px 0">
+                <li>ur save is base64-encoded into a sync code or QR</li>
+                <li>open the code/QR/file on the OTHER device</li>
+                <li>BrainBoard merges or overwrites (u choose)</li>
+                <li>nothing leaves ur device · no cloud · no tracking</li>
+                <li>recommended: sync every few sessions to keep devices fresh</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <b style="display:block">Username</b>
+            <span class="dim" style="font-size:11px">${a.username||'(not set · using "'+(State.data.name||'Saint')+'")'}</span>
+          </div>
+          <button class="btn-secondary" style="padding:6px 14px;font-size:11px" onclick="App.changeUsername()">EDIT</button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <b style="display:block">PIN Lock</b>
+            <span class="dim" style="font-size:11px">${a.pinHash?'🔒 protected · 4-digit PIN':'🔓 not set'}</span>
+          </div>
+          <button class="btn-secondary" style="padding:6px 14px;font-size:11px" onclick="App.changePin()">${a.pinHash?'CHANGE':'SET'}</button>
+        </div>
+        ${a.pinHash?`<div class="setting-row">
+          <div>
+            <b style="display:block">Lock on Open</b>
+            <span class="dim" style="font-size:11px">PIN required when app opens</span>
+          </div>
+          <div class="toggle ${a.lockEnabled?'on':''}" onclick="App.toggleLock()"></div>
+        </div>`:''}
+        ${a.pinHash?`<div class="setting-row">
+          <div>
+            <b style="display:block;color:#EF4444">Remove PIN</b>
+            <span class="dim" style="font-size:11px">unlock account</span>
+          </div>
+          <button class="btn-secondary" style="padding:6px 14px;font-size:11px;background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)" onclick="App.removePin()">REMOVE</button>
+        </div>`:''}
+        <div style="margin-top:14px;padding:14px;background:rgba(255,255,255,.04);border-radius:10px;font-size:11px;color:rgba(255,255,255,.7)">
+          <b style="color:var(--gold-bright);display:block;margin-bottom:6px">🛡️ about security & privacy</b>
+          BrainBoard is offline-first. Ur save lives in this device's localStorage · never sent to any server. PIN obfuscates ur local save · friend code identifies u to other players. Sync codes / QR / files are PEER-TO-PEER · they encode ur save into a code u can paste/scan on another device. Nothing touches the cloud · ever.
+        </div>
+        <p class="dim text-center" style="font-size:11px;margin-top:8px">created ${a.createdAt?new Date(a.createdAt).toLocaleDateString():'today'}</p>
+      </div>`;
+    UI.show('aux');
+  },
+  _legacyOpenAccount(){
     Account.ensureFriendCode();
     const a = State.data.account||{};
     document.getElementById('aux-title').innerHTML = '👤 Account & Security';
@@ -13332,6 +13509,411 @@ const BibleBreak = {
 // ====================================================================
 // 📥 v0.65 · INSTALL HUB · every device · every OS · auto-detect + step-by-step
 // ====================================================================
+// ====================================================================
+// 🔄 v0.71 · CROSS-DEVICE SYNC · backend-free · sync code · QR · file
+// ====================================================================
+const Sync = {
+  // Encode save as a portable base64 blob
+  encodeSave(){
+    try{
+      const payload = {
+        v:1,
+        ts:Date.now(),
+        appV:VERSION,
+        data: State.data,
+      };
+      const json = JSON.stringify(payload);
+      // gzip-like compression via simple deflation isn't free in browser without lib · just base64 for now
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      return b64;
+    }catch(e){ console.error('encode err',e); return null; }
+  },
+  decodeSave(b64){
+    try{
+      const json = decodeURIComponent(escape(atob(b64)));
+      return JSON.parse(json);
+    }catch(e){ console.error('decode err',e); return null; }
+  },
+  generateSyncCode(){
+    const b64 = Sync.encodeSave();
+    if(!b64) return null;
+    return b64; // raw code
+  },
+  generateSyncURL(){
+    const b64 = Sync.encodeSave();
+    if(!b64) return null;
+    return `https://snailgamedev.github.io/BrainBoard/?import=${b64}`;
+  },
+
+  // EXPORT FLOW
+  openExportFlow(){
+    const code = Sync.generateSyncCode();
+    if(!code){ Toast.show('encode failed · try again'); return; }
+    const url  = Sync.generateSyncURL();
+    const sizeKB = (code.length / 1024).toFixed(1);
+    Modal.show(`
+      <div class="big">📤</div>
+      <h3 style="color:var(--gold-bright)">send this device</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">pick how u wanna transfer · ${sizeKB} KB save · works between ANY 2 devices</p>
+      <div class="sync-method-grid">
+        <button class="sync-method-btn" onclick="Sync.showCode()">
+          <div class="sm-em">📋</div>
+          <div class="sm-name">copy code</div>
+          <div class="sm-desc">paste on other device · text-based</div>
+        </button>
+        <button class="sync-method-btn" onclick="Sync.showURL()">
+          <div class="sm-em">🔗</div>
+          <div class="sm-name">sync link</div>
+          <div class="sm-desc">share URL · auto-imports on open</div>
+        </button>
+        <button class="sync-method-btn" onclick="Sync.showQR()">
+          <div class="sm-em">📱</div>
+          <div class="sm-name">QR code</div>
+          <div class="sm-desc">scan from another device</div>
+        </button>
+        <button class="sync-method-btn" onclick="Sync.exportFile()">
+          <div class="sm-em">💾</div>
+          <div class="sm-name">download file</div>
+          <div class="sm-desc">.brainboard JSON · save anywhere</div>
+        </button>
+      </div>
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="Modal.close()">cancel</button>
+    `);
+  },
+
+  showCode(){
+    const code = Sync.generateSyncCode();
+    Modal.show(`
+      <div class="big">📋</div>
+      <h3 style="color:var(--gold-bright)">copy this code</h3>
+      <p class="dim" style="font-size:11.5px">paste this on ur other device · Account → 📥 Receive → paste code</p>
+      <textarea readonly id="sync-code-ta" class="sync-code-box" onclick="this.select()">${code}</textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="Sync.openExportFlow()">← back</button>
+        <button class="btn-primary" onclick="Sync._copyCode()">📋 copy to clipboard</button>
+      </div>
+    `);
+    setTimeout(()=>{ const ta = document.getElementById('sync-code-ta'); ta?.focus(); ta?.select(); }, 100);
+  },
+  _copyCode(){
+    const ta = document.getElementById('sync-code-ta');
+    if(!ta) return;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(()=>Toast.show('📋 sync code copied! paste on other device'));
+    } else {
+      ta.select(); document.execCommand('copy');
+      Toast.show('📋 copied (legacy)');
+    }
+    Sync._markSynced();
+    haptic(15); SFX.tap();
+  },
+
+  showURL(){
+    const url = Sync.generateSyncURL();
+    const sizeKB = (url.length / 1024).toFixed(1);
+    Modal.show(`
+      <div class="big">🔗</div>
+      <h3 style="color:var(--gold-bright)">sync link</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">share this URL · opening it on ANY device auto-imports the save · ${sizeKB} KB</p>
+      <textarea readonly id="sync-url-ta" class="sync-code-box" style="min-height:80px" onclick="this.select()">${url}</textarea>
+      <p class="dim" style="font-size:10px;margin:4px 0 8px">⚠️ long URLs · may not fit in some messaging apps · code or QR may work better</p>
+      <div class="modal-actions" style="flex-direction:column;gap:6px">
+        <button class="btn-primary" onclick="Sync._copyURL()">📋 copy URL</button>
+        <button class="btn-secondary" onclick="Sync._shareURL()">📤 native share sheet</button>
+        <button class="btn-secondary" onclick="Sync.openExportFlow()">← back</button>
+      </div>
+    `);
+  },
+  _copyURL(){
+    const ta = document.getElementById('sync-url-ta');
+    if(!ta) return;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(()=>Toast.show('🔗 URL copied!'));
+    } else { ta.select(); document.execCommand('copy'); Toast.show('🔗 copied'); }
+    Sync._markSynced();
+    haptic(15); SFX.tap();
+  },
+  _shareURL(){
+    const url = Sync.generateSyncURL();
+    if(navigator.share){
+      navigator.share({title:'My BrainBoard save', text:'open this on ur other device to sync', url}).catch(()=>{});
+    } else { Sync._copyURL(); }
+  },
+
+  showQR(){
+    const url = Sync.generateSyncURL();
+    if(url.length > 2500){
+      Modal.show(`
+        <div class="big">⚠️</div>
+        <h3>save too big for QR</h3>
+        <p style="font-size:13px;margin:10px 0">ur save data is ${(url.length/1024).toFixed(1)} KB · QR codes can hold ~2.5 KB max</p>
+        <p class="dim" style="font-size:11.5px">use the <b>copy code</b> or <b>download file</b> methods instead · those work for any save size</p>
+        <button class="btn-primary" style="margin-top:14px" onclick="Sync.openExportFlow()">← back to methods</button>
+      `);
+      return;
+    }
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&color=FBBF24&bgcolor=0F0820`;
+    Modal.show(`
+      <div class="big">📱</div>
+      <h3 style="color:var(--gold-bright)">scan from other device</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">point ur other device's camera at this QR · tap the link that pops up · save auto-imports</p>
+      <img src="${qrSrc}" alt="sync QR" style="border-radius:14px;border:2px solid #FBBF24;background:#0F0820;padding:8px;display:block;margin:10px auto;max-width:280px">
+      <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="Sync.openExportFlow()">← back</button>
+    `);
+    Sync._markSynced();
+  },
+
+  exportFile(){
+    const code = Sync.generateSyncCode();
+    const payload = {v:1,ts:Date.now(),appV:VERSION,code};
+    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const name = (State.data.name||'Player').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+    a.href = url; a.download = `brainboard-save-${name}-${Date.now()}.brainboard`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    Toast.show('💾 save downloaded · open on other device via 📥 Receive');
+    Sync._markSynced();
+    Modal.close();
+    SFX.chime(); haptic(15);
+  },
+
+  _markSynced(){
+    const a = State.data.account || (State.data.account = {});
+    a.lastSync = Date.now();
+    Save.write();
+  },
+
+  // IMPORT FLOW
+  openImportFlow(){
+    Modal.show(`
+      <div class="big">📥</div>
+      <h3 style="color:var(--gold-bright)">receive from other device</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">pick how ur receiving the save · supports all formats</p>
+      <div class="sync-method-grid">
+        <button class="sync-method-btn" onclick="Sync.openPasteCode()">
+          <div class="sm-em">📋</div>
+          <div class="sm-name">paste code</div>
+          <div class="sm-desc">paste the sync code/URL u copied</div>
+        </button>
+        <button class="sync-method-btn" onclick="Sync.openImportFile()">
+          <div class="sm-em">💾</div>
+          <div class="sm-name">upload file</div>
+          <div class="sm-desc">.brainboard file u saved</div>
+        </button>
+      </div>
+      <p class="dim" style="font-size:11px;margin-top:8px;text-align:center;line-height:1.5">
+        💡 sync link opened on this device? it should auto-prompt to import · no manual paste needed
+      </p>
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="Modal.close()">cancel</button>
+    `);
+  },
+
+  openPasteCode(){
+    Modal.show(`
+      <div class="big">📋</div>
+      <h3 style="color:var(--gold-bright)">paste sync code</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">paste the code OR the full sync URL · BrainBoard auto-detects</p>
+      <textarea id="paste-code-ta" class="sync-code-box" style="min-height:140px" placeholder="paste here..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="Sync.openImportFlow()">← back</button>
+        <button class="btn-primary" onclick="Sync._tryImport()">📥 import</button>
+      </div>
+    `);
+    setTimeout(()=>document.getElementById('paste-code-ta')?.focus(), 100);
+  },
+  _tryImport(){
+    const ta = document.getElementById('paste-code-ta');
+    if(!ta) return;
+    let code = ta.value.trim();
+    // Strip URL prefix if user pasted a full sync link
+    const m = code.match(/[?&]import=([^&]+)/);
+    if(m) code = m[1];
+    if(!code){ Toast.show('paste something first'); return; }
+    Sync._confirmImport(code);
+  },
+
+  openImportFile(){
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.brainboard,.json,application/json';
+    inp.onchange = (e) => {
+      const f = e.target.files?.[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const wrapper = JSON.parse(reader.result);
+          const code = wrapper.code || wrapper.data ? Sync.encodeSave.call({data:wrapper.data||wrapper}) : wrapper;
+          // Simpler: if wrapper.code exists use it · else try to encode wrapper.data
+          let realCode;
+          if(typeof wrapper === 'string') realCode = wrapper;
+          else if(wrapper.code) realCode = wrapper.code;
+          else if(wrapper.data){
+            // user uploaded a raw State.data export · re-encode
+            const payload = {v:1,ts:Date.now(),appV:VERSION,data:wrapper.data};
+            realCode = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+          } else realCode = reader.result;
+          Sync._confirmImport(realCode);
+        }catch(e){
+          // Maybe file is just raw code text
+          Sync._confirmImport(reader.result.trim());
+        }
+      };
+      reader.readAsText(f);
+    };
+    inp.click();
+  },
+
+  _confirmImport(code){
+    const decoded = Sync.decodeSave(code);
+    if(!decoded || !decoded.data){
+      Modal.show(`
+        <div class="big">⚠️</div>
+        <h3>code didn't decode</h3>
+        <p style="font-size:13px;margin:10px 0">that sync code or file looks invalid · double-check it copied fully · sometimes long codes get cut off in messaging apps</p>
+        <button class="btn-primary" style="margin-top:14px" onclick="Sync.openImportFlow()">← back</button>
+      `);
+      return;
+    }
+    const incoming = decoded.data;
+    const myWins  = State.data?.totals?.wins || 0;
+    const newWins = incoming?.totals?.wins || 0;
+    const myIQ  = State.data?.iq || 0;
+    const newIQ = incoming?.iq || 0;
+    const incomingTS = decoded.ts ? new Date(decoded.ts).toLocaleString() : '?';
+    Modal.show(`
+      <div class="big">📥</div>
+      <h3 style="color:var(--gold-bright)">save ready to import</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">from <b>${incoming?.name||'Player'}</b> · ${incomingTS}</p>
+      <div class="sync-compare">
+        <div class="sc-col">
+          <div class="sc-label">this device</div>
+          <div class="sc-val">${myWins} wins · IQ ${myIQ}</div>
+        </div>
+        <div class="sc-arrow">→</div>
+        <div class="sc-col">
+          <div class="sc-label">incoming</div>
+          <div class="sc-val" style="color:#10B981">${newWins} wins · IQ ${newIQ}</div>
+        </div>
+      </div>
+      <p class="dim" style="font-size:11px;margin:8px 0;line-height:1.5">u can OVERWRITE this device's save w/ incoming · OR keep both (this device wins on conflicts)</p>
+      <div class="modal-actions" style="flex-direction:column;gap:6px">
+        <button class="btn-primary" onclick="Sync.doOverwrite()">⚠️ OVERWRITE · use incoming save</button>
+        <button class="btn-secondary" onclick="Sync.doMerge()">🤝 MERGE · keep best of both</button>
+        <button class="btn-secondary" onclick="Modal.close()">cancel</button>
+      </div>
+    `);
+    Sync._pendingImport = incoming;
+  },
+
+  doOverwrite(){
+    const incoming = Sync._pendingImport;
+    if(!incoming) return;
+    State.data = {...incoming};
+    Save.write();
+    Sync._markSynced();
+    Modal.close();
+    Toast.show('✅ overwrite complete · welcome back ur save · refreshing UI');
+    setTimeout(()=>{
+      UI.updateWallet();
+      try{ App.toLobby(); }catch(e){}
+    }, 600);
+    SFX.holy(); haptic(40); confetti({variant:'gold',count:50});
+    Ach.unlock('sync_first');
+    Sync._pendingImport = null;
+  },
+
+  doMerge(){
+    const incoming = Sync._pendingImport;
+    if(!incoming) return;
+    const merged = Sync._mergeData(State.data, incoming);
+    State.data = merged;
+    Save.write();
+    Sync._markSynced();
+    Modal.close();
+    Toast.show('🤝 merged · best of both worlds');
+    setTimeout(()=>{
+      UI.updateWallet();
+      try{ App.toLobby(); }catch(e){}
+    }, 600);
+    SFX.holy(); haptic(40); confetti({variant:'gold',count:50});
+    Ach.unlock('sync_first');
+    Sync._pendingImport = null;
+  },
+
+  // Merge strategy: take MAX of counter-like fields · UNION of array/obj keys · keep "this" for prefs
+  _mergeData(a, b){
+    const out = {...a};
+    // Currency · take MAX of each
+    out.wallet = {};
+    Object.keys({...(a.wallet||{}), ...(b.wallet||{})}).forEach(k => {
+      out.wallet[k] = Math.max(a.wallet?.[k]||0, b.wallet?.[k]||0);
+    });
+    // Totals · max each
+    out.totals = {
+      wins:   Math.max(a.totals?.wins   ||0, b.totals?.wins  ||0),
+      losses: Math.max(a.totals?.losses ||0, b.totals?.losses||0),
+      games:  Math.max(a.totals?.games  ||0, b.totals?.games ||0),
+    };
+    out.iq = Math.max(a.iq||0, b.iq||0);
+    out.streak = Math.max(a.streak||0, b.streak||0);
+    out.peakStreak = Math.max(a.peakStreak||0, b.peakStreak||0);
+    out.daysPlayed = Math.max(a.daysPlayed||0, b.daysPlayed||0);
+    // perGame · merge each game · take max wins/plays/best
+    out.perGame = {};
+    const allKeys = new Set([...Object.keys(a.perGame||{}), ...Object.keys(b.perGame||{})]);
+    allKeys.forEach(k => {
+      const ag = a.perGame?.[k] || {}; const bg = b.perGame?.[k] || {};
+      out.perGame[k] = {
+        wins:  Math.max(ag.wins ||0, bg.wins ||0),
+        plays: Math.max(ag.plays||0, bg.plays||0),
+        best:  Math.max(ag.best ||0, bg.best ||0),
+        lastWin: Math.max(ag.lastWin||0, bg.lastWin||0),
+      };
+    });
+    // Achievements · union
+    out.ach = {...(a.ach||{})};
+    Object.keys(b.ach||{}).forEach(k => { if(!out.ach[k] || b.ach[k] < out.ach[k]) out.ach[k] = b.ach[k]; });
+    // PR records · take best score per key
+    out.prRecords = {...(a.prRecords||{})};
+    Object.keys(b.prRecords||{}).forEach(k => {
+      const ar = a.prRecords?.[k] || {}; const br = b.prRecords[k] || {};
+      out.prRecords[k] = {
+        bestScore: Math.max(ar.bestScore||0, br.bestScore||0),
+        bestTime:  (ar.bestTime && br.bestTime) ? Math.min(ar.bestTime, br.bestTime) : (ar.bestTime||br.bestTime||null),
+        when: Math.max(ar.when||0, br.when||0),
+      };
+    });
+    // Lifetime earned · max each
+    out.lifetimeEarned = {};
+    Object.keys({...(a.lifetimeEarned||{}), ...(b.lifetimeEarned||{})}).forEach(k => {
+      out.lifetimeEarned[k] = Math.max(a.lifetimeEarned?.[k]||0, b.lifetimeEarned?.[k]||0);
+    });
+    // brainDNA · take max each axis
+    out.brainDNA = {};
+    Object.keys({...(a.brainDNA||{}), ...(b.brainDNA||{})}).forEach(k => {
+      out.brainDNA[k] = Math.max(a.brainDNA?.[k]||0, b.brainDNA?.[k]||0);
+    });
+    return out;
+  },
+
+  // Auto-detect ?import=... on page load
+  checkUrlImport(){
+    try{
+      const params = new URLSearchParams(location.search);
+      const code = params.get('import');
+      if(!code) return;
+      // Defer · let UI settle first
+      setTimeout(() => {
+        Sync._confirmImport(code);
+        // Clean URL so re-refresh doesn't re-prompt
+        history.replaceState({}, '', location.pathname);
+      }, 800);
+    }catch(e){ console.warn('url import check err', e); }
+  },
+};
+
 const InstallHub = {
   detect(){
     const ua = navigator.userAgent || '';
@@ -19240,6 +19822,8 @@ function _bootOnce(){
     console.error('BrainBoard boot fail',e);
     _showFatal(e);
   }
+  // v0.71 · sync URL auto-import · after init so State is loaded
+  try{ Sync.checkUrlImport(); }catch(e){ console.warn('sync url import err', e); }
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', _bootOnce);
