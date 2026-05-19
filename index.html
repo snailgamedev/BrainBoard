@@ -2118,7 +2118,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · 9-step tutorial · chill timers · per-game levels · v0.75.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · 9-step tutorial · lossless sync · chill timers · v0.76.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2159,7 +2159,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.75.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.76.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -2281,7 +2281,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.75.0';
+const VERSION = '0.76.0';
 
 // ----- STATE -----
 const State = {
@@ -12597,6 +12597,8 @@ const Tracker = {
   // Call on EVERY game start (win or loss). Updates streak when a NEW day plays.
   markPlay(){
     const d = State.data, today = Tracker.todayKey();
+    // v0.76 · HAWK · proactive reset BEFORE incrementing · catches midnight rollover
+    Tracker.syncDailyCounters();
     if(d.lastPlayDate === today){
       d.gamesToday = (d.gamesToday||0) + 1;
       Tracker._calendarBump(today);
@@ -13392,12 +13394,21 @@ const Wellness = {
 
   // v0.69 · 🧠 BRAIN DUMP · write 3 things off ur mind
   brainDump(){
+    const w = Wellness.ensure();
+    const recent = (w.brainDumps||[]).slice(0,3);
+    const recentHtml = recent.length ? `
+      <details style="margin-top:8px;background:rgba(0,0,0,.18);border-radius:8px;padding:6px 10px">
+        <summary style="cursor:pointer;font-size:11px;color:var(--gold-bright);list-style:none">▸ recent dumps · ${w.brainDumps.length}</summary>
+        ${recent.map(d => `<div style="font-size:11px;margin:6px 0;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:6px;line-height:1.5"><div class="dim" style="font-size:9px">${new Date(d.ts).toLocaleDateString()}</div>${d.txt.replace(/</g,'&lt;').slice(0,140)}${d.txt.length>140?'...':''}</div>`).join('')}
+      </details>
+    ` : '';
     Modal.show(`
       <div class="big">🧠</div>
       <h3 style="color:var(--gold-bright)">brain dump</h3>
-      <p class="dim" style="font-size:12px;margin:8px 0">3 things stuck in ur head · write em down · let em go · u don't have to save</p>
+      <p class="dim" style="font-size:12px;margin:8px 0">3 things stuck in ur head · write em down · let em go</p>
       <textarea id="bd-input" class="name-input" placeholder="1. ...&#10;2. ...&#10;3. ..." style="height:120px;resize:vertical;font-family:inherit;width:100%;padding:10px"></textarea>
-      <p class="dim" style="font-size:11px;margin:6px 0">private · stays in ur browser · not synced anywhere</p>
+      <p class="dim" style="font-size:11px;margin:6px 0">private · stays in ur browser · syncs across devices via 🔄 Sync</p>
+      ${recentHtml}
       <div class="modal-actions">
         <button class="btn-secondary" onclick="Modal.close()">close · no save</button>
         <button class="btn-primary" onclick="Wellness._brainDumpSave()">🧠 save · feel lighter</button>
@@ -14385,6 +14396,156 @@ const Sync = {
     Object.keys({...(a.brainDNA||{}), ...(b.brainDNA||{})}).forEach(k => {
       out.brainDNA[k] = Math.max(a.brainDNA?.[k]||0, b.brainDNA?.[k]||0);
     });
+
+    // v0.76 · OPERATION CARRY-THE-SAVE · GHOST recon · 15+ missing fields now merged
+    // Today-context counters · MAX if same date · prefer newer date
+    const today = new Date().toDateString();
+    const newerDate = (d1, d2) => {
+      if(!d1) return d2; if(!d2) return d1;
+      return new Date(d1) > new Date(d2) ? d1 : d2;
+    };
+    out.gamesTodayDate = newerDate(a.gamesTodayDate, b.gamesTodayDate);
+    out.gamesToday = (a.gamesTodayDate === b.gamesTodayDate)
+      ? Math.max(a.gamesToday||0, b.gamesToday||0)
+      : (out.gamesTodayDate === a.gamesTodayDate ? (a.gamesToday||0) : (b.gamesToday||0));
+
+    // playCalendar · UNION by date · MAX per date
+    out.playCalendar = {...(a.playCalendar||{})};
+    Object.keys(b.playCalendar||{}).forEach(k => {
+      out.playCalendar[k] = Math.max(out.playCalendar[k]||0, b.playCalendar[k]||0);
+    });
+
+    // Loss streak trackers · MAX
+    out.lossStreak = Math.max(a.lossStreak||0, b.lossStreak||0);
+    out.longestLossStreak = Math.max(a.longestLossStreak||0, b.longestLossStreak||0);
+
+    // Goals · UNION by id · prefer claimed if either is
+    const goalMap = {};
+    [...(a.goals||[]), ...(b.goals||[])].forEach(g => {
+      const existing = goalMap[g.id];
+      if(!existing || (g.claimed && !existing.claimed)) goalMap[g.id] = g;
+    });
+    out.goals = Object.values(goalMap);
+    out.goalsCompleted = Math.max(a.goalsCompleted||0, b.goalsCompleted||0);
+
+    // Powerups · MAX per type
+    out.powerups = {};
+    Object.keys({...(a.powerups||{}), ...(b.powerups||{})}).forEach(k => {
+      out.powerups[k] = Math.max(a.powerups?.[k]||0, b.powerups?.[k]||0);
+    });
+
+    // Frenzy stats · MAX each (best score · best streak · total runs · total score)
+    out.frenzy = {
+      lastPlayed: Math.max(a.frenzy?.lastPlayed||0, b.frenzy?.lastPlayed||0),
+      bestStreak: Math.max(a.frenzy?.bestStreak||0, b.frenzy?.bestStreak||0),
+      totalRuns:  Math.max(a.frenzy?.totalRuns ||0, b.frenzy?.totalRuns ||0),
+      totalScore: Math.max(a.frenzy?.totalScore||0, b.frenzy?.totalScore||0),
+      streak:     Math.max(a.frenzy?.streak    ||0, b.frenzy?.streak    ||0),
+      bestScore:  Math.max(a.frenzy?.bestScore ||0, b.frenzy?.bestScore ||0),
+    };
+
+    // Friends · UNION by friendCode · merge messages chronologically
+    const friendMap = {};
+    [...(a.friends||[]), ...(b.friends||[])].forEach(f => {
+      if(!friendMap[f.code]){ friendMap[f.code] = {...f, messages: f.messages||[]}; }
+      else {
+        const ex = friendMap[f.code];
+        const allMsgs = [...(ex.messages||[]), ...(f.messages||[])];
+        const seen = new Set();
+        ex.messages = allMsgs.filter(m => { const k = `${m.ts}|${m.from}|${m.text}`; if(seen.has(k)) return false; seen.add(k); return true; })
+          .sort((x,y) => x.ts - y.ts);
+        ex.lastSeen = Math.max(ex.lastSeen||0, f.lastSeen||0);
+      }
+    });
+    out.friends = Object.values(friendMap);
+
+    // Quests · only same-date matters · take more progressed
+    if(a.quests?.date === today || b.quests?.date === today){
+      const todayQuests = a.quests?.date === today ? a.quests : b.quests;
+      const otherQuests = a.quests?.date === today ? b.quests : a.quests;
+      const mergedList = (todayQuests.list||[]).map(q => {
+        const peer = (otherQuests?.list||[]).find(p => p.id === q.id);
+        return peer && peer.date === today ? {...q, progress: Math.max(q.progress||0, peer.progress||0)} : q;
+      });
+      out.quests = {
+        date: today,
+        list: mergedList,
+        claimed: [...new Set([...(a.quests?.claimed||[]), ...(b.quests?.claimed||[])])],
+      };
+    }
+
+    // Leaderboards · UNION entries per key
+    out.leaderboards = {};
+    const lbKeys = new Set([...Object.keys(a.leaderboards||{}), ...Object.keys(b.leaderboards||{})]);
+    lbKeys.forEach(k => {
+      const al = a.leaderboards?.[k] || {};
+      const bl = b.leaderboards?.[k] || {};
+      out.leaderboards[k] = {
+        daily:   [...(al.daily||[]),   ...(bl.daily||[])],
+        weekly:  [...(al.weekly||[]),  ...(bl.weekly||[])],
+        allTime: [...(al.allTime||[]), ...(bl.allTime||[])],
+      };
+    });
+
+    // Duels · UNION history · dedupe outgoing/incoming by id
+    const dedupById = arr => { const m = {}; (arr||[]).forEach(d => m[d.id] = d); return Object.values(m); };
+    out.duels = {
+      outgoing: dedupById([...(a.duels?.outgoing||[]), ...(b.duels?.outgoing||[])]),
+      incoming: dedupById([...(a.duels?.incoming||[]), ...(b.duels?.incoming||[])]),
+      history:  dedupById([...(a.duels?.history ||[]), ...(b.duels?.history ||[])]),
+    };
+
+    // BP · UNION claimed tiers · MAX xp
+    out.bp = {
+      xp:      Math.max(a.bp?.xp||0, b.bp?.xp||0),
+      claimed: [...new Set([...(a.bp?.claimed||[]), ...(b.bp?.claimed||[])])],
+    };
+
+    // Activity log · UNION by ts · keep latest 30
+    const actAll = [...(a.activityLog||[]), ...(b.activityLog||[])];
+    const actSeen = new Set();
+    out.activityLog = actAll.filter(x => { const k = `${x.ts}|${x.msg}`; if(actSeen.has(k)) return false; actSeen.add(k); return true; })
+      .sort((x,y) => y.ts - x.ts).slice(0, 30);
+
+    // Wellness · MAX/UNION every cumulative field · preserve daily counters w/ date check
+    const aw = a.wellness || {};
+    const bw = b.wellness || {};
+    out.wellness = {...aw, ...bw};
+    out.wellness.breaksTaken      = Math.max(aw.breaksTaken||0, bw.breaksTaken||0);
+    out.wellness.faithBreakCount  = Math.max(aw.faithBreakCount||0, bw.faithBreakCount||0);
+    out.wellness.grassTouches     = Math.max(aw.grassTouches||0, bw.grassTouches||0);
+    out.wellness.wellnessStreak   = Math.max(aw.wellnessStreak||0, bw.wellnessStreak||0);
+    out.wellness.peakWellnessStreak = Math.max(aw.peakWellnessStreak||0, bw.peakWellnessStreak||0);
+    out.wellness.meditationsDone  = Math.max(aw.meditationsDone||0, bw.meditationsDone||0);
+    out.wellness.workoutsDone     = Math.max(aw.workoutsDone||0, bw.workoutsDone||0);
+    // Daily counters · same-date = MAX · else take newer
+    out.wellness.waterCountDate = newerDate(aw.waterCountDate, bw.waterCountDate);
+    out.wellness.waterCount = (aw.waterCountDate === bw.waterCountDate)
+      ? Math.max(aw.waterCount||0, bw.waterCount||0)
+      : (out.wellness.waterCountDate === aw.waterCountDate ? (aw.waterCount||0) : (bw.waterCount||0));
+    // Logs · UNION sleep + energy + mood + brainDumps · keep latest N
+    const _unionLog = (lim, ...arrs) => {
+      const all = arrs.flat();
+      const seen = new Set();
+      return all.filter(x => { const k = `${x.ts}|${JSON.stringify(x)}`; if(seen.has(k)) return false; seen.add(k); return true; })
+        .sort((x,y) => y.ts - x.ts).slice(0, lim);
+    };
+    out.wellness.sleepLog   = _unionLog(14, aw.sleepLog||[],   bw.sleepLog||[]);
+    out.wellness.energyLog  = _unionLog(30, aw.energyLog||[],  bw.energyLog||[]);
+    out.wellness.moodLog    = _unionLog(30, aw.moodLog||[],    bw.moodLog||[]);
+    out.wellness.brainDumps = _unionLog(10, aw.brainDumps||[], bw.brainDumps||[]);
+
+    // Calendar streak · MAX
+    out.calStreak = Math.max(a.calStreak||0, b.calStreak||0);
+
+    // Weekly tourney · MAX cumulative
+    out.weeklyTourney = {
+      wins:       Math.max(a.weeklyTourney?.wins      ||0, b.weeklyTourney?.wins      ||0),
+      lastWeekId: newerDate(a.weeklyTourney?.lastWeekId, b.weeklyTourney?.lastWeekId),
+      podiumed:   Math.max(a.weeklyTourney?.podiumed  ||0, b.weeklyTourney?.podiumed  ||0),
+      totalGems:  Math.max(a.weeklyTourney?.totalGems ||0, b.weeklyTourney?.totalGems ||0),
+    };
+
     return out;
   },
 
