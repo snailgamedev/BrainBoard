@@ -1246,6 +1246,83 @@ button{
   border:1px solid rgba(96,165,250,.35);
   border-radius:14px;padding:12px 14px;
 }
+/* ==================== v0.68 · BIBLE BREAK + DAILY GOALS + FAITH OPT-IN ==================== */
+.daily-goal-card{
+  background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(96,165,250,.1));
+  border:1px solid rgba(16,185,129,.3);
+  border-radius:14px;padding:12px 14px;margin-bottom:12px;
+}
+.daily-goal-row{
+  display:grid;grid-template-columns:110px 1fr 60px;gap:8px;
+  align-items:center;margin-bottom:6px;font-size:12px;
+}
+.dg-label{font-weight:600}
+.dg-em{font-size:14px;margin-right:4px}
+.dg-bar{
+  height:8px;background:rgba(255,255,255,.1);
+  border-radius:99px;overflow:hidden;
+}
+.dg-fill{
+  height:100%;background:linear-gradient(90deg,#10B981,#FBBF24);
+  transition:width .4s;
+}
+.dg-stat{
+  text-align:right;font-size:11px;font-weight:700;
+  color:var(--gold-bright);
+}
+.daily-goal-row.done .dg-fill{background:linear-gradient(90deg,#FBBF24,#FFD700)}
+.daily-goal-row.done .dg-stat{color:#10B981}
+.bible-break-section{
+  margin-top:14px;background:rgba(167,139,250,.1);
+  border:1px solid rgba(167,139,250,.35);
+  border-radius:14px;padding:12px;
+}
+.bible-break-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.bible-break-btn{
+  background:rgba(124,58,237,.15);
+  border:1px solid rgba(167,139,250,.4);
+  border-radius:12px;padding:10px 8px;
+  color:#FFF8E7;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  text-align:center;font-family:inherit;
+  transition:transform .15s, background .15s;
+}
+.bible-break-btn:active{transform:scale(.96)}
+.bible-break-btn:hover{background:rgba(124,58,237,.28)}
+.bb-em{font-size:24px;line-height:1}
+.bb-name{font-weight:700;font-size:12px;margin-top:2px}
+.bb-desc{font-size:10px;opacity:.75;line-height:1.3;margin-top:2px}
+.bible-break-invite{
+  margin-top:14px;background:rgba(245,158,11,.06);
+  border:1px dashed rgba(245,158,11,.3);
+  border-radius:14px;padding:12px;text-align:center;
+}
+.faith-choice-grid{
+  display:flex;flex-direction:column;gap:8px;margin:10px 0;
+}
+.faith-choice{
+  background:rgba(255,255,255,.05);
+  border:2px solid rgba(245,158,11,.25);
+  border-radius:14px;padding:14px 12px;cursor:pointer;
+  display:flex;align-items:center;gap:12px;text-align:left;
+  color:#FFF8E7;font-family:inherit;
+  transition:transform .15s, border .15s, background .15s;
+}
+.faith-choice:hover{
+  background:rgba(245,158,11,.08);
+  border-color:#FBBF24;
+}
+.faith-choice:active{transform:scale(.98)}
+.fc-em{font-size:36px;line-height:1;flex-shrink:0}
+.fc-name{font-weight:800;font-size:14px;color:var(--gold-bright)}
+.fc-desc{font-size:11px;opacity:.85;margin-top:2px;line-height:1.4}
+.bible-timer{
+  font-family:'Cinzel',serif;font-size:72px;
+  color:#A78BFA;font-weight:800;margin:14px 0;
+  text-shadow:0 0 24px rgba(167,139,250,.6);
+}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1681,7 +1758,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · installs anywhere · works offline · v0.67.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · free forever · works offline · v0.68.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1722,7 +1799,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.67.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.68.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1842,7 +1919,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.67.0';
+const VERSION = '0.68.0';
 
 // ----- STATE -----
 const State = {
@@ -1857,22 +1934,19 @@ const DEFAULT_SAVE = {
   emoji:'🙏', joinedAt:Date.now(), lastDailyClaim:0,
   wallet:{coin:0,gem:0,brain:0,faith:0,ticket:0,key:0},
   iq:50, streak:0, lastPlayDate:null, peakStreak:0, daysPlayed:0, gamesToday:0, gamesTodayDate:'',  // v0.22 starts humble · v0.63 tracking expanded
-  // v0.66 · WELLNESS system · break + hydration + posture + eye + bedtime tracking
+  // v0.66 WELLNESS · v0.68 + faith opt-in + daily goals + wellness streak
   wellness:{
     enabled:true,
-    waterEvery:6,           // remind every N games
-    breakEvery:12,          // hard break every N games
-    eyeRule20:true,         // 20-20-20 eye rest reminder
-    postureCheck:true,      // posture reminder on break
-    bedtimeCutoff:23,       // hour (24h) past which wind-down banner shows
-    sessionMaxMin:60,       // soft cap on continuous play minutes
-    waterCount:0,           // glasses logged today
-    waterCountDate:'',      // sync key for daily water counter
-    breaksTaken:0,          // total breaks logged
-    lastWaterReminderGameNum:0,
-    lastBreakReminderGameNum:0,
-    lastEyeReminderTs:0,
-    sessionStartTs:0,       // current continuous session
+    waterEvery:6, breakEvery:12, eyeRule20:true, postureCheck:true,
+    bedtimeCutoff:23, sessionMaxMin:60,
+    waterCount:0, waterCountDate:'', breaksTaken:0,
+    lastWaterReminderGameNum:0, lastBreakReminderGameNum:0, lastEyeReminderTs:0,
+    sessionStartTs:0,
+    // v0.68 FAITH OPT-IN · DEFAULT OFF · respects natural-faith rule
+    faithBreaks:false, faithLevel:'none', faithBreakCount:0,
+    moodLog:[], grassTouches:0,
+    wellnessStreak:0, lastWellnessDate:'', peakWellnessStreak:0,
+    dailyGoals:{breaks:3, water:6, mood:1, grass:1},
   },
   // v0.64 · MEGA TRACKING · 7 features wired
   playCalendar:{},          // {dateString: gamesPlayed} · last 30 days kept
@@ -12240,14 +12314,24 @@ const Wellness = {
     Modal.close();
     const w = Wellness.ensure();
     w.breaksTaken = (w.breaksTaken||0) + 1;
+    const today = new Date().toDateString();
+    if(w._breaksTodayDate !== today){ w._breaksToday = 0; w._breaksTodayDate = today; }
+    w._breaksToday = (w._breaksToday||0) + 1;
     Wallet.add({coin:25, brain:1});
     Toast.show(`🌿 break taken · +25🪙 +1🧠 · ${w.breaksTaken} breaks all-time`);
     Activity.log('ach','🌿', `took a break · brain reset`);
-    SFX.holy(); haptic(30);
+    Wellness.bumpWellnessStreak();
+    SFX.chime(); haptic(30);
     Save.write();
     if(w.breaksTaken === 1) Ach.unlock('first_break');
     if(w.breaksTaken >= 10) Ach.unlock('breaks_10');
     if(w.breaksTaken >= 50) Ach.unlock('breaks_50');
+    // v0.68 · gentle one-time faith opt-in nudge AFTER 3 breaks · never again if dismissed
+    if(w.breaksTaken === 3 && !w.faithLevel || (w.breaksTaken === 3 && w.faithLevel === 'none' && !w._faithOptInAsked)){
+      w._faithOptInAsked = true;
+      Save.write();
+      setTimeout(() => Wellness.faithOptInPrompt(), 1200);
+    }
   },
   fireWaterToast(){
     const w = Wellness.ensure();
@@ -12262,6 +12346,7 @@ const Wellness = {
     Toast.show(`💧 logged · ${w.waterCount} today · +1🧠`);
     if(w.waterCount === 1) Ach.unlock('water_first');
     if(w.waterCount >= 8) Ach.unlock('water_8_in_day');
+    Wellness.bumpWellnessStreak();
     Save.write();
     haptic(15); SFX.tap();
   },
@@ -12279,7 +12364,52 @@ const Wellness = {
   renderPanel(){
     const w = Wellness.ensure();
     Wellness.syncDailyWater();
+    const prog = Wellness.todayWellnessProgress();
+    const goalRow = (key, em, label) => {
+      const p = prog[key];
+      const pct = Math.min(100, Math.round((p.have / Math.max(1,p.need))*100));
+      const done = p.have >= p.need;
+      return `<div class="daily-goal-row${done?' done':''}">
+        <div class="dg-label"><span class="dg-em">${em}</span> ${label}</div>
+        <div class="dg-bar"><div class="dg-fill" style="width:${pct}%"></div></div>
+        <div class="dg-stat">${p.have}/${p.need}${done?' ✓':''}</div>
+      </div>`;
+    };
+    const goalCard = `<div class="daily-goal-card">
+      <div class="wellness-section-h" style="margin-top:0">🎯 today's wellness goals</div>
+      ${goalRow('breaks','🌿','breaks')}
+      ${goalRow('water', '💧','water glasses')}
+      ${goalRow('mood',  '😊','mood check-in')}
+      ${goalRow('grass', '🌱','outside time')}
+      ${w.wellnessStreak ? `<div class="dim" style="text-align:center;font-size:11px;margin-top:8px">🔥 wellness streak: <b style="color:var(--gold-bright)">${w.wellnessStreak} day${w.wellnessStreak===1?'':'s'}</b> · peak ${w.peakWellnessStreak||w.wellnessStreak}</div>` : ''}
+    </div>`;
+
+    let bibleSection = '';
+    if(w.faithBreaks){
+      bibleSection = `
+        <div class="bible-break-section">
+          <div class="wellness-section-h" style="color:#A78BFA">📖 Bible breaks · ur opted in · all skippable</div>
+          <div class="bible-break-grid">
+            ${BibleBreak.ACTIVITIES.map(a=>`<button class="bible-break-btn" onclick="BibleBreak.start('${a.id}')">
+              <div class="bb-em">${a.em}</div>
+              <div class="bb-name">${a.name}</div>
+              <div class="bb-desc">${a.desc}</div>
+            </button>`).join('')}
+          </div>
+          ${w.faithBreakCount ? `<div class="dim" style="text-align:center;font-size:11px;margin-top:8px">🙏 ${w.faithBreakCount} Bible breaks taken</div>` : ''}
+          <button class="btn-secondary" style="margin-top:8px;width:100%;font-size:11px;opacity:.7" onclick="Wellness.toggleFaithBreaks()">turn off Bible breaks</button>
+        </div>`;
+    } else {
+      bibleSection = `
+        <div class="bible-break-invite">
+          <div class="wellness-section-h" style="margin-top:0">📖 faith path · totally optional</div>
+          <p class="dim" style="font-size:11.5px;margin:4px 0 8px;line-height:1.5">unlock <b>Bible breaks</b> · verse meditation · psalm walks · prayer prompts · gratitude · all skippable · ur choice</p>
+          <button class="btn-secondary" style="width:100%;font-size:12px" onclick="Wellness.faithOptInPrompt()">choose path · or skip</button>
+        </div>`;
+    }
+
     return `<div class="wellness-panel">
+      ${goalCard}
       <div class="wellness-stat-row">
         <div class="wellness-stat"><span class="we-em">💧</span><span class="we-val">${w.waterCount||0}</span><span class="we-lbl">water today</span></div>
         <div class="wellness-stat"><span class="we-em">🌿</span><span class="we-val">${w.breaksTaken||0}</span><span class="we-lbl">breaks all-time</span></div>
@@ -12295,6 +12425,8 @@ const Wellness = {
         <button class="btn-secondary" onclick="Wellness.startStretchFlow()">🤸 guided stretch · 3 min</button>
         <button class="btn-secondary" onclick="Wellness.startBreathTimer()">🌬️ 4-7-8 breathing · 2 min</button>
       </div>
+
+      ${bibleSection}
 
       <div class="wellness-section-h">😊 how u feelin rn</div>
       <div class="mood-strip">
@@ -12424,6 +12556,7 @@ const Wellness = {
     if(!w.moodLog) w.moodLog = [];
     w.moodLog.unshift({mood, ts: Date.now()});
     if(w.moodLog.length > 30) w.moodLog.length = 30;
+    Wellness.bumpWellnessStreak();
     Save.write();
     Toast.show(`${mood} logged · take care of u boi`);
     SFX.chime(); haptic(15);
@@ -12471,13 +12604,253 @@ const Wellness = {
   touchGrass(){
     const w = Wellness.ensure();
     w.grassTouches = (w.grassTouches||0) + 1;
+    const today = new Date().toDateString();
+    if(w._todayGrassDate !== today){ w._todayGrassCount = 0; w._todayGrassDate = today; }
+    w._todayGrassCount = (w._todayGrassCount||0) + 1;
     Wallet.add({coin:50, faith:1});
     Toast.show(`🌱 touched grass · +50🪙 +1✝️ · ${w.grassTouches} all-time`);
     Activity.log('ach','🌱', `went outside · brain reset`);
-    SFX.holy(); haptic(40); confetti({variant:'star',count:30});
+    Wellness.bumpWellnessStreak();
+    SFX.chime(); haptic(40); confetti({variant:'star',count:30});
     Save.write();
     if(w.grassTouches >= 1) Ach.unlock('grass_first');
     if(w.grassTouches >= 10) Ach.unlock('grass_10');
+  },
+
+  // v0.68 · FAITH OPT-IN · ask once · respect their answer · default is OFF
+  faithOptInPrompt(){
+    Modal.show(`
+      <div class="big">📖</div>
+      <h3>add a faith path?</h3>
+      <p style="font-size:13px;margin:10px 0;line-height:1.5">u'll see <b>Bible Break</b> options in ur wellness hub · verse meditation · psalm walks · prayer prompts · gospel pauses · gratitude moments · all optional · all skippable</p>
+      <p class="dim" style="font-size:11.5px;margin:8px 0">pick what fits u · change anytime in Wellness · no judgement either way</p>
+      <div class="faith-choice-grid">
+        <button class="faith-choice" onclick="Wellness.setFaithLevel('christian')">
+          <div class="fc-em">✝️</div>
+          <div class="fc-name">Christian</div>
+          <div class="fc-desc">Bible breaks · verses · prayer · scripture · 5 activities</div>
+        </button>
+        <button class="faith-choice" onclick="Wellness.setFaithLevel('spiritual')">
+          <div class="fc-em">🧘</div>
+          <div class="fc-name">Spiritual</div>
+          <div class="fc-desc">Mindful breaks · gratitude · grounding · no scripture</div>
+        </button>
+        <button class="faith-choice" onclick="Wellness.setFaithLevel('none')">
+          <div class="fc-em">⚡</div>
+          <div class="fc-name">Just breaks</div>
+          <div class="fc-desc">stretch · breath · water · grass · no faith content</div>
+        </button>
+      </div>
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="Modal.close()">decide later</button>
+    `);
+    haptic(10); SFX.tap();
+  },
+  setFaithLevel(level){
+    const w = Wellness.ensure();
+    w.faithLevel = level;
+    w.faithBreaks = level === 'christian';
+    Save.write();
+    Modal.close();
+    if(level === 'christian'){ Toast.show('✝️ Bible breaks unlocked · all optional · skip anytime', 3500); }
+    else if(level === 'spiritual'){ Toast.show('🧘 mindful breaks active', 3500); }
+    else { Toast.show('⚡ clean breaks · no faith content', 3500); }
+    Ach.unlock('faith_pref_set');
+    SFX.chime(); haptic(20);
+    App.openWellnessHub?.();
+  },
+  toggleFaithBreaks(){
+    const w = Wellness.ensure();
+    if(!w.faithLevel || w.faithLevel === 'none'){ Wellness.faithOptInPrompt(); }
+    else { w.faithBreaks = !w.faithBreaks; Save.write(); SFX.tap(); App.openWellnessHub?.(); }
+  },
+
+  // v0.68 · daily wellness goal tracker
+  todayWellnessProgress(){
+    const w = Wellness.ensure();
+    const goals = w.dailyGoals || {breaks:3, water:6, mood:1, grass:1};
+    Wellness.syncDailyWater();
+    const today = new Date().toDateString();
+    const todayMoods = (w.moodLog||[]).filter(m => new Date(m.ts).toDateString() === today).length;
+    const todayGrass = w._todayGrassDate === today ? (w._todayGrassCount||0) : 0;
+    const breaksToday = (w._breaksToday && w._breaksTodayDate === today) ? w._breaksToday : 0;
+    return {
+      breaks:{have:breaksToday,    need:goals.breaks},
+      water: {have:w.waterCount||0,need:goals.water},
+      mood:  {have:todayMoods,     need:goals.mood},
+      grass: {have:todayGrass,     need:goals.grass},
+    };
+  },
+
+  // v0.68 · wellness streak bumper
+  bumpWellnessStreak(){
+    const w = Wellness.ensure();
+    const today = new Date().toDateString();
+    if(w.lastWellnessDate === today) return;
+    const yest = new Date(Date.now()-86400000).toDateString();
+    if(w.lastWellnessDate === yest){ w.wellnessStreak = (w.wellnessStreak||0) + 1; }
+    else { w.wellnessStreak = 1; }
+    w.peakWellnessStreak = Math.max(w.peakWellnessStreak||0, w.wellnessStreak);
+    w.lastWellnessDate = today;
+    Save.write();
+    if(w.wellnessStreak === 3) Ach.unlock('wellness_streak_3');
+    if(w.wellnessStreak === 7) Ach.unlock('wellness_streak_7');
+  },
+};
+
+// ====================================================================
+// 📖 v0.68 · BIBLE BREAK · OPT-IN ONLY · faith content for Christian users
+// ====================================================================
+const BibleBreak = {
+  ACTIVITIES: [
+    {id:'verse',     em:'📖', name:'Verse Meditation', desc:'breathe on one verse · 60 sec',  sec:60},
+    {id:'psalm',     em:'🐑', name:'Psalm 23 Walk',    desc:'meditative read · whole psalm',  sec:90},
+    {id:'prayer',    em:'🙏', name:'Quick Prayer',     desc:'guided 3-line prayer · 30 sec', sec:30},
+    {id:'gospel',    em:'✨', name:'Gospel Pause',     desc:'John 1:1-5 read-along',         sec:90},
+    {id:'gratitude', em:'🌅', name:'Gratitude Moment', desc:'3 things to thank God for',     sec:45},
+  ],
+  PSALM23: [
+    'The LORD is my shepherd · I shall not want.',
+    'He makes me lie down in green pastures · he leads me beside still waters.',
+    'He restores my soul · He leads me in paths of righteousness for his name\'s sake.',
+    'Yea · though I walk through the valley of the shadow of death · I will fear no evil · for thou art with me.',
+    'Thy rod and thy staff · they comfort me.',
+    'Thou preparest a table before me in the presence of mine enemies.',
+    'Thou anointest my head with oil · my cup runneth over.',
+    'Surely goodness and mercy shall follow me all the days of my life · and I will dwell in the house of the LORD forever.',
+  ],
+  JOHN1: [
+    'In the beginning was the Word · and the Word was with God · and the Word was God.',
+    'He was in the beginning with God.',
+    'All things were made through him · and without him was not any thing made that was made.',
+    'In him was life · and the life was the light of men.',
+    'The light shines in the darkness · and the darkness has not overcome it.',
+  ],
+  PRAYER_LINES: [
+    ['Thank you for this moment of rest.', 'Renew my mind for what\'s next.', 'Keep me grounded · keep me steady.'],
+    ['God I see you in the small wins today.', 'Help me carry that gratitude forward.', 'Use what I have for what matters.'],
+    ['Slow my heart Lord.', 'Quiet the noise so I can hear you.', 'Walk with me into the next thing.'],
+    ['I lay down the pressure I\'m holding.', 'Take what\'s heavy · I trust your hands.', 'Let me breathe and remember whose I am.'],
+    ['Father · thank you for breath · for sight · for this body.', 'I receive your peace today.', 'May my work bless others.'],
+  ],
+  GRATITUDE_PROMPTS: [
+    'name 3 specific things from today',
+    'name 3 people who love u',
+    'name 3 abilities ur body has rn',
+    'name 3 prayers God already answered',
+    'name 3 ways u were carried this week',
+  ],
+
+  start(id){
+    const a = BibleBreak.ACTIVITIES.find(x => x.id === id);
+    if(!a) return;
+    Ach.unlock('bible_break_first');
+    const w = Wellness.ensure();
+    w.faithBreakCount = (w.faithBreakCount||0) + 1;
+    if(w.faithBreakCount >= 10) Ach.unlock('bible_break_10');
+    if(w.faithBreakCount >= 50) Ach.unlock('bible_break_50');
+    Save.write();
+    if(id === 'verse')      BibleBreak._verseFlow(a);
+    else if(id === 'psalm') BibleBreak._readAlong(a, BibleBreak.PSALM23, '🐑 Psalm 23 · KJV');
+    else if(id === 'gospel')BibleBreak._readAlong(a, BibleBreak.JOHN1, '✨ John 1:1-5 · ESV');
+    else if(id === 'prayer')BibleBreak._prayerFlow(a);
+    else if(id === 'gratitude') BibleBreak._gratitudeFlow(a);
+  },
+
+  _verseFlow(a){
+    const v = randomVerse();
+    const start = Date.now();
+    let remain = a.sec;
+    const render = () => {
+      Modal.show(`
+        <div class="big">${a.em}</div>
+        <h3 style="color:var(--gold-bright)">${a.name}</h3>
+        <div class="verse" style="margin:16px 0;font-size:14px;line-height:1.6">"${v.t}"<cite>— ${v.r}</cite></div>
+        <div class="dim" style="font-size:11px;margin:8px 0">breathe slow · soak it in · don\'t rush</div>
+        <div class="bible-timer">${remain}</div>
+        <button class="btn-primary" style="margin-top:10px" onclick="BibleBreak._completeFaith()">🙏 done · feels good</button>
+        <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="BibleBreak._closeFaith()">close · finish later</button>
+      `);
+    };
+    render();
+    BibleBreak._tickTimer = setInterval(() => {
+      remain = Math.max(0, a.sec - Math.floor((Date.now() - start)/1000));
+      if(remain <= 0){ clearInterval(BibleBreak._tickTimer); BibleBreak._tickTimer=null; BibleBreak._completeFaith(); }
+      else render();
+    }, 1000);
+  },
+
+  _readAlong(a, lines, title){
+    let i = 0;
+    const next = () => {
+      if(i >= lines.length){ BibleBreak._completeFaith(); return; }
+      const line = lines[i];
+      Modal.show(`
+        <div class="big">${a.em}</div>
+        <h3 style="color:var(--gold-bright)">${title}</h3>
+        <p style="font-size:16px;line-height:1.7;margin:18px 0;font-style:italic">"${line}"</p>
+        <div class="dim" style="font-size:11px">verse ${i+1} of ${lines.length} · tap NEXT when ur ready</div>
+        <button class="btn-primary" style="margin-top:14px" onclick="BibleBreak._readNext()">▶ next</button>
+        <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="BibleBreak._closeFaith()">close · pick up later</button>
+      `);
+      i++;
+      BibleBreak._readAdvance = next;
+    };
+    next();
+  },
+  _readNext(){ BibleBreak._readAdvance?.(); },
+
+  _prayerFlow(a){
+    const lines = BibleBreak.PRAYER_LINES[Math.floor(Math.random()*BibleBreak.PRAYER_LINES.length)];
+    let i = 0;
+    const next = () => {
+      if(i >= lines.length){ BibleBreak._completeFaith(); return; }
+      Modal.show(`
+        <div class="big">🙏</div>
+        <h3 style="color:var(--gold-bright)">${a.name}</h3>
+        <p style="font-size:17px;line-height:1.6;margin:18px 6px;font-style:italic">"${lines[i]}"</p>
+        <div class="dim" style="font-size:11px;margin:8px 0">say it slow · mean it · line ${i+1} of 3</div>
+        <button class="btn-primary" onclick="BibleBreak._prayerNext()">▶ next line</button>
+        <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="BibleBreak._closeFaith()">close</button>
+      `);
+      i++;
+      BibleBreak._prayerAdvance = next;
+    };
+    next();
+  },
+  _prayerNext(){ BibleBreak._prayerAdvance?.(); },
+
+  _gratitudeFlow(a){
+    const prompt = BibleBreak.GRATITUDE_PROMPTS[Math.floor(Math.random()*BibleBreak.GRATITUDE_PROMPTS.length)];
+    Modal.show(`
+      <div class="big">🌅</div>
+      <h3 style="color:var(--gold-bright)">${a.name}</h3>
+      <p style="font-size:14px;margin:12px 0">${prompt}</p>
+      <div class="dim" style="font-size:11px;margin:6px 0">no need to type · just think on each one for a moment</div>
+      <div class="verse" style="margin:12px 0">"Give thanks in all circumstances."<cite>— 1 Thessalonians 5:18</cite></div>
+      <button class="btn-primary" style="margin-top:14px" onclick="BibleBreak._completeFaith()">🙏 named 3 · done</button>
+      <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="BibleBreak._closeFaith()">close · come back later</button>
+    `);
+  },
+
+  _closeFaith(){
+    if(BibleBreak._tickTimer){ clearInterval(BibleBreak._tickTimer); BibleBreak._tickTimer=null; }
+    Modal.close();
+  },
+
+  _completeFaith(){
+    if(BibleBreak._tickTimer){ clearInterval(BibleBreak._tickTimer); BibleBreak._tickTimer=null; }
+    Modal.close();
+    Wallet.add({coin:30, faith:2, brain:1});
+    Toast.show('🙏 Bible break done · +30🪙 +2✝️ +1🧠');
+    Activity.log('ach','📖','Bible break · soul reset');
+    const w = Wellness.ensure();
+    const today = new Date().toDateString();
+    if(w._breaksTodayDate !== today){ w._breaksToday = 0; w._breaksTodayDate = today; }
+    w._breaksToday = (w._breaksToday||0) + 1;
+    w.breaksTaken = (w.breaksTaken||0) + 1;
+    Wellness.bumpWellnessStreak();
+    Save.write();
+    SFX.holy(); haptic(30); confetti({variant:'gold', count:40});
   },
 };
 
