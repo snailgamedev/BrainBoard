@@ -1325,7 +1325,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.61.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.61.1 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1366,7 +1366,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.61.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.61.1</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1483,7 +1483,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.61.0';
+const VERSION = '0.61.1';
 
 // ----- STATE -----
 const State = {
@@ -7546,7 +7546,10 @@ const Ach = {
     if(!def) return;
     State.data.ach[id] = Date.now();
     Save.write();
-    Toast.show(`${def.em} <span class="ach">${def.t}</span> · ${def.d}`);
+    // v0.61.1 phase 3: first_win toast is redundant w/ the cinematic FIRST WIN badge in Modal.win
+    if(id !== 'first_win'){
+      Toast.show(`${def.em} <span class="ach">${def.t}</span> · ${def.d}`);
+    }
     SFX.win();
     // v0.46 · achievement chain combo
     try{ Chain.push(id); }catch(e){}
@@ -8043,6 +8046,8 @@ const Modal = {
     }
     // v0.61 phase 2: PR/first-win cinematic backdrop · totals.wins is already incremented at this point
     const isFirstWin = State.data && State.data.totals && State.data.totals.wins === 1;
+    // v0.61.1 phase 3: stash for screenshot (avoids fragile inline JSON in onclick)
+    State._lastWinPayload = {title, rewards: rewards||{}, isFirstWin, isPR};
     const cinematicCls = isPR ? 'pr' : (isFirstWin ? 'first' : '');
     const headerBadge = isFirstWin
       ? `<div class="first-win-badge">🌱 your FIRST win · welcome to BrainBoard</div>`
@@ -8056,7 +8061,7 @@ const Modal = {
         ${bottom}
         <div class="share-row">
           <button class="share-btn" onclick="App.shareScore('${title.replace(/'/g,'')}')">📤 share</button>
-          <button class="share-btn" onclick="App.shareScreenshot('${title.replace(/'/g,'')}',${JSON.stringify(rewards||{}).replace(/"/g,'&quot;')})">📸 save card</button>
+          <button class="share-btn" onclick="App.shareScreenshot()">📸 save card</button>
         </div>
         <div class="modal-actions">
           <button class="btn-secondary" onclick="App._modalLobby()">🏛️ lobby</button>
@@ -9283,6 +9288,8 @@ const App = {
     pop = document.createElement('div');
     pop.id='share-popup'; pop.className='share-popup';
     pop.innerHTML = html;
+    // v0.61.1 phase 3: backdrop tap dismisses
+    pop.addEventListener('click', e=>{ if(e.target === pop) pop.remove(); });
     document.body.appendChild(pop);
   },
   _copyClip(text){
@@ -9290,7 +9297,10 @@ const App = {
     else Toast.show('📤 copy not supported');
   },
   // v0.61 phase 2: canvas-rendered shareable PNG
-  shareScreenshot(title, rewards){
+  shareScreenshot(){
+    const payload = State._lastWinPayload || {title:'WIN!', rewards:{}};
+    const title = payload.title;
+    const rewards = payload.rewards || {};
     try{
       const canvas = document.createElement('canvas');
       canvas.width = 1080; canvas.height = 1080;
@@ -9309,8 +9319,9 @@ const App = {
       ctx.fillText('sharpen the mind · feed the spirit', canvas.width/2, 250);
       // win badge
       ctx.font='bold 64px sans-serif'; ctx.fillStyle='#FFD700';
-      ctx.fillText('🎉 VICTORY', canvas.width/2, 400);
-      ctx.font='48px sans-serif'; ctx.fillStyle='#FFF';
+      const badgeText = payload.isFirstWin ? '🌱 FIRST WIN' : (payload.isPR ? '💎 NEW BEST' : '🎉 VICTORY');
+      ctx.fillText(badgeText, canvas.width/2, 400);
+      ctx.font='44px sans-serif'; ctx.fillStyle='#FFF';
       const clean = (title||'').replace(/[^ -~ -ɏ☀-⟿\uD83C-􏰀-\uDFFF]/g,'').slice(0,40);
       ctx.fillText(clean, canvas.width/2, 480);
       // stats
@@ -9332,18 +9343,54 @@ const App = {
       // URL footer
       ctx.font='bold 32px sans-serif'; ctx.fillStyle='#FBBF24';
       ctx.fillText('snailgamedev.github.io/BrainBoard', canvas.width/2, 1000);
-      // export
-      canvas.toBlob(blob=>{
-        if(!blob){ Toast.show('📸 export failed'); return; }
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `brainboard-win-${Date.now()}.png`;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url), 1500);
-        Toast.show('📸 saved · share anywhere!');
-        SFX.sparkle();
-        haptic(15);
-      }, 'image/png');
+      // export · v0.61.1 phase 3: triple-path for iOS Safari compatibility
+      const fname = `brainboard-win-${Date.now()}.png`;
+      // Path 1: Web Share Files API · native share sheet (great on iOS)
+      if(canvas.toBlob && navigator.canShare){
+        canvas.toBlob(blob=>{
+          if(!blob){ App._screenshotFallback(canvas, fname); return; }
+          try{
+            const file = new File([blob], fname, {type:'image/png'});
+            if(navigator.canShare({files:[file]})){
+              navigator.share({files:[file], title:'BrainBoard', text:`${title} · play free: https://snailgamedev.github.io/BrainBoard/`})
+                .then(()=>{ Toast.show('📸 shared!'); SFX.sparkle(); })
+                .catch(()=>App._screenshotDownload(blob, fname));
+            }else{ App._screenshotDownload(blob, fname); }
+          }catch(e){ App._screenshotDownload(blob, fname); }
+        }, 'image/png');
+      }
+      // Path 2: toBlob + download anchor (Chrome/Firefox desktop + most Android)
+      else if(canvas.toBlob){
+        canvas.toBlob(blob=>{
+          if(!blob) App._screenshotFallback(canvas, fname);
+          else App._screenshotDownload(blob, fname);
+        }, 'image/png');
+      }
+      // Path 3: toDataURL fallback (old iOS Safari)
+      else{ App._screenshotFallback(canvas, fname); }
+      haptic(15);
+    }catch(e){ Toast.show('📸 screenshot failed'); console.error(e); }
+  },
+  _screenshotDownload(blob, fname){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    Toast.show('📸 saved · share anywhere!');
+    SFX.sparkle();
+  },
+  _screenshotFallback(canvas, fname){
+    try{
+      const data = canvas.toDataURL('image/png');
+      const w = window.open();
+      if(w){
+        w.document.write(`<!doctype html><title>${fname}</title><body style="background:#0F0820;margin:0;padding:14px;font-family:system-ui;color:#FFF8E7"><img src="${data}" style="max-width:100%;display:block;margin:0 auto;border-radius:10px"><p style="text-align:center;margin-top:14px">long-press the image to save</p></body>`);
+        Toast.show('📸 opened in new tab · long-press to save');
+      }else{
+        Toast.show('📸 popup blocked · enable popups');
+      }
+      SFX.sparkle();
     }catch(e){ Toast.show('📸 screenshot failed'); console.error(e); }
   },
 
