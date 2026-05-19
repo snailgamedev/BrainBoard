@@ -830,6 +830,66 @@ button{
   margin-top:8px;
 }
 .share-btn:active{transform:scale(.96)}
+/* ==================== v0.61 phase 2 · WIN CINEMATIC ==================== */
+.share-row{display:flex;gap:8px;margin:10px 0 6px;justify-content:center;flex-wrap:wrap}
+.share-row .share-btn{margin-top:0;flex:1;min-width:130px;max-width:170px}
+.win-cinematic{position:relative;animation:winPop .6s cubic-bezier(.2,1.4,.4,1)}
+.win-cinematic.pr{background:radial-gradient(circle at 50% 0,rgba(251,191,36,.25),transparent 70%);border-radius:14px;padding:8px}
+.win-cinematic.first{background:radial-gradient(circle at 50% 0,rgba(167,139,250,.3),transparent 75%);border-radius:14px;padding:8px}
+@keyframes winPop{
+  0%{opacity:0;transform:scale(.6) translateY(20px)}
+  60%{opacity:1;transform:scale(1.04) translateY(-4px)}
+  100%{opacity:1;transform:scale(1) translateY(0)}
+}
+.win-emoji{display:inline-block;animation:winBounce 1.4s ease-in-out infinite}
+@keyframes winBounce{
+  0%,100%{transform:scale(1) rotate(0deg)}
+  50%{transform:scale(1.12) rotate(-3deg)}
+}
+.win-title{animation:fadeUp .5s ease-out .15s backwards}
+.reward-row{animation:fadeUp .5s ease-out .25s backwards}
+@keyframes fadeUp{
+  0%{opacity:0;transform:translateY(8px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+.first-win-badge,.pr-badge{
+  display:inline-block;
+  background:linear-gradient(90deg,#FBBF24,#A78BFA);
+  color:#0F0820;font-weight:800;font-size:11px;
+  padding:5px 12px;border-radius:99px;
+  letter-spacing:.05em;margin-bottom:8px;
+  animation:badgeShine 2s ease-in-out infinite;
+}
+.first-win-badge{background:linear-gradient(90deg,#A78BFA,#FBBF24,#10B981);background-size:200% 100%}
+@keyframes badgeShine{
+  0%,100%{background-position:0% 50%;box-shadow:0 0 12px rgba(251,191,36,.4)}
+  50%{background-position:100% 50%;box-shadow:0 0 24px rgba(251,191,36,.7)}
+}
+.win-again{
+  animation:pulseAgain 1.6s ease-in-out infinite;
+  position:relative;overflow:hidden;
+}
+@keyframes pulseAgain{
+  0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.55)}
+  50%{box-shadow:0 0 0 8px rgba(251,191,36,0)}
+}
+.share-popup{
+  position:fixed;inset:0;background:rgba(15,8,32,.85);
+  display:flex;align-items:center;justify-content:center;
+  z-index:500;padding:20px;
+  animation:fadeUp .3s ease-out;
+}
+.share-popup .share-picker{
+  background:linear-gradient(135deg,#1A0F30,#3A1F60);
+  border:2px solid #FBBF24;border-radius:18px;
+  padding:18px;max-width:340px;width:100%;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);
+}
+.share-popup a.btn-secondary{
+  text-decoration:none;display:flex;
+  align-items:center;justify-content:center;
+  padding:14px 10px;font-size:13px;
+}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1265,7 +1325,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.60.1 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.61.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1306,7 +1366,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.60.1</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.61.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1423,7 +1483,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.60.1';
+const VERSION = '0.61.0';
 
 // ----- STATE -----
 const State = {
@@ -7908,6 +7968,14 @@ const SFX = (()=>{
     win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.18),i*100)); },
     chime(){ [349,440,523].forEach((f,i)=>setTimeout(()=>tone(f,.25,'sine',.12),i*120)); },
     holy(){ [392,493,587,784,987].forEach((f,i)=>setTimeout(()=>tone(f,.4,'sine',.1),i*120)); },
+    // v0.61 phase 2 sound design pass
+    cheer(){ [659,784,988,1318,1568].forEach((f,i)=>setTimeout(()=>tone(f,.22,'triangle',.09),i*60)); },
+    levelup(){ [392,523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.18,'sine',.1),i*55)); },
+    sparkle(){ for(let i=0;i<6;i++) setTimeout(()=>tone(1500+Math.random()*1500,.08,'sine',.06),i*40); },
+    perfect(){ [784,988,1318,1568,2093].forEach((f,i)=>setTimeout(()=>tone(f,.28,'sine',.11),i*70)); setTimeout(()=>tone(2637,.5,'sine',.1),360); },
+    woosh(){ const c=ac(); if(!c) return; const o=c.createOscillator(),g=c.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(880,c.currentTime); o.frequency.exponentialRampToValueAtTime(110,c.currentTime+.25); g.gain.setValueAtTime(.08,c.currentTime); g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.25); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+.26); },
+    milestone(){ [523,659,784,1046,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.2,'sine',.1),i*90)); },
+    coinPing(){ tone(1320,.05,'sine',.06); setTimeout(()=>tone(1760,.07,'sine',.06),40); },
   };
 })();
 function haptic(ms=10){ if(State.data?.settings?.haptic && navigator.vibrate) navigator.vibrate(ms); }
@@ -7957,9 +8025,10 @@ const Modal = {
       title = `${t.em} TIER UP · ${t.name} · ${title}`;
       State._lastTierPromotion = null;
     }
+    // v0.61 phase 2: reward chips with count-up data attrs
     const r = Object.entries(rewards||{}).map(([k,n])=>{
       const e = {coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️',ticket:'🎫',key:'🗝️'}[k]||'';
-      return `<span class="reward-chip">+${n} ${e}</span>`;
+      return `<span class="reward-chip" data-final="${n}">+<span class="reward-count" data-target="${n}">0</span> ${e}</span>`;
     }).join('');
     // v0.9 natural-faith: scripture only when contextually appropriate
     const showVerse = verse !== null || shouldShowVerseOnWin(roomId, ctx);
@@ -7972,17 +8041,48 @@ const Modal = {
       bottom = `<div class="bio-quote" style="margin:14px 0">${randomEncouragement()}</div>`;
       SFX.win();
     }
+    // v0.61 phase 2: PR/first-win cinematic backdrop · totals.wins is already incremented at this point
+    const isFirstWin = State.data && State.data.totals && State.data.totals.wins === 1;
+    const cinematicCls = isPR ? 'pr' : (isFirstWin ? 'first' : '');
+    const headerBadge = isFirstWin
+      ? `<div class="first-win-badge">🌱 your FIRST win · welcome to BrainBoard</div>`
+      : (isPR ? `<div class="pr-badge">💎 new personal best</div>` : '');
     Modal.show(`
-      <div class="big">${emoji}</div>
-      <h3>${title}</h3>
-      <div class="reward-row">${r}</div>
-      ${bottom}
-      <button class="share-btn" onclick="App.shareScore('${title.replace(/'/g,'')}')">📤 share my score</button>
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="App._modalLobby()">🏛️ lobby</button>
-        <button class="btn-primary" onclick="App._modalRetry()">🔁 again</button>
+      <div class="win-cinematic ${cinematicCls}">
+        ${headerBadge}
+        <div class="big win-emoji">${emoji}</div>
+        <h3 class="win-title">${title}</h3>
+        <div class="reward-row">${r}</div>
+        ${bottom}
+        <div class="share-row">
+          <button class="share-btn" onclick="App.shareScore('${title.replace(/'/g,'')}')">📤 share</button>
+          <button class="share-btn" onclick="App.shareScreenshot('${title.replace(/'/g,'')}',${JSON.stringify(rewards||{}).replace(/"/g,'&quot;')})">📸 save card</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="App._modalLobby()">🏛️ lobby</button>
+          <button class="btn-primary win-again" onclick="App._modalRetry()">🔁 play again</button>
+        </div>
       </div>`);
-    confetti();
+    // count-up animation on reward chips
+    setTimeout(()=>{
+      document.querySelectorAll('.reward-count').forEach(el=>{
+        const target = parseInt(el.dataset.target,10)||0;
+        if(target<=0) return;
+        const steps = Math.min(20, target);
+        const inc = Math.max(1, Math.round(target/steps));
+        let n=0;
+        const tick = ()=>{
+          n = Math.min(target, n+inc);
+          el.textContent = n;
+          if(n<target){ setTimeout(tick, 30); SFX.coinPing && SFX.coinPing(); }
+        };
+        tick();
+      });
+    }, 80);
+    // confetti variant: first-win = epic, PR = gold, default = star
+    if(isFirstWin){ epicConfetti(); SFX.cheer(); setTimeout(()=>SFX.milestone(),500); }
+    else if(isPR){ goldBurst(); SFX.perfect(); }
+    else{ confetti({variant:'star',count:50}); SFX.sparkle(); }
     // v0.37 win modal music sting · 4-note ascending flourish
     if(typeof Music !== 'undefined' && State.data?.settings?.music){
       [523,659,784,1046].forEach((f,i)=>{
@@ -8091,20 +8191,41 @@ function renderMiniWallet(){
 }
 function fmt(n){ if(n<1000) return n; if(n<1e6) return (n/1000).toFixed(1)+'k'; return (n/1e6).toFixed(1)+'M'; }
 function el(t,c,h){ const e=document.createElement(t); if(c)e.className=c; if(h!==undefined)e.innerHTML=h; return e; }
-function confetti(){
-  const colors=['#F59E0B','#FBBF24','#7C3AED','#3B82F6','#10B981','#EF4444','#FFF8E7'];
-  for(let i=0;i<36;i++){
+function confetti(opts){
+  // v0.61 phase 2: cinematic variants
+  const variant = (opts && opts.variant) || 'default';  // 'default' · 'gold' · 'star' · 'epic'
+  const count = (opts && opts.count) || (variant==='epic' ? 100 : variant==='gold' ? 60 : 42);
+  const palette = {
+    'default':['#F59E0B','#FBBF24','#7C3AED','#3B82F6','#10B981','#EF4444','#FFF8E7'],
+    'gold':   ['#FBBF24','#F59E0B','#FFD700','#FFF8E7','#FFA500','#FFB400'],
+    'star':   ['#FBBF24','#FFF8E7','#A78BFA','#60A5FA'],
+    'epic':   ['#FBBF24','#F59E0B','#A78BFA','#7C3AED','#60A5FA','#10B981','#FFD700','#FFF8E7'],
+  }[variant] || ['#F59E0B','#FBBF24','#7C3AED'];
+  const useStars = (variant==='star' || variant==='epic');
+  for(let i=0;i<count;i++){
     const p = document.createElement('div');
     p.className='confetti-piece';
-    p.style.background=colors[Math.floor(Math.random()*colors.length)];
-    p.style.left=(50+Math.random()*10-5)+'%';
+    const c = palette[Math.floor(Math.random()*palette.length)];
+    if(useStars && Math.random()<.45){
+      // ✨ stars as inline char so they render fluidly
+      p.textContent = ['✨','⭐','💫','🌟'][Math.floor(Math.random()*4)];
+      p.style.background='transparent';
+      p.style.fontSize = (16+Math.random()*16)+'px';
+      p.style.width='auto'; p.style.height='auto';
+    }else{
+      p.style.background=c;
+    }
+    p.style.left=(50+Math.random()*16-8)+'%';
     p.style.top='40%';
-    p.style.setProperty('--dx', ((Math.random()-.5)*window.innerWidth*1.2)+'px');
-    p.style.setProperty('--dy', ((Math.random()-.2)*window.innerHeight*.9)+'px');
+    p.style.setProperty('--dx', ((Math.random()-.5)*window.innerWidth*1.4)+'px');
+    p.style.setProperty('--dy', ((Math.random()-.15)*window.innerHeight*(variant==='epic'?1.1:.95))+'px');
+    if(variant==='epic'){ p.style.animationDuration = (1.4+Math.random()*1.2)+'s'; }
     document.body.appendChild(p);
-    setTimeout(()=>p.remove(),1600);
+    setTimeout(()=>p.remove(), variant==='epic' ? 2600 : 1700);
   }
 }
+function goldBurst(){ confetti({variant:'gold',count:80}); }
+function epicConfetti(){ confetti({variant:'epic',count:120}); }
 
 // ====================================================================
 // 🎬 v0.10 GAME INTROS — every game gets a proper entry popup
@@ -9134,15 +9255,96 @@ const App = {
     }
   },
   shareScore(title){
-    const text = `🧠 BrainBoard · ${title} · IQ Rank ${State.data.iq} · Streak 🔥${State.data.streak}\n\nplay free: https://snailgamedev.github.io/BrainBoard/`;
+    const url = 'https://snailgamedev.github.io/BrainBoard/';
+    const text = `🧠 BrainBoard · ${title} · IQ Rank ${State.data.iq} · Streak 🔥${State.data.streak}\n\nplay free: ${url}`;
     if(navigator.share){
-      navigator.share({title:'BrainBoard',text}).catch(()=>{});
-    }else if(navigator.clipboard){
-      navigator.clipboard.writeText(text).then(()=>Toast.show('📋 copied to clipboard!'));
+      navigator.share({title:'BrainBoard',text,url}).catch(()=>{});
     }else{
-      Toast.show('📤 share not supported');
+      // v0.61 phase 2: in-modal share picker fallback
+      App._sharePicker(text, url);
     }
     haptic(8);
+  },
+  _sharePicker(text, url){
+    const enc = encodeURIComponent(text);
+    const html = `
+      <div class="share-picker">
+        <h3 style="margin:0 0 10px;color:var(--gold-bright)">📤 SHARE YOUR SCORE</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <a class="btn-secondary" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${enc}">🐦 Twitter / X</a>
+          <a class="btn-secondary" target="_blank" rel="noopener" href="sms:?body=${enc}">💬 SMS</a>
+          <a class="btn-secondary" target="_blank" rel="noopener" href="https://www.reddit.com/submit?title=${encodeURIComponent('BrainBoard score')}&text=${enc}">👽 Reddit</a>
+          <button class="btn-secondary" onclick="App._copyClip(${JSON.stringify(text).replace(/"/g,'&quot;')})">📋 Copy</button>
+        </div>
+        <button class="btn-primary" style="margin-top:12px;width:100%" onclick="document.getElementById('share-popup').remove()">DONE</button>
+      </div>`;
+    let pop = document.getElementById('share-popup');
+    if(pop) pop.remove();
+    pop = document.createElement('div');
+    pop.id='share-popup'; pop.className='share-popup';
+    pop.innerHTML = html;
+    document.body.appendChild(pop);
+  },
+  _copyClip(text){
+    if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>Toast.show('📋 copied!')); }
+    else Toast.show('📤 copy not supported');
+  },
+  // v0.61 phase 2: canvas-rendered shareable PNG
+  shareScreenshot(title, rewards){
+    try{
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080; canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      // gradient bg
+      const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+      g.addColorStop(0,'#1A0F30'); g.addColorStop(0.5,'#3A1F60'); g.addColorStop(1,'#0F0820');
+      ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+      // gold border
+      ctx.strokeStyle='#FBBF24'; ctx.lineWidth=8;
+      ctx.strokeRect(40,40,canvas.width-80,canvas.height-80);
+      // BrainBoard logo
+      ctx.font='bold 96px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#FBBF24';
+      ctx.fillText('🧠 BrainBoard', canvas.width/2, 200);
+      ctx.font='32px sans-serif'; ctx.fillStyle='#FFF8E7';
+      ctx.fillText('sharpen the mind · feed the spirit', canvas.width/2, 250);
+      // win badge
+      ctx.font='bold 64px sans-serif'; ctx.fillStyle='#FFD700';
+      ctx.fillText('🎉 VICTORY', canvas.width/2, 400);
+      ctx.font='48px sans-serif'; ctx.fillStyle='#FFF';
+      const clean = (title||'').replace(/[^ -~ -ɏ☀-⟿\uD83C-􏰀-\uDFFF]/g,'').slice(0,40);
+      ctx.fillText(clean, canvas.width/2, 480);
+      // stats
+      ctx.font='36px sans-serif'; ctx.fillStyle='#FBBF24';
+      ctx.fillText(`IQ Rank ${State.data.iq}  ·  Streak 🔥${State.data.streak}`, canvas.width/2, 600);
+      // rewards
+      const rEntries = Object.entries(rewards||{});
+      if(rEntries.length){
+        ctx.font='40px sans-serif'; ctx.fillStyle='#10B981';
+        const e = {coin:'🪙',gem:'💎',brain:'🧠',faith:'✝️',ticket:'🎫',key:'🗝️'};
+        const rTxt = rEntries.map(([k,n])=>`+${n} ${e[k]||k}`).join('   ');
+        ctx.fillText(rTxt, canvas.width/2, 720);
+      }
+      // verse
+      ctx.font='italic 28px serif'; ctx.fillStyle='#FFF8E7';
+      ctx.fillText('"Whatever you do, work heartily, as for the Lord."', canvas.width/2, 850);
+      ctx.font='24px sans-serif'; ctx.fillStyle='rgba(255,248,231,.7)';
+      ctx.fillText('— Colossians 3:23', canvas.width/2, 890);
+      // URL footer
+      ctx.font='bold 32px sans-serif'; ctx.fillStyle='#FBBF24';
+      ctx.fillText('snailgamedev.github.io/BrainBoard', canvas.width/2, 1000);
+      // export
+      canvas.toBlob(blob=>{
+        if(!blob){ Toast.show('📸 export failed'); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `brainboard-win-${Date.now()}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 1500);
+        Toast.show('📸 saved · share anywhere!');
+        SFX.sparkle();
+        haptic(15);
+      }, 'image/png');
+    }catch(e){ Toast.show('📸 screenshot failed'); console.error(e); }
   },
 
   // ----- AUX -----
