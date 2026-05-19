@@ -1,6 +1,6 @@
-// BrainBoard Service Worker · v0.63.0
+// BrainBoard Service Worker · v0.64.0
 // NETWORK-FIRST · updates land instantly · cache is offline fallback only
-const VERSION = 'brainboard-v0.63.0';
+const VERSION = 'brainboard-v0.64.0';
 const CORE = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

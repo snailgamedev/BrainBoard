@@ -995,6 +995,103 @@ button{
   padding-top:6px;border-top:1px dashed rgba(245,158,11,.3);
 }
 .today-next b{color:var(--gold-bright)}
+/* ==================== v0.64 · STREAK CALENDAR + MASTERY + GOALS + LIFETIME ==================== */
+.lifetime-card{
+  background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(124,58,237,.14));
+  border:1px solid rgba(16,185,129,.35);
+  border-radius:14px;padding:12px 14px;margin:14px 0;
+}
+.lifetime-title{
+  font-size:11px;font-weight:700;letter-spacing:.08em;
+  color:#10B981;text-align:center;margin-bottom:8px;
+}
+.lifetime-row{
+  display:flex;justify-content:space-around;flex-wrap:wrap;gap:8px;
+  font-size:14px;font-weight:700;
+}
+.lifetime-row span{
+  background:rgba(0,0,0,.18);padding:6px 12px;border-radius:99px;
+}
+.streak-cal-wrap{
+  background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:12px;margin:14px 0;
+}
+.streak-cal-title{
+  font-size:11px;font-weight:700;letter-spacing:.08em;
+  color:var(--gold-bright);text-align:center;margin-bottom:8px;
+}
+.streak-cal-grid{
+  display:grid;grid-template-columns:repeat(10,1fr);gap:4px;max-width:340px;margin:0 auto;
+}
+.cal-cell{
+  aspect-ratio:1;border-radius:3px;
+  background:rgba(255,255,255,.07);
+  transition:transform .15s;
+}
+.cal-cell:hover{transform:scale(1.4);z-index:2;position:relative}
+.cal-cell.lvl-0{background:rgba(255,255,255,.07)}
+.cal-cell.lvl-1{background:rgba(16,185,129,.4)}
+.cal-cell.lvl-2{background:rgba(16,185,129,.6)}
+.cal-cell.lvl-3{background:rgba(251,191,36,.7)}
+.cal-cell.lvl-4{background:rgba(251,191,36,1);box-shadow:0 0 6px rgba(251,191,36,.7)}
+.cal-cell.is-today{outline:2px solid #FBBF24;outline-offset:1px}
+.streak-cal-legend{
+  display:flex;align-items:center;justify-content:center;gap:4px;margin-top:8px;
+}
+.streak-cal-legend .cal-cell{width:14px;height:14px;aspect-ratio:auto}
+.room-mastery-section, .goals-section{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:12px;margin:14px 0;
+}
+.rm-title{
+  font-family:'Cinzel',serif;color:var(--gold-bright);
+  font-size:14px;margin:0 0 10px;text-align:center;
+}
+.rm-row{
+  display:grid;grid-template-columns:1fr 80px;gap:8px;
+  align-items:center;margin-bottom:6px;font-size:12px;
+}
+.rm-label{font-weight:600}
+.rm-bar{
+  grid-column:1/-1;height:8px;background:rgba(255,255,255,.1);
+  border-radius:99px;overflow:hidden;margin-top:2px;
+}
+.rm-fill{
+  height:100%;background:linear-gradient(90deg,#10B981,#FBBF24);
+  transition:width .4s;
+}
+.rm-stat{
+  text-align:right;font-size:11px;font-weight:700;color:var(--gold-bright);
+}
+.rm-row{grid-template-columns:1fr 80px}
+.rm-row > .rm-label{grid-column:1}
+.rm-row > .rm-stat{grid-column:2}
+.rm-row > .rm-bar{grid-column:1/-1}
+.goal-row{
+  background:rgba(124,58,237,.1);
+  border-radius:10px;padding:8px 10px;margin-bottom:8px;
+}
+.goal-label{font-size:12px;font-weight:700;margin-bottom:4px}
+.goal-meta{
+  font-size:10.5px;opacity:.85;text-align:right;
+  display:flex;justify-content:flex-end;align-items:center;gap:8px;
+}
+.goal-x{
+  background:rgba(239,68,68,.2);color:#FCA5A5;
+  border:1px solid rgba(239,68,68,.4);
+  border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;
+}
+.goal-type-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0;
+}
+.goal-type-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.4);
+  border-radius:10px;padding:10px 6px;cursor:pointer;
+  color:#FFF8E7;font-family:inherit;text-align:center;
+}
+.goal-type-btn:active{transform:scale(.96)}
+.goal-type-btn:hover{background:rgba(124,58,237,.22)}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1430,7 +1527,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.63.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.64.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1471,7 +1568,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.63.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.64.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1589,7 +1686,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.63.0';
+const VERSION = '0.64.0';
 
 // ----- STATE -----
 const State = {
@@ -1604,6 +1701,15 @@ const DEFAULT_SAVE = {
   emoji:'🙏', joinedAt:Date.now(), lastDailyClaim:0,
   wallet:{coin:0,gem:0,brain:0,faith:0,ticket:0,key:0},
   iq:50, streak:0, lastPlayDate:null, peakStreak:0, daysPlayed:0, gamesToday:0, gamesTodayDate:'',  // v0.22 starts humble · v0.63 tracking expanded
+  // v0.64 · MEGA TRACKING · 7 features wired
+  playCalendar:{},          // {dateString: gamesPlayed} · last 30 days kept
+  roomMastery:{},           // {roomId: {gamesWon: set serialized, perfectDays: 0}}
+  lifetimeEarned:{coin:0,gem:0,brain:0,faith:0,ticket:0,key:0}, // never decreases · counts all-time accumulation
+  gameTimes:{count:0, totalMs:0, last10:[]}, // average game duration tracker
+  lossStreak:0,             // current consecutive loss count · resets on win
+  longestLossStreak:0,      // worst run · stays as a humbling marker
+  goals:[],                 // user-set personal goals · [{id, label, type, target, current, deadline, claimed}]
+  goalsCompleted:0,         // counter for achievements
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
@@ -7552,6 +7658,8 @@ const Wallet = {
   add(c){
     const w = State.data.wallet;
     Object.entries(c).forEach(([k,v])=>{ w[k]=(w[k]||0)+v; });
+    // v0.64 · track lifetime accumulation (never decreases · for stats card)
+    try{ Tracker.recordEarn(c); }catch(e){}
     Save.write(); UI.updateWallet();
   },
   spend(c){
@@ -9355,6 +9463,8 @@ const App = {
     State.data.recsHistory = State.data.recsHistory || {};
     const recKey = `${roomId}:${g.id}`;
     State.data.recsHistory[recKey] = (State.data.recsHistory[recKey]||0)+1;
+    // v0.64 · stamp start time for game-duration tracking
+    State._gameStartTs = Date.now();
     // play cinematic, then launch
     Cinematic.show(roomId, g, ()=>g.launch());
   },
@@ -9594,6 +9704,54 @@ const App = {
     Toast.show(`🎨 theme: ${APP_THEMES[t].name}`);
     Ach.unlock('theme_picked');
     App.openSettings();
+  },
+  // v0.64 · Goal creator popup
+  _openGoalCreator(){
+    const opts = Goals.TYPES.map(t=>{
+      const cur = t.fn(State.data);
+      return `<button class="goal-type-btn" onclick="App._pickGoalType('${t.id}')">
+        <span style="font-size:24px">${t.em}</span>
+        <span style="font-weight:700">${t.label}</span>
+        <span class="dim" style="font-size:11px">current: ${cur}</span>
+      </button>`;
+    }).join('');
+    Modal.show(`<div class="big">🎯</div>
+      <h3>pick a goal type</h3>
+      <p class="dim" style="font-size:12px;margin:4px 0 10px">choose what to chase</p>
+      <div class="goal-type-grid">${opts}</div>
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="Modal.close()">cancel</button>`);
+  },
+  _pickGoalType(typeId){
+    const type = Goals.TYPES.find(t=>t.id===typeId); if(!type) return;
+    const cur = type.fn(State.data);
+    const suggested = Math.max(type.min, cur + type.step*Math.max(3, Math.round(type.min/2)));
+    Modal.show(`<div class="big">${type.em}</div>
+      <h3>${type.label}</h3>
+      <p class="dim" style="font-size:12px;margin:4px 0 10px">current: <b>${cur}</b> · pick your target</p>
+      <input id="goal-target" type="number" value="${suggested}" min="${Math.max(type.min, cur+type.step)}" max="${type.max}" step="${type.step}" class="name-input" style="text-align:center;font-size:22px;font-weight:700">
+      <p class="dim" style="font-size:11px;margin:8px 0 4px">deadline (days from now · 0 = no deadline)</p>
+      <input id="goal-days" type="number" value="14" min="0" max="365" step="1" class="name-input" style="text-align:center">
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="App._openGoalCreator()">← back</button>
+        <button class="btn-primary" onclick="App._confirmGoal('${typeId}')">🎯 lock in</button>
+      </div>`);
+  },
+  _confirmGoal(typeId){
+    const target = parseInt(document.getElementById('goal-target').value, 10);
+    const days = parseInt(document.getElementById('goal-days').value, 10);
+    if(!target || target<1){ Toast.show('pick a real target'); return; }
+    Goals.create(typeId, target, days>0 ? days : null);
+    Modal.close();
+    SFX.chime();
+    haptic(20);
+    // re-open stats to show the new goal
+    setTimeout(()=>App.openStats(), 300);
+  },
+  _removeGoal(id){
+    Goals.remove(id);
+    Toast.show('goal removed');
+    SFX.tap();
+    setTimeout(()=>App.openStats(), 100);
   },
   _useStreakSave(){
     Modal.close();
@@ -9925,6 +10083,9 @@ const App = {
     // v0.63 · sync daily counter before render
     try{ Tracker.syncDailyCounters(); }catch(e){}
     const winRate = d.totals.games > 0 ? Math.round((d.totals.wins / d.totals.games)*100) : 0;
+    const avgSec = Tracker.avgGameTimeSec();
+    const recentAvg = Tracker.recentAvgGameTimeSec();
+    const le = d.lifetimeEarned || {coin:0,gem:0,brain:0,faith:0};
     const top = `
       <div class="stats-grid">
         <div class="stat-card"><div class="lbl">Brain Rank</div><div class="val" style="font-size:18px">${d.iq}<br><span style="font-size:11px;opacity:.85">${rankBadge(d.iq)}</span></div></div>
@@ -9935,8 +10096,51 @@ const App = {
         <div class="stat-card"><div class="lbl">total wins</div><div class="val">${d.totals.wins}</div></div>
         <div class="stat-card"><div class="lbl">games played</div><div class="val">${d.totals.games}</div></div>
         <div class="stat-card"><div class="lbl">📈 win rate</div><div class="val">${winRate}%</div></div>
-        <div class="stat-card"><div class="lbl">🪙 coins</div><div class="val">${fmt(d.wallet.coin)}</div></div>
-        <div class="stat-card"><div class="lbl">✝️ stars</div><div class="val">${fmt(d.wallet.faith)}</div></div>
+        <div class="stat-card"><div class="lbl">⏱ avg game</div><div class="val">${avgSec}s</div></div>
+        <div class="stat-card"><div class="lbl">⏱ last 10 avg</div><div class="val">${recentAvg}s</div></div>
+        <div class="stat-card"><div class="lbl">🎯 goals done</div><div class="val">${d.goalsCompleted||0}</div></div>
+        <div class="stat-card"><div class="lbl">📉 longest loss run</div><div class="val">${d.longestLossStreak||0}</div></div>
+      </div>
+      <div class="lifetime-card">
+        <div class="lifetime-title">🏅 LIFETIME EARNED</div>
+        <div class="lifetime-row">
+          <span>🪙 ${fmt(le.coin||0)}</span>
+          <span>💎 ${fmt(le.gem||0)}</span>
+          <span>🧠 ${fmt(le.brain||0)}</span>
+          <span>✝️ ${fmt(le.faith||0)}</span>
+        </div>
+      </div>
+      ${Tracker.renderStreakCalendar()}
+      <div class="room-mastery-section">
+        <h3 class="rm-title">🗺️ Room Mastery</h3>
+        ${Object.entries(ROOMS).filter(([id])=>id!=='daily').map(([rid,room])=>{
+          const m = Tracker.roomMastery(rid);
+          return `<div class="rm-row">
+            <div class="rm-label">${room.em} ${room.name}</div>
+            <div class="rm-bar"><div class="rm-fill" style="width:${m.pct}%"></div></div>
+            <div class="rm-stat">${m.won}/${m.total} · ${m.pct}%</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="goals-section">
+        <h3 class="rm-title">🎯 Personal Goals</h3>
+        ${(()=>{
+          const active = Goals.active();
+          if(!active.length) return '<p class="dim text-center" style="font-size:11px;margin:6px 0 10px">no goals set · tap below to start one</p>';
+          return active.map(g=>{
+            const p = Goals.progress(g);
+            const left = g.deadline ? Math.max(0, Math.round((g.deadline - Date.now())/86400000)) : null;
+            return `<div class="goal-row">
+              <div class="goal-label">${g.label}</div>
+              <div class="rm-bar"><div class="rm-fill" style="width:${p.pct}%;background:linear-gradient(90deg,#A78BFA,#FBBF24)"></div></div>
+              <div class="goal-meta">${p.cur}/${g.target} · ${p.pct}%${left!==null?` · ${left}d left`:''} <button class="goal-x" onclick="App._removeGoal('${g.id}')">✕</button></div>
+            </div>`;
+          }).join('');
+        })()}
+        <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="App._openGoalCreator()">➕ create a goal</button>
+      </div>
+      <div style="margin:14px 0;text-align:center">
+        <button class="btn-primary" onclick="StatsScreenshot.generate()" style="padding:10px 18px;font-size:13px">📸 save stats as PNG</button>
       </div>`;
     // v0.20 tier progress bar
     const tier = getRankTier(d.iq);
@@ -11465,6 +11669,7 @@ const Tracker = {
     const d = State.data, today = Tracker.todayKey();
     if(d.lastPlayDate === today){
       d.gamesToday = (d.gamesToday||0) + 1;
+      Tracker._calendarBump(today);
       return false; // already counted today
     }
     // New day playing — update streak based on lastPlayDate
@@ -11481,9 +11686,113 @@ const Tracker = {
     d.lastPlayDate = today;
     d.gamesToday = 1;
     d.gamesTodayDate = today;
+    Tracker._calendarBump(today);
     Save.write();
     try{ UI.updateWallet(); }catch(e){}
     return true; // streak bumped this call
+  },
+  // v0.64 · calendar bump + prune to last 60 days for storage hygiene
+  _calendarBump(dateStr){
+    const d = State.data;
+    if(!d.playCalendar) d.playCalendar = {};
+    d.playCalendar[dateStr] = (d.playCalendar[dateStr]||0) + 1;
+    const keys = Object.keys(d.playCalendar);
+    if(keys.length > 90){
+      const cutoff = Date.now() - 90*86400000;
+      keys.forEach(k=>{ if(new Date(k).getTime() < cutoff) delete d.playCalendar[k]; });
+    }
+  },
+  // v0.64 · render 30-day heat grid (5 wks × 7 days)
+  renderStreakCalendar(){
+    const d = State.data;
+    const cal = d.playCalendar || {};
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const days = [];
+    for(let i=29;i>=0;i--){
+      const date = new Date(today.getTime() - i*86400000);
+      const key = date.toDateString();
+      const count = cal[key]||0;
+      const level = count===0 ? 0 : count<3 ? 1 : count<6 ? 2 : count<10 ? 3 : 4;
+      days.push({date, count, level, isToday: i===0});
+    }
+    return `<div class="streak-cal-wrap">
+      <div class="streak-cal-title">📅 last 30 days</div>
+      <div class="streak-cal-grid">
+        ${days.map(d=>`<div class="cal-cell lvl-${d.level}${d.isToday?' is-today':''}" title="${d.date.toLocaleDateString()} · ${d.count} games"></div>`).join('')}
+      </div>
+      <div class="streak-cal-legend">
+        <span class="dim" style="font-size:10px">less</span>
+        <div class="cal-cell lvl-0"></div>
+        <div class="cal-cell lvl-1"></div>
+        <div class="cal-cell lvl-2"></div>
+        <div class="cal-cell lvl-3"></div>
+        <div class="cal-cell lvl-4"></div>
+        <span class="dim" style="font-size:10px">more</span>
+      </div>
+    </div>`;
+  },
+  // v0.64 · per-room mastery (% of games in room with at least 1 win)
+  roomMastery(roomId){
+    const d = State.data;
+    const room = ROOMS[roomId]; if(!room) return {pct:0, won:0, total:0};
+    const total = room.games.length;
+    let won = 0;
+    room.games.forEach(g=>{
+      const key = `${roomId}:${g.id}`;
+      if((d.perGame[key]?.wins||0) > 0) won++;
+    });
+    return {pct: total ? Math.round((won/total)*100) : 0, won, total};
+  },
+  // v0.64 · lifetime currency accumulator (track all rewards earned)
+  recordEarn(rewards){
+    const d = State.data;
+    if(!d.lifetimeEarned) d.lifetimeEarned = {coin:0,gem:0,brain:0,faith:0,ticket:0,key:0};
+    Object.entries(rewards||{}).forEach(([k,n])=>{ d.lifetimeEarned[k] = (d.lifetimeEarned[k]||0) + n; });
+  },
+  // v0.64 · game time tracking · rolling avg over last 10
+  recordGameTime(ms){
+    const d = State.data;
+    if(!d.gameTimes) d.gameTimes = {count:0, totalMs:0, last10:[]};
+    d.gameTimes.count++;
+    d.gameTimes.totalMs += ms;
+    d.gameTimes.last10.push(ms);
+    if(d.gameTimes.last10.length > 10) d.gameTimes.last10.shift();
+  },
+  avgGameTimeSec(){
+    const d = State.data;
+    if(!d.gameTimes || !d.gameTimes.count) return 0;
+    return Math.round(d.gameTimes.totalMs / d.gameTimes.count / 1000);
+  },
+  recentAvgGameTimeSec(){
+    const d = State.data;
+    if(!d.gameTimes || !d.gameTimes.last10.length) return 0;
+    const sum = d.gameTimes.last10.reduce((a,b)=>a+b,0);
+    return Math.round(sum / d.gameTimes.last10.length / 1000);
+  },
+  // v0.64 · loss streak tracker · encourage (don't penalize)
+  recordWinResult(won){
+    const d = State.data;
+    if(won){
+      d.lossStreak = 0;
+    } else {
+      d.lossStreak = (d.lossStreak||0) + 1;
+      d.longestLossStreak = Math.max(d.longestLossStreak||0, d.lossStreak);
+      // Fire encouragement at 3+ losses · once per chain
+      if(d.lossStreak === 3) Tracker._encourage();
+    }
+  },
+  _encourage(){
+    const messages = [
+      `🌱 3 losses · keep going · every champion has stretches like this`,
+      `🌱 tough run · the next win is on its way`,
+      `🌱 losing streak · perfect time to try a different room`,
+      `🌱 reset moment · you're not stuck · just learning`,
+      `🌱 progress isn't linear · the bounce-back is loading`,
+    ];
+    setTimeout(()=>{
+      Toast.show(messages[Math.floor(Math.random()*messages.length)], 4200);
+    }, 1500);
   },
   // Sync gamesToday counter when day rolls (call from lobby render)
   syncDailyCounters(){
@@ -11533,6 +11842,189 @@ const Tracker = {
       </div>
       ${next ? `<div class="today-next">🎯 ${next.n} more to <b>${next.label}</b></div>` : `<div class="today-next">✨ all main milestones cleared!</div>`}
     </div>`;
+  }
+};
+
+// ====================================================================
+// 🎯 v0.64 · PERSONAL GOALS · user-set targets with deadline · gem reward on completion
+// ====================================================================
+const Goals = {
+  TYPES: [
+    {id:'wins',  em:'🏆', label:'win games',            min:5, max:500, step:5, fn:d=>d.totals.wins||0},
+    {id:'streak',em:'🔥', label:'streak (days)',        min:3, max:60,  step:1, fn:d=>d.streak||0},
+    {id:'iq',    em:'🧠', label:'reach Brain Rank',     min:100,max:2000,step:25, fn:d=>d.iq||0},
+    {id:'rooms', em:'🗺️',label:'master rooms (50%+)',   min:1, max:8,   step:1, fn:d=>{
+       let c=0; Object.keys(ROOMS).forEach(rid=>{ if(Tracker.roomMastery(rid).pct>=50) c++; }); return c;
+    }},
+    {id:'games', em:'🎮', label:'play games',           min:10,max:1000,step:10, fn:d=>d.totals.games||0},
+    {id:'days',  em:'📅', label:'days played total',    min:7, max:365, step:1, fn:d=>d.daysPlayed||0},
+  ],
+  ensureArray(){ if(!State.data.goals) State.data.goals = []; },
+  active(){ Goals.ensureArray(); return State.data.goals.filter(g=>!g.claimed); },
+  create(typeId, target, daysAhead){
+    Goals.ensureArray();
+    const type = Goals.TYPES.find(t=>t.id===typeId); if(!type) return null;
+    const id = 'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const goal = {
+      id, typeId, target,
+      label: `${type.em} ${type.label} → ${target}`,
+      created: Date.now(),
+      deadline: daysAhead ? Date.now() + daysAhead*86400000 : null,
+      claimed: false,
+    };
+    State.data.goals.push(goal);
+    Save.write();
+    Activity.log('ach', type.em, `goal set: ${goal.label}`);
+    Toast.show(`🎯 goal locked in: ${goal.label}`);
+    SFX.chime();
+    return goal;
+  },
+  remove(id){
+    Goals.ensureArray();
+    State.data.goals = State.data.goals.filter(g=>g.id!==id);
+    Save.write();
+  },
+  progress(goal){
+    const type = Goals.TYPES.find(t=>t.id===goal.typeId);
+    const cur = type ? type.fn(State.data) : 0;
+    return {cur, pct: Math.min(100, Math.round((cur/goal.target)*100))};
+  },
+  bumpOnResult(roomId, gameId, won, rewards){
+    // Check each active goal · if completed, fire reward
+    Goals.ensureArray();
+    State.data.goals.forEach(g=>{
+      if(g.claimed) return;
+      const {cur} = Goals.progress(g);
+      if(cur >= g.target){
+        g.claimed = true;
+        g.claimedAt = Date.now();
+        State.data.goalsCompleted = (State.data.goalsCompleted||0) + 1;
+        // gem reward scales with goal size: floor(target / 25) capped 1-15
+        const reward = {gem: Math.min(15, Math.max(1, Math.floor(g.target/25))), coin:100};
+        Wallet.add(reward);
+        Activity.log('ach', '🎯', `goal achieved: ${g.label} · +${reward.gem}💎`);
+        setTimeout(()=>{
+          Modal.show(`<div class="big">🎯</div>
+            <h3 style="color:var(--gold-bright)">GOAL ACHIEVED!</h3>
+            <p style="margin:10px 0;font-size:14px"><b>${g.label}</b></p>
+            <div class="reward-row">
+              <span class="reward-chip">+${reward.gem} 💎</span>
+              <span class="reward-chip">+${reward.coin} 🪙</span>
+            </div>
+            <p class="dim" style="font-size:11px;margin-top:8px">${State.data.goalsCompleted} goals achieved · keep stacking</p>
+            <div class="modal-actions"><button class="btn-primary" onclick="Modal.close()">✨ NICE</button></div>`);
+          confetti({variant:'gold',count:60});
+          SFX.milestone();
+          haptic(40);
+        }, 1500);
+        if(State.data.goalsCompleted >= 5) Ach.unlock('goal_5');
+        if(State.data.goalsCompleted >= 1) Ach.unlock('goal_first');
+      }
+    });
+    Save.write();
+  },
+};
+
+// ====================================================================
+// 📸 v0.64 · STATS SCREENSHOT · canvas PNG of profile card
+// ====================================================================
+const StatsScreenshot = {
+  generate(){
+    const d = State.data;
+    try{
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080; canvas.height = 1350;
+      const ctx = canvas.getContext('2d');
+      const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+      g.addColorStop(0,'#1A0F30'); g.addColorStop(0.5,'#3A1F60'); g.addColorStop(1,'#0F0820');
+      ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle='#FBBF24'; ctx.lineWidth=8;
+      ctx.strokeRect(40,40,canvas.width-80,canvas.height-80);
+      // Header
+      ctx.font='bold 84px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#FBBF24';
+      ctx.fillText('🧠 BrainBoard', canvas.width/2, 180);
+      ctx.font='28px sans-serif'; ctx.fillStyle='#FFF8E7';
+      ctx.fillText(`${d.name||'Player'}'s profile`, canvas.width/2, 230);
+      // Big stat row
+      const stats = [
+        {em:'🧠', val:d.iq||0,                lbl:'Brain Rank'},
+        {em:'🔥', val:d.streak||0,            lbl:'streak'},
+        {em:'🏆', val:d.totals.wins||0,       lbl:'wins'},
+        {em:'🎮', val:d.totals.games||0,      lbl:'games'},
+      ];
+      const cardW = 220, cardH = 200, gap = 22;
+      const startX = (canvas.width - (cardW*4 + gap*3))/2;
+      stats.forEach((s,i)=>{
+        const x = startX + i*(cardW+gap);
+        ctx.fillStyle='rgba(255,255,255,.08)';
+        ctx.fillRect(x, 310, cardW, cardH);
+        ctx.strokeStyle='rgba(245,158,11,.4)'; ctx.lineWidth=2;
+        ctx.strokeRect(x, 310, cardW, cardH);
+        ctx.font='52px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#FFF';
+        ctx.fillText(s.em, x+cardW/2, 380);
+        ctx.font='bold 56px sans-serif'; ctx.fillStyle='#FBBF24';
+        ctx.fillText(String(s.val), x+cardW/2, 450);
+        ctx.font='22px sans-serif'; ctx.fillStyle='#FFF8E7';
+        ctx.fillText(s.lbl, x+cardW/2, 488);
+      });
+      // Lifetime + advanced row
+      const winRate = d.totals.games>0 ? Math.round((d.totals.wins/d.totals.games)*100) : 0;
+      ctx.font='32px sans-serif'; ctx.fillStyle='#FBBF24'; ctx.textAlign='center';
+      ctx.fillText(`📈 ${winRate}% win rate  ·  🏆 peak streak ${d.peakStreak||0}  ·  📅 ${d.daysPlayed||0} days played`, canvas.width/2, 590);
+      // Lifetime earned
+      const le = d.lifetimeEarned||{};
+      ctx.font='28px sans-serif'; ctx.fillStyle='#10B981';
+      ctx.fillText(`🪙 ${le.coin||0} lifetime  ·  💎 ${le.gem||0} earned  ·  🧠 ${le.brain||0} brain  ·  ✝️ ${le.faith||0} stars`, canvas.width/2, 650);
+      // Avg game time
+      const avg = Tracker.avgGameTimeSec();
+      ctx.font='26px sans-serif'; ctx.fillStyle='#A78BFA';
+      ctx.fillText(`⏱ avg game: ${avg}s  ·  🎮 ${d.gamesToday||0} games today  ·  🎯 ${d.goalsCompleted||0} goals achieved`, canvas.width/2, 700);
+      // Room mastery section
+      ctx.font='bold 36px sans-serif'; ctx.fillStyle='#FBBF24';
+      ctx.fillText('🗺️ ROOM MASTERY', canvas.width/2, 800);
+      const rooms = Object.entries(ROOMS).filter(([id])=>id!=='daily');
+      ctx.font='24px sans-serif';
+      rooms.forEach((entry,i)=>{
+        const [rid, room] = entry;
+        const mast = Tracker.roomMastery(rid);
+        const y = 860 + i*44;
+        ctx.fillStyle='#FFF8E7'; ctx.textAlign='left';
+        ctx.fillText(`${room.em} ${room.name}`, 140, y);
+        ctx.textAlign='right'; ctx.fillStyle='#FBBF24';
+        ctx.fillText(`${mast.won}/${mast.total} · ${mast.pct}%`, canvas.width-140, y);
+        // bar
+        const barX = 480, barY = y-20, barW = 280, barH = 14;
+        ctx.fillStyle='rgba(255,255,255,.12)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle='#10B981';
+        ctx.fillRect(barX, barY, barW*(mast.pct/100), barH);
+      });
+      // Footer
+      ctx.font='italic 28px serif'; ctx.fillStyle='#FFF8E7'; ctx.textAlign='center';
+      ctx.fillText('"Whatever you do, work heartily."  — Colossians 3:23', canvas.width/2, 1240);
+      ctx.font='bold 32px sans-serif'; ctx.fillStyle='#FBBF24';
+      ctx.fillText('snailgamedev.github.io/BrainBoard', canvas.width/2, 1290);
+      // Export
+      const fname = `brainboard-stats-${Date.now()}.png`;
+      if(canvas.toBlob && navigator.canShare){
+        canvas.toBlob(blob=>{
+          if(!blob){ App._screenshotFallback(canvas, fname); return; }
+          try{
+            const file = new File([blob], fname, {type:'image/png'});
+            if(navigator.canShare({files:[file]})){
+              navigator.share({files:[file], title:'BrainBoard Profile', text:'check my BrainBoard stats!'})
+                .then(()=>{ Toast.show('📸 shared!'); SFX.sparkle(); })
+                .catch(()=>App._screenshotDownload(blob, fname));
+            }else{ App._screenshotDownload(blob, fname); }
+          }catch(e){ App._screenshotDownload(blob, fname); }
+        }, 'image/png');
+      } else if(canvas.toBlob){
+        canvas.toBlob(blob=>blob ? App._screenshotDownload(blob, fname) : App._screenshotFallback(canvas, fname), 'image/png');
+      } else {
+        App._screenshotFallback(canvas, fname);
+      }
+      haptic(15);
+    }catch(e){ Toast.show('📸 export failed'); console.error(e); }
   }
 };
 
@@ -11604,6 +12096,17 @@ function recordResult(roomId, gameId, won, rewards={}){
   rewards = _antiCheatClamp(rewards);
   // v0.63 · TRACKER · marks play day · updates streak based on actual gameplay
   try{ Tracker.markPlay(); }catch(e){ console.warn('tracker err',e); }
+  // v0.64 · game time tracking · uses State._gameStartTs (set in GameIntro.start)
+  try{
+    if(State._gameStartTs){
+      Tracker.recordGameTime(Date.now() - State._gameStartTs);
+      State._gameStartTs = 0;
+    }
+  }catch(e){}
+  // v0.64 · loss-streak tracker · encourage on 3rd consecutive loss
+  try{ Tracker.recordWinResult(won); }catch(e){}
+  // v0.64 · goal progress check
+  try{ Goals.bumpOnResult(roomId, gameId, won, rewards); }catch(e){}
   // pass roomId so Modal.win can apply natural-faith rule without explicit param
   State._lastResultRoom = roomId;
   const key = `${roomId}:${gameId}`;
