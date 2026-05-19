@@ -955,6 +955,46 @@ button{
   position:relative;z-index:1;
 }
 .milestone-btn:hover{background:rgba(0,0,0,.6) !important}
+/* ==================== v0.63 · TODAY ROLLUP CARD ==================== */
+.today-card{
+  background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(245,158,11,.12));
+  border:1px solid rgba(245,158,11,.35);
+  border-radius:14px;
+  padding:12px 14px;
+  margin-bottom:10px;
+  animation:fadeUp .4s ease-out;
+}
+.today-card.streak-danger{
+  border-color:#EF4444;
+  animation:dangerPulse 2.4s ease-in-out infinite;
+}
+@keyframes dangerPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.35)}
+  50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}
+}
+.today-row{
+  display:flex;justify-content:space-around;gap:6px;
+  margin-bottom:8px;
+}
+.today-stat{
+  display:flex;flex-direction:column;align-items:center;
+  flex:1;text-align:center;
+  padding:6px 4px;border-radius:10px;
+  background:rgba(0,0,0,.18);
+}
+.today-em{font-size:20px;line-height:1}
+.today-val{
+  font-family:'Cinzel',serif;font-weight:800;
+  font-size:22px;color:var(--gold-bright);
+  margin-top:2px;line-height:1.1;
+}
+.today-lbl{font-size:10px;opacity:.75;margin-top:2px;letter-spacing:.04em}
+.today-next{
+  font-size:11.5px;text-align:center;
+  color:#FFF8E7;opacity:.92;
+  padding-top:6px;border-top:1px dashed rgba(245,158,11,.3);
+}
+.today-next b{color:var(--gold-bright)}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1390,7 +1430,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.62.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.63.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1431,7 +1471,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.62.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.63.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1448,6 +1488,7 @@ button{
     <div id="dailyBanner" class="lobby-banner" style="display:none">
       <b>🎁 daily reward ready!</b> tap any room to claim today's blessing
     </div>
+    <div id="todayCard"></div>
     <div id="dailyChallenge"></div>
     <div id="dailyQuests"></div>
     <div id="recentlyPlayed"></div>
@@ -1548,7 +1589,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.62.0';
+const VERSION = '0.63.0';
 
 // ----- STATE -----
 const State = {
@@ -1562,7 +1603,7 @@ const DEFAULT_SAVE = {
   v:VERSION, onboarded:false, name:'Saint', preset:'saint', mood:'curious',
   emoji:'🙏', joinedAt:Date.now(), lastDailyClaim:0,
   wallet:{coin:0,gem:0,brain:0,faith:0,ticket:0,key:0},
-  iq:50, streak:0, lastPlayDate:null,  // v0.22 starts humble at Sprout tier
+  iq:50, streak:0, lastPlayDate:null, peakStreak:0, daysPlayed:0, gamesToday:0, gamesTodayDate:'',  // v0.22 starts humble · v0.63 tracking expanded
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
@@ -8973,52 +9014,54 @@ const App = {
   },
 
   // ----- DAILY -----
+  // v0.63 · DECOUPLED · checkDaily handles ONLY the blessing reward
+  // Streak is owned by Tracker (updated on actual gameplay via recordResult)
   checkDaily(){
     const d = State.data, today = new Date().toDateString();
     const last = d.lastDailyClaim ? new Date(d.lastDailyClaim).toDateString() : null;
-    if(today!==last){
-      // streak logic
-      const yest = new Date(Date.now()-86400000).toDateString();
-      const wouldBreak = last !== yest && d.streak >= 1;
-      // v0.25 STREAK SAVE: if streak would break + user has streakSave, offer to use it
-      if(wouldBreak && (d.powerups?.streakSave||0)>0){
-        Modal.show(`<div class="big">🛡️</div>
-          <h3>save your streak?</h3>
-          <p style="margin:8px 0;font-size:13px">your ${d.streak}-day streak is about to break · use a Streak Save?</p>
-          <p class="dim" style="font-size:11px">you have ${d.powerups.streakSave} streak save${d.powerups.streakSave>1?'s':''}</p>
-          <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:12px">
-            <button class="btn-primary" onclick="App._useStreakSave()">🛡️ USE · keep streak</button>
-            <button class="btn-secondary" onclick="App._loseStreak()">❌ let it go</button>
-          </div>`);
-        return;
-      }
-      d.streak = (last===yest) ? (d.streak+1) : 1;
-      d.lastDailyClaim = Date.now();
-      const reward = {coin:100, gem:1, faith:1};
-      if(d.streak>=7) reward.gem += 1;
-      if(d.streak>=30) reward.gem += 3;
-      // v0.32 7-day streak gem rewards
-      if(d.streak%7===0 && d.streak>0){
-        reward.gem = (reward.gem||0)+2;
-        Ach.unlock('streak_gem');
-      }
-      Wallet.add(reward);
-      Save.write();
-      const v = randomVerse();
-      Modal.show(`
-        <div class="big">🎁</div>
-        <h3>Daily Blessing</h3>
-        <p class="dim">streak: 🔥 ${d.streak} day${d.streak>1?'s':''}</p>
-        <div class="reward-row">
-          ${Object.entries(reward).map(([k,n])=>{const e={coin:'🪙',gem:'💎',faith:'✝️'}[k]; return `<span class="reward-chip">+${n} ${e}</span>`}).join('')}
-        </div>
-        <div class="verse">"${v.t}"<cite>— ${v.r}</cite></div>
-        <div class="modal-actions"><button class="btn-primary" onclick="Modal.close()">🙌 amen</button></div>
-      `);
-      SFX.holy();
-      haptic(40);
-      Ach.check();
+    if(today === last) return; // already claimed today
+
+    // v0.63 · STREAK SAVE offer · detect via Tracker (only if user actually has a chain to save)
+    const yest = new Date(Date.now()-86400000).toDateString();
+    const chainAtRisk = d.lastPlayDate && d.lastPlayDate !== today && d.lastPlayDate !== yest && (d.streak||0) >= 2;
+    if(chainAtRisk && (d.powerups?.streakSave||0) > 0){
+      Modal.show(`<div class="big">🛡️</div>
+        <h3>save your streak?</h3>
+        <p style="margin:8px 0;font-size:13px">your ${d.streak}-day streak is about to break · use a Streak Save?</p>
+        <p class="dim" style="font-size:11px">you have ${d.powerups.streakSave} streak save${d.powerups.streakSave>1?'s':''}</p>
+        <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:12px">
+          <button class="btn-primary" onclick="App._useStreakSave()">🛡️ USE · keep streak</button>
+          <button class="btn-secondary" onclick="App._loseStreak()">❌ let it go</button>
+        </div>`);
+      return;
     }
+
+    // Blessing reward · uses CURRENT streak (Tracker owns it)
+    const streak = d.streak || 0;
+    const reward = {coin:100, gem:1, faith:1};
+    if(streak>=7) reward.gem += 1;
+    if(streak>=30) reward.gem += 3;
+    if(streak%7===0 && streak>0){
+      reward.gem = (reward.gem||0)+2;
+      Ach.unlock('streak_gem');
+    }
+    Wallet.add(reward);
+    d.lastDailyClaim = Date.now();
+    Save.write();
+    const v = randomVerse();
+    Modal.show(`
+      <div class="big">🎁</div>
+      <h3>Daily Blessing</h3>
+      <p class="dim">streak: 🔥 ${streak} day${streak===1?'':'s'} · play a game today to extend!</p>
+      <div class="reward-row">
+        ${Object.entries(reward).map(([k,n])=>{const e={coin:'🪙',gem:'💎',faith:'✝️'}[k]; return `<span class="reward-chip">+${n} ${e}</span>`}).join('')}
+      </div>
+      <div class="verse">"${v.t}"<cite>— ${v.r}</cite></div>
+      <div class="modal-actions"><button class="btn-primary" onclick="Modal.close()">🙌 amen</button></div>
+    `);
+    SFX.holy();
+    haptic(40);
+    Ach.check();
   },
 
   // ----- ROOM -----
@@ -9053,10 +9096,17 @@ const App = {
   toLobby(){
     UI.show('lobby');
     haptic(6);
+    // v0.63 · check daily blessing on every lobby return (midnight rollover safe)
+    App.checkDaily();
     App.renderLobbyExtras();
   },
   renderLobbyExtras(){
     Quests.ensureToday();
+    // v0.63 · render today rollup card
+    try{
+      const tc = document.getElementById('todayCard');
+      if(tc) tc.innerHTML = Tracker.renderTodayCard();
+    }catch(e){ console.warn('tracker card err',e); }
     // v0.40 · auto-detect language on first ever lobby render
     Lang.autoDetect();
     // v0.43 · weekly tournament check (payout previous-week standing if rollover)
@@ -9549,22 +9599,26 @@ const App = {
     Modal.close();
     const d = State.data;
     d.powerups.streakSave--;
-    d.streak++; // continue streak
-    d.lastDailyClaim = Date.now();
+    // v0.63 · pretend user played yesterday so Tracker.markPlay extends chain on next game
+    d.lastPlayDate = new Date(Date.now()-86400000).toDateString();
     Save.write();
     Ach.unlock('streak_saved');
-    Toast.show(`🛡️ streak saved · now ${d.streak} days`);
+    Toast.show(`🛡️ streak preserved · play a game today to lock it in`);
     SFX.holy(); haptic(40); confetti();
     UI.updateWallet();
+    // fire blessing now that chain is preserved
+    setTimeout(()=>App.checkDaily(), 600);
   },
   _loseStreak(){
     Modal.close();
     const d = State.data;
-    d.streak = 1;
-    d.lastDailyClaim = Date.now();
+    // v0.63 · honest reset · next play starts streak=1 via Tracker
+    d.lastPlayDate = null;
+    d.streak = 0;
     Save.write();
-    Toast.show('streak reset · let\'s rebuild');
+    Toast.show('streak ended · play today to start fresh');
     UI.updateWallet();
+    setTimeout(()=>App.checkDaily(), 600);
   },
   installPWA(){
     if(window._deferredPrompt){
@@ -9868,12 +9922,19 @@ const App = {
     Ach.unlock('coach_consulted');
     const d = State.data;
     document.getElementById('aux-title').innerHTML = '🏆 Stats';
+    // v0.63 · sync daily counter before render
+    try{ Tracker.syncDailyCounters(); }catch(e){}
+    const winRate = d.totals.games > 0 ? Math.round((d.totals.wins / d.totals.games)*100) : 0;
     const top = `
       <div class="stats-grid">
         <div class="stat-card"><div class="lbl">Brain Rank</div><div class="val" style="font-size:18px">${d.iq}<br><span style="font-size:11px;opacity:.85">${rankBadge(d.iq)}</span></div></div>
-        <div class="stat-card"><div class="lbl">streak</div><div class="val">🔥 ${d.streak}</div></div>
+        <div class="stat-card"><div class="lbl">🔥 current streak</div><div class="val">${d.streak||0}</div></div>
+        <div class="stat-card"><div class="lbl">🏆 peak streak</div><div class="val">${d.peakStreak||0}</div></div>
+        <div class="stat-card"><div class="lbl">📅 days played</div><div class="val">${d.daysPlayed||0}</div></div>
+        <div class="stat-card"><div class="lbl">🎮 games today</div><div class="val">${d.gamesToday||0}</div></div>
         <div class="stat-card"><div class="lbl">total wins</div><div class="val">${d.totals.wins}</div></div>
         <div class="stat-card"><div class="lbl">games played</div><div class="val">${d.totals.games}</div></div>
+        <div class="stat-card"><div class="lbl">📈 win rate</div><div class="val">${winRate}%</div></div>
         <div class="stat-card"><div class="lbl">🪙 coins</div><div class="val">${fmt(d.wallet.coin)}</div></div>
         <div class="stat-card"><div class="lbl">✝️ stars</div><div class="val">${fmt(d.wallet.faith)}</div></div>
       </div>`;
@@ -11394,6 +11455,88 @@ const App = {
 };
 
 // ====================================================================
+// 📊 v0.63 · TRACKER · single source of truth for streak/play-day/daily-counters
+// ====================================================================
+const Tracker = {
+  todayKey(){ return new Date().toDateString(); },
+  yesterdayKey(){ return new Date(Date.now()-86400000).toDateString(); },
+  // Call on EVERY game start (win or loss). Updates streak when a NEW day plays.
+  markPlay(){
+    const d = State.data, today = Tracker.todayKey();
+    if(d.lastPlayDate === today){
+      d.gamesToday = (d.gamesToday||0) + 1;
+      return false; // already counted today
+    }
+    // New day playing — update streak based on lastPlayDate
+    const yest = Tracker.yesterdayKey();
+    if(d.lastPlayDate === yest){
+      d.streak = (d.streak||0) + 1;
+    } else if(!d.lastPlayDate){
+      d.streak = 1; // first ever play
+    } else {
+      d.streak = 1; // chain broken, restart
+    }
+    d.peakStreak = Math.max(d.peakStreak||0, d.streak);
+    d.daysPlayed = (d.daysPlayed||0) + 1;
+    d.lastPlayDate = today;
+    d.gamesToday = 1;
+    d.gamesTodayDate = today;
+    Save.write();
+    try{ UI.updateWallet(); }catch(e){}
+    return true; // streak bumped this call
+  },
+  // Sync gamesToday counter when day rolls (call from lobby render)
+  syncDailyCounters(){
+    const d = State.data, today = Tracker.todayKey();
+    if(d.gamesTodayDate !== today){
+      d.gamesToday = 0;
+      d.gamesTodayDate = today;
+      Save.write();
+    }
+  },
+  // Streak danger detector · returns true if user played yesterday and hasn't played today + it's after 6pm
+  streakInDanger(){
+    const d = State.data, today = Tracker.todayKey(), yest = Tracker.yesterdayKey();
+    if((d.streak||0) < 2) return false;
+    if(d.lastPlayDate !== yest) return false; // already broken or already played today
+    const hour = new Date().getHours();
+    return hour >= 18; // after 6 PM
+  },
+  // Next milestone hint (returns {label, remaining} or null)
+  nextMilestone(){
+    const d = State.data;
+    const checks = [
+      {n: 10 - (d.totals.wins||0), label:'10 wins'},
+      {n: 25 - (d.totals.wins||0), label:'25 wins'},
+      {n: 50 - (d.totals.wins||0), label:'50 wins · half century'},
+      {n: 100 - (d.totals.wins||0), label:'100 wins · centurion'},
+      {n: 250 - (d.totals.wins||0), label:'250 wins · royal'},
+      {n: 7 - (d.streak||0), label:'7-day streak'},
+      {n: 30 - (d.streak||0), label:'30-day streak'},
+      {n: 300 - (d.iq||0), label:'1000 IQ club'},
+      {n: 600 - (d.iq||0), label:'IQ 1500'},
+      {n: 900 - (d.iq||0), label:'IQ 2000 · apostle sage'},
+    ].filter(c=>c.n>0).sort((a,b)=>a.n-b.n);
+    return checks[0] || null;
+  },
+  // Render the rollup card · "today's progress + next milestone + streak"
+  renderTodayCard(){
+    const d = State.data;
+    Tracker.syncDailyCounters();
+    const next = Tracker.nextMilestone();
+    const danger = Tracker.streakInDanger();
+    return `<div class="today-card${danger?' streak-danger':''}">
+      <div class="today-row">
+        <div class="today-stat"><span class="today-em">🔥</span><span class="today-val">${d.streak||0}</span><span class="today-lbl">streak${danger?' · play today!':''}</span></div>
+        <div class="today-stat"><span class="today-em">🎮</span><span class="today-val">${d.gamesToday||0}</span><span class="today-lbl">today</span></div>
+        <div class="today-stat"><span class="today-em">🏆</span><span class="today-val">${d.peakStreak||0}</span><span class="today-lbl">best</span></div>
+      </div>
+      ${next ? `<div class="today-next">🎯 ${next.n} more to <b>${next.label}</b></div>` : `<div class="today-next">✨ all main milestones cleared!</div>`}
+    </div>`;
+  }
+};
+
+// ====================================================================
 // 🎉 v0.62 phase 4 · MILESTONES · celebrate threshold crossings (separate from achievement toasts)
 // ====================================================================
 const Milestones = (()=>{
@@ -11459,6 +11602,8 @@ function recordResult(roomId, gameId, won, rewards={}){
   const d = State.data;
   // v0.9 anti-cheat: clamp rewards to sane bounds
   rewards = _antiCheatClamp(rewards);
+  // v0.63 · TRACKER · marks play day · updates streak based on actual gameplay
+  try{ Tracker.markPlay(); }catch(e){ console.warn('tracker err',e); }
   // pass roomId so Modal.win can apply natural-faith rule without explicit param
   State._lastResultRoom = roomId;
   const key = `${roomId}:${gameId}`;
