@@ -1268,6 +1268,56 @@ button{
 .install-manage, .install-faq{
   margin-top:14px;
 }
+/* v0.70 · BROWSER PREREQUISITE section */
+.browser-prereq{
+  margin:14px 0;
+  background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(124,58,237,.08));
+  border:2px solid rgba(245,158,11,.4);
+  border-radius:14px;padding:14px;
+}
+.browser-pre-card{
+  background:rgba(0,0,0,.18);
+  border-radius:10px;padding:12px;
+  text-align:center;margin-bottom:12px;
+}
+.bp-em{font-size:38px;line-height:1;margin-bottom:6px}
+.bp-status{
+  font-weight:700;font-size:13px;color:#FBBF24;margin-bottom:6px;
+}
+.bp-note{
+  font-size:11.5px;opacity:.9;line-height:1.5;
+}
+.browser-dl-list{
+  display:flex;flex-direction:column;gap:8px;
+}
+.browser-dl-row{
+  display:grid;grid-template-columns:1fr auto;gap:6px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:10px 12px;
+  align-items:center;
+}
+.bdl-name{
+  font-weight:700;font-size:13px;color:var(--gold-bright);
+  grid-column:1;
+}
+.bdl-desc{
+  font-size:11px;opacity:.85;grid-column:1;line-height:1.4;
+}
+.bdl-link{
+  grid-column:2;grid-row:1 / span 2;
+  background:linear-gradient(135deg,#FBBF24,#F59E0B);
+  color:#0F0820;font-weight:700;font-size:11px;
+  padding:8px 12px;border-radius:99px;
+  text-decoration:none;white-space:nowrap;
+  align-self:center;
+}
+.bdl-link:active{transform:scale(.95)}
+.bdl-link-no{
+  background:rgba(16,185,129,.2);
+  color:#10B981;
+  border:1px solid rgba(16,185,129,.4);
+}
 /* ==================== v0.68 · BIBLE BREAK + DAILY GOALS + FAITH OPT-IN ==================== */
 .daily-goal-card{
   background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(96,165,250,.1));
@@ -1827,7 +1877,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · wellness baked in · works offline · v0.69.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · wellness baked in · works offline · v0.70.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1868,7 +1918,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.69.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.70.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1988,7 +2038,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.69.0';
+const VERSION = '0.70.0';
 
 // ----- STATE -----
 const State = {
@@ -10139,6 +10189,7 @@ const App = {
         <div class="install-hero-sub">${isStandalone ? '✅ already running standalone · ur installed!' : 'recommended steps below · or scroll for every other device'}</div>
         ${window._deferredPrompt && !isStandalone ? `<button class="btn-primary install-now-btn" onclick="App.installPWA()">⚡ INSTALL NOW · one tap</button>` : ''}
       </div>
+      ${InstallHub.renderBrowserPrereq(dev)}
       ${InstallHub.renderCompatibilityMatrix()}
       ${InstallHub.renderPath(dev.pathId, true)}
       <div class="install-offline-card">
@@ -13639,6 +13690,160 @@ const InstallHub = {
       ${p.note ? `<div class="install-note">💡 ${p.note}</div>` : ''}
     </div>`;
   },
+  // v0.70 · BROWSER PREREQ · "u need Chrome/Edge/etc · here's how to get one"
+  // Each OS gets specific download instructions w/ direct links
+  renderBrowserPrereq(dev){
+    const pathId = dev.pathId;
+    // Group device → which browsers can install it · which it likely already has · how to install missing ones
+    const guides = {
+      'iphone': {
+        em:'🍎', label:'iPhone · iOS Safari', preinstalled:'Safari is pre-installed on every iPhone · u already have it',
+        note:'Safari is the ONLY browser that can install PWAs on iPhone · Apple\'s rules · u CANNOT use Chrome/Firefox/Brave on iOS for install (they all use Safari under the hood but lose install ability)',
+        downloads:[{name:'Safari', desc:'pre-installed · just open it', link:null}],
+      },
+      'ipad': {
+        em:'🍎', label:'iPad · iPadOS Safari', preinstalled:'Safari is pre-installed on every iPad',
+        note:'same iOS rule · Safari is the only PWA-installer on iPad · other browsers can\'t install',
+        downloads:[{name:'Safari', desc:'pre-installed · just open it', link:null}],
+      },
+      'android': {
+        em:'🤖', label:'Android Chrome', preinstalled:'Chrome is usually pre-installed on Android phones',
+        note:'most Android phones come w/ Chrome · if missing · install free from Play Store',
+        downloads:[
+          {name:'Chrome', desc:'best PWA support · #1 recommended', link:'https://play.google.com/store/apps/details?id=com.android.chrome'},
+          {name:'Brave', desc:'privacy-focused · also great', link:'https://play.google.com/store/apps/details?id=com.brave.browser'},
+          {name:'Edge', desc:'works too · less common on Android', link:'https://play.google.com/store/apps/details?id=com.microsoft.emmx'},
+        ],
+      },
+      'android-samsung': {
+        em:'🤖', label:'Samsung Internet', preinstalled:'Samsung Internet comes pre-installed on Galaxy phones',
+        note:'if u have a Galaxy · u already have Samsung Internet (orange compass icon) · alternative: install Chrome via Play Store',
+        downloads:[
+          {name:'Samsung Internet', desc:'updates via Galaxy Store', link:'https://play.google.com/store/apps/details?id=com.sec.android.app.sbrowser'},
+          {name:'Chrome', desc:'alternative · also works great', link:'https://play.google.com/store/apps/details?id=com.android.chrome'},
+        ],
+      },
+      'android-firefox': {
+        em:'🦊', label:'Android Firefox', preinstalled:'NOT pre-installed · grab it from Play Store',
+        note:'Firefox supports PWA install on Android since v79 · alternative: just use Chrome (pre-installed)',
+        downloads:[{name:'Firefox', desc:'free · v79+ supports install', link:'https://play.google.com/store/apps/details?id=org.mozilla.firefox'}],
+      },
+      'mac-chrome': {
+        em:'💻', label:'Mac · need a Chromium-based browser', preinstalled:'macOS comes w/ Safari only · u likely need to install Chrome/Brave/Edge',
+        note:'pick any one of these · they all install BrainBoard perfectly · Chrome is the most common',
+        downloads:[
+          {name:'Google Chrome', desc:'most popular · 1-click install', link:'https://www.google.com/chrome/'},
+          {name:'Brave', desc:'privacy-first · same engine as Chrome', link:'https://brave.com/download/'},
+          {name:'Microsoft Edge', desc:'Microsoft\'s Chromium browser', link:'https://www.microsoft.com/edge/download'},
+          {name:'Arc', desc:'newer · stylish · same engine', link:'https://arc.net/download'},
+          {name:'Vivaldi', desc:'highly customizable Chromium', link:'https://vivaldi.com/download/'},
+        ],
+      },
+      'mac-safari': {
+        em:'🍎', label:'Mac Safari (Sonoma 14+)', preinstalled:'Safari is pre-installed · u already have it',
+        note:'Safari can install PWAs only on macOS Sonoma 14+ · older macOS = use Chrome/Brave/Edge instead',
+        downloads:[
+          {name:'Safari', desc:'pre-installed · update macOS to Sonoma 14+ for PWA support', link:null},
+          {name:'Chrome (fallback)', desc:'works on older macOS too', link:'https://www.google.com/chrome/'},
+        ],
+      },
+      'mac-firefox': {
+        em:'🦊', label:'Mac · Firefox can\'t install PWAs', preinstalled:'Firefox doesn\'t support PWA install on Mac',
+        note:'use Chrome / Brave / Edge / Safari (Sonoma+) for install · OR just bookmark in Firefox',
+        downloads:[
+          {name:'Chrome', desc:'recommended swap-in for install', link:'https://www.google.com/chrome/'},
+          {name:'Brave', desc:'privacy alternative', link:'https://brave.com/download/'},
+        ],
+      },
+      'win-chrome': {
+        em:'🖥️', label:'Windows · need Chrome/Edge/Brave', preinstalled:'Windows 10/11 comes w/ Microsoft Edge pre-installed (use that if u want zero-install)',
+        note:'Edge is built-in and works perfectly · OR grab Chrome/Brave',
+        downloads:[
+          {name:'Microsoft Edge', desc:'pre-installed on Windows 10+', link:'https://www.microsoft.com/edge/download'},
+          {name:'Google Chrome', desc:'most popular alternative', link:'https://www.google.com/chrome/'},
+          {name:'Brave', desc:'privacy-focused', link:'https://brave.com/download/'},
+        ],
+      },
+      'win-edge': {
+        em:'🖥️', label:'Windows · Edge (pre-installed)', preinstalled:'Edge comes pre-installed on Windows 10/11 · u already have it',
+        note:'Edge has the smoothest PWA experience on Windows · ZERO browser install needed',
+        downloads:[
+          {name:'Microsoft Edge', desc:'pre-installed · update via Windows Update', link:'https://www.microsoft.com/edge/download'},
+        ],
+      },
+      'win-firefox': {
+        em:'🦊', label:'Windows · Firefox can\'t install PWAs natively', preinstalled:'use Edge (pre-installed) instead · or Chrome/Brave',
+        note:'Edge is RIGHT THERE on every Win 10/11 · zero-install path · use Edge for the install',
+        downloads:[
+          {name:'Microsoft Edge', desc:'already on ur PC · just open it', link:null},
+          {name:'Chrome', desc:'alternative download', link:'https://www.google.com/chrome/'},
+        ],
+      },
+      'chromebook': {
+        em:'💻', label:'Chromebook · Chrome is the only browser', preinstalled:'Chrome is THE browser on ChromeOS · u already have it · it IS the system',
+        note:'no install needed · open Chrome (it\'s pinned to ur shelf by default)',
+        downloads:[{name:'Chrome', desc:'pre-installed · the OS basically IS Chrome', link:null}],
+      },
+      'linux-chrome': {
+        em:'🐧', label:'Linux · install Chrome / Chromium / Brave', preinstalled:'most Linux distros come w/ Firefox · u\'ll need to install a Chromium-based browser',
+        note:'try the package manager first (apt/dnf/pacman) · or grab the .deb/.rpm/.AppImage from the official site',
+        downloads:[
+          {name:'Chromium (via apt)', desc:'sudo apt install chromium-browser · Debian/Ubuntu', link:null},
+          {name:'Chromium (via dnf)', desc:'sudo dnf install chromium · Fedora', link:null},
+          {name:'Chromium (via pacman)', desc:'sudo pacman -S chromium · Arch', link:null},
+          {name:'Google Chrome', desc:'official .deb/.rpm download', link:'https://www.google.com/chrome/'},
+          {name:'Brave', desc:'official Linux installer', link:'https://brave.com/linux/'},
+          {name:'Microsoft Edge', desc:'official .deb/.rpm', link:'https://www.microsoft.com/edge/download/insider'},
+        ],
+      },
+      'linux-firefox': {
+        em:'🦊', label:'Linux · Firefox needs extension or use Chromium', preinstalled:'Firefox is usually pre-installed · but Firefox can\'t install PWAs natively on Linux',
+        note:'use the firefoxpwa extension · OR install Chromium for proper PWA support',
+        downloads:[
+          {name:'Chromium', desc:'sudo apt install chromium-browser (or pacman/dnf equivalent)', link:null},
+          {name:'firefoxpwa extension', desc:'add PWA install button to Firefox', link:'https://addons.mozilla.org/en-US/firefox/addon/pwas-for-firefox/'},
+        ],
+      },
+      'fallback': {
+        em:'🌐', label:'pick any modern browser', preinstalled:'most devices come w/ some browser pre-installed',
+        note:'BrainBoard plays in any modern browser · install (icon + offline) needs a Chromium-based browser or Safari · here are ur best options',
+        downloads:[
+          {name:'Google Chrome', desc:'works everywhere', link:'https://www.google.com/chrome/'},
+          {name:'Microsoft Edge', desc:'pre-installed on Windows 10+', link:'https://www.microsoft.com/edge/download'},
+          {name:'Brave', desc:'privacy-first Chromium', link:'https://brave.com/download/'},
+        ],
+      },
+      'already': {
+        em:'✅', label:'already installed · ignore this section', preinstalled:'u\'re already running standalone',
+        note:'BrainBoard is installed and working · share the link if u want others to install too',
+        downloads:[],
+      },
+    };
+
+    const g = guides[pathId] || guides['fallback'];
+    if(pathId === 'already') return ''; // skip if already installed
+    const dlHtml = g.downloads.length === 0 ? '' : g.downloads.map(d => `
+      <div class="browser-dl-row">
+        <div class="bdl-name">${d.name}</div>
+        <div class="bdl-desc">${d.desc}</div>
+        ${d.link ? `<a class="bdl-link" href="${d.link}" target="_blank" rel="noopener">📥 download</a>` : `<span class="bdl-link bdl-link-no">pre-installed</span>`}
+      </div>
+    `).join('');
+
+    return `<div class="browser-prereq">
+      <div class="install-section-h" style="color:#FBBF24">🌐 first · u need a PWA-capable browser</div>
+      <div class="browser-pre-card">
+        <div class="bp-em">${g.em}</div>
+        <div class="bp-status">${g.preinstalled}</div>
+        <div class="bp-note">${g.note}</div>
+      </div>
+      ${dlHtml ? `<div class="browser-dl-list">${dlHtml}</div>` : ''}
+      <p class="dim" style="font-size:11px;text-align:center;margin-top:10px;line-height:1.5">
+        💡 already have ur browser? <b style="color:#10B981">skip down to the install steps</b> ↓
+      </p>
+    </div>`;
+  },
+
   // v0.69 · device compatibility matrix · at-a-glance
   renderCompatibilityMatrix(){
     return `<div class="install-compat">
