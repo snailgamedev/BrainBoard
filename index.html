@@ -1200,6 +1200,52 @@ button{
 .wellness-actions .btn-secondary{
   padding:12px;font-size:13px;font-weight:700;
 }
+.wellness-section-h{
+  font-family:'Cinzel',serif;color:var(--gold-bright);
+  font-size:12px;letter-spacing:.06em;
+  margin:14px 0 8px;text-align:center;
+}
+.mood-strip{
+  display:flex;justify-content:space-around;gap:4px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:8px;
+}
+.mood-pick{
+  flex:1;background:transparent;border:1px solid transparent;
+  font-size:30px;padding:8px 4px;border-radius:10px;cursor:pointer;
+  transition:transform .15s, background .15s;
+}
+.mood-pick:hover{background:rgba(255,255,255,.08);border-color:rgba(245,158,11,.4)}
+.mood-pick:active{transform:scale(1.2)}
+.stretch-timer{
+  font-family:'Cinzel',serif;font-size:84px;
+  color:var(--gold-bright);font-weight:800;
+  margin:14px 0;text-shadow:0 0 24px rgba(251,191,36,.5);
+}
+.breath-count{
+  font-family:'Cinzel',serif;font-size:72px;
+  color:#60A5FA;font-weight:800;margin:14px 0;
+  text-shadow:0 0 24px rgba(96,165,250,.5);
+}
+/* ==================== v0.67 · INSTALL HUB DETAILED ==================== */
+.install-section-h{
+  font-size:11px;font-weight:700;letter-spacing:.06em;
+  color:var(--gold-bright);text-transform:uppercase;
+  margin-bottom:6px;
+}
+.install-verify{
+  background:rgba(16,185,129,.08);border-left:3px solid #10B981;
+  padding:8px 8px 8px 28px;border-radius:6px;list-style:disc;
+}
+.install-troubleshoot{
+  background:rgba(251,146,60,.08);border-left:3px solid #FB923C;
+  padding:8px 8px 8px 28px;border-radius:6px;list-style:disc;
+}
+.install-offline-card{
+  margin-top:14px;background:rgba(96,165,250,.1);
+  border:1px solid rgba(96,165,250,.35);
+  border-radius:14px;padding:12px 14px;
+}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1635,7 +1681,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · installs anywhere · wellness baked in · v0.66.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · installs anywhere · works offline · v0.67.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1676,7 +1722,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.66.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.67.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1796,7 +1842,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.66.0';
+const VERSION = '0.67.0';
 
 // ----- STATE -----
 const State = {
@@ -9942,14 +9988,23 @@ const App = {
     const allPaths = InstallHub.PATHS;
     document.getElementById('aux-title').innerHTML = '📥 Install BrainBoard';
 
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     const recommendedBlock = `
       <div class="install-hero">
         <div class="install-hero-em">${dev.emoji}</div>
         <div class="install-hero-title">looks like ur on <b>${dev.label}</b></div>
-        <div class="install-hero-sub">recommended path below · or scroll for every other device</div>
-        ${window._deferredPrompt ? `<button class="btn-primary install-now-btn" onclick="App.installPWA()">⚡ INSTALL NOW · one tap</button>` : ''}
+        <div class="install-hero-sub">${isStandalone ? '✅ already running standalone · ur installed!' : 'recommended steps below · or scroll for every other device'}</div>
+        ${window._deferredPrompt && !isStandalone ? `<button class="btn-primary install-now-btn" onclick="App.installPWA()">⚡ INSTALL NOW · one tap</button>` : ''}
       </div>
       ${InstallHub.renderPath(dev.pathId, true)}
+      <div class="install-offline-card">
+        <div class="install-section-h" style="margin:0 0 8px;color:#60A5FA">📶 offline readiness</div>
+        <div id="install-offline-status" class="dim" style="font-size:12px;text-align:center;padding:8px 0">tap below to test if u can play without wifi →</div>
+        <button class="btn-secondary" style="width:100%" onclick="App._testOffline()">🧪 test offline mode</button>
+        <p class="dim" style="font-size:11px;text-align:center;margin-top:8px;line-height:1.5">
+          installed app works <b>fully offline</b> · service worker pre-caches everything on first load · then serves from cache instantly · updates fetch silently in background when u\'re online
+        </p>
+      </div>
     `;
 
     const grid = allPaths.filter(p=>p.id!==dev.pathId).map(p=>`
@@ -10013,6 +10068,19 @@ const App = {
       App._copyInstallLink();
     }
     haptic(8);
+  },
+  // v0.67 · offline readiness tester · asks SW if everything's cached
+  _testOffline(){
+    const slot = document.getElementById('install-offline-status');
+    if(!slot) return;
+    slot.innerHTML = `<span style="color:#60A5FA">🔍 checking offline readiness...</span>`;
+    InstallHub.checkOfflineReady((ready, msg) => {
+      const color = ready ? '#10B981' : '#FB923C';
+      const em = ready ? '✅' : '⚠️';
+      slot.innerHTML = `<span style="color:${color};font-weight:700">${em} ${msg}</span>`;
+      Toast.show(`${em} ${msg}`);
+      SFX.tap();
+    });
   },
   _renderInstallQR(){
     const slot = document.getElementById('install-qr-slot'); if(!slot) return;
@@ -12216,11 +12284,30 @@ const Wellness = {
         <div class="wellness-stat"><span class="we-em">💧</span><span class="we-val">${w.waterCount||0}</span><span class="we-lbl">water today</span></div>
         <div class="wellness-stat"><span class="we-em">🌿</span><span class="we-val">${w.breaksTaken||0}</span><span class="we-lbl">breaks all-time</span></div>
         <div class="wellness-stat"><span class="we-em">⏰</span><span class="we-val">${Wellness.sessionMinutes()}m</span><span class="we-lbl">this session</span></div>
+        <div class="wellness-stat"><span class="we-em">🌱</span><span class="we-val">${w.grassTouches||0}</span><span class="we-lbl">grass touches</span></div>
       </div>
+
+      <div class="wellness-section-h">⚡ quick actions</div>
       <div class="wellness-actions">
-        <button class="btn-secondary" onclick="Wellness.logWater()">💧 +1 glass</button>
+        <button class="btn-secondary" onclick="Wellness.logWater()">💧 +1 glass water</button>
         <button class="btn-secondary" onclick="Wellness.markBreakTaken()">🌿 took a break</button>
+        <button class="btn-secondary" onclick="Wellness.touchGrass()">🌱 touched grass</button>
+        <button class="btn-secondary" onclick="Wellness.startStretchFlow()">🤸 guided stretch · 3 min</button>
+        <button class="btn-secondary" onclick="Wellness.startBreathTimer()">🌬️ 4-7-8 breathing · 2 min</button>
       </div>
+
+      <div class="wellness-section-h">😊 how u feelin rn</div>
+      <div class="mood-strip">
+        <button class="mood-pick" onclick="Wellness.logMood('😄')">😄</button>
+        <button class="mood-pick" onclick="Wellness.logMood('🙂')">🙂</button>
+        <button class="mood-pick" onclick="Wellness.logMood('😐')">😐</button>
+        <button class="mood-pick" onclick="Wellness.logMood('😔')">😔</button>
+        <button class="mood-pick" onclick="Wellness.logMood('😴')">😴</button>
+        <button class="mood-pick" onclick="Wellness.logMood('🔥')">🔥</button>
+      </div>
+      ${w.moodLog?.length ? `<div class="dim" style="font-size:11px;text-align:center;margin:8px 0">recent: ${w.moodLog.slice(0,8).map(m=>m.mood).join(' · ')}</div>` : ''}
+
+      <div class="wellness-section-h">⚙️ reminder settings</div>
       <div class="setting-row">
         <div><b>Wellness reminders</b><div class="dim" style="font-size:11px">water · breaks · eye rest · bedtime</div></div>
         <div class="toggle ${w.enabled?'on':''}" onclick="Wellness.toggle('enabled')"></div>
@@ -12274,6 +12361,124 @@ const Wellness = {
     SFX.tap(); haptic(10);
     App.openWellnessHub?.();
   },
+  // v0.67 · stretch sequence · 5 numbered moves with timer
+  STRETCHES: [
+    {em:'🙆', name:'neck rolls',      desc:'slow circles · 5 each direction', sec:30},
+    {em:'🤲', name:'shoulder rolls',  desc:'forward 5 · backward 5',          sec:25},
+    {em:'🙌', name:'arm reach',       desc:'reach up · hold 10 · drop slow',  sec:25},
+    {em:'🧍', name:'standing twist',  desc:'gentle waist twist · both sides', sec:30},
+    {em:'🦵', name:'leg shake',       desc:'shake each leg · 10 sec each',    sec:30},
+    {em:'👁️', name:'eye palming',     desc:'cup hands over eyes · breathe',   sec:30},
+  ],
+  startStretchFlow(){
+    let i = 0;
+    const run = () => {
+      if(i >= Wellness.STRETCHES.length){
+        Modal.close();
+        Wellness.markBreakTaken();
+        return;
+      }
+      const s = Wellness.STRETCHES[i];
+      const total = Wellness.STRETCHES.length;
+      Modal.show(`
+        <div class="big">${s.em}</div>
+        <h3 style="color:var(--gold-bright)">${s.name}</h3>
+        <p style="font-size:13px;margin:6px 0">${s.desc}</p>
+        <div class="dim" style="font-size:11px;margin:8px 0">stretch ${i+1} of ${total}</div>
+        <div class="stretch-timer" id="stretch-timer">${s.sec}</div>
+        <div class="modal-actions" style="flex-direction:column;gap:8px">
+          <button class="btn-primary" id="stretch-next-btn" onclick="Wellness._stretchNext()">⏭ next</button>
+          <button class="btn-secondary" onclick="Modal.close()">stop · finish later</button>
+        </div>
+      `);
+      Wellness._stretchStartTime = Date.now();
+      Wellness._stretchDuration = s.sec;
+      Wellness._stretchIndex = i;
+      Wellness._tickStretch();
+      i++;
+      Wellness._stretchAdvance = () => { run(); };
+    };
+    Wellness._stretchAdvance = run;
+    run();
+  },
+  _tickStretch(){
+    if(!Wellness._stretchStartTime) return;
+    const elapsed = (Date.now() - Wellness._stretchStartTime) / 1000;
+    const remain = Math.max(0, Math.ceil(Wellness._stretchDuration - elapsed));
+    const t = document.getElementById('stretch-timer');
+    if(t) t.textContent = remain;
+    if(remain <= 0){
+      Wellness._stretchStartTime = 0;
+      setTimeout(() => Wellness._stretchAdvance?.(), 300);
+    } else {
+      setTimeout(() => Wellness._tickStretch(), 200);
+    }
+  },
+  _stretchNext(){
+    Wellness._stretchStartTime = 0;
+    Wellness._stretchAdvance?.();
+  },
+  // v0.67 · mood log · how do u feel rn (3-tap)
+  logMood(mood){
+    const w = Wellness.ensure();
+    if(!w.moodLog) w.moodLog = [];
+    w.moodLog.unshift({mood, ts: Date.now()});
+    if(w.moodLog.length > 30) w.moodLog.length = 30;
+    Save.write();
+    Toast.show(`${mood} logged · take care of u boi`);
+    SFX.chime(); haptic(15);
+  },
+  // v0.67 · 4-7-8 breath timer (4 in · 7 hold · 8 out · 4 cycles)
+  startBreathTimer(){
+    let phase = 'in', cycle = 0, count = 4;
+    const phases = {in:{label:'BREATHE IN',sec:4,em:'🌬️'}, hold:{label:'HOLD',sec:7,em:'⏸️'}, out:{label:'BREATHE OUT',sec:8,em:'💨'}};
+    const tick = () => {
+      const p = phases[phase];
+      Modal.show(`
+        <div class="big" style="font-size:88px">${p.em}</div>
+        <h3 style="color:var(--gold-bright);font-size:32px">${p.label}</h3>
+        <div class="breath-count">${count}</div>
+        <div class="dim" style="font-size:12px">cycle ${cycle+1} of 4 · 4-7-8 technique</div>
+        <button class="btn-secondary" style="margin-top:14px" onclick="Wellness._stopBreath()">finish early</button>
+      `);
+      Wellness._breathTimer = setTimeout(()=>{
+        count--;
+        if(count > 0) tick();
+        else {
+          if(phase === 'in'){ phase = 'hold'; count = phases.hold.sec; tick(); }
+          else if(phase === 'hold'){ phase = 'out'; count = phases.out.sec; tick(); }
+          else {
+            cycle++;
+            if(cycle >= 4){
+              Modal.close();
+              Toast.show('🌬️ breathing done · system calmed');
+              Wellness.markBreakTaken();
+              Wellness._breathTimer = null;
+            } else {
+              phase = 'in'; count = phases.in.sec; tick();
+            }
+          }
+        }
+      }, 1000);
+    };
+    tick();
+  },
+  _stopBreath(){
+    if(Wellness._breathTimer){ clearTimeout(Wellness._breathTimer); Wellness._breathTimer = null; }
+    Modal.close();
+  },
+  // v0.67 · "touch grass" · log going outside
+  touchGrass(){
+    const w = Wellness.ensure();
+    w.grassTouches = (w.grassTouches||0) + 1;
+    Wallet.add({coin:50, faith:1});
+    Toast.show(`🌱 touched grass · +50🪙 +1✝️ · ${w.grassTouches} all-time`);
+    Activity.log('ach','🌱', `went outside · brain reset`);
+    SFX.holy(); haptic(40); confetti({variant:'star',count:30});
+    Save.write();
+    if(w.grassTouches >= 1) Ach.unlock('grass_first');
+    if(w.grassTouches >= 10) Ach.unlock('grass_10');
+  },
 };
 
 // ====================================================================
@@ -12316,134 +12521,350 @@ const InstallHub = {
     return {pathId:'fallback', label:'your device', emoji:'🌐'};
   },
   PATHS: [
-    {id:'iphone', em:'📱', label:'iPhone (iOS 14+)', steps:[
-      'open https://snailgamedev.github.io/BrainBoard/ in <b>Safari</b> (Chrome/Firefox on iOS can\'t install PWAs · Apple limitation)',
-      'tap the <b>Share button</b> at the bottom (looks like a box with an arrow ⬆)',
-      'scroll down → tap <b>"Add to Home Screen"</b>',
-      'tap <b>"Add"</b> in the top right',
-      'BrainBoard icon now lives on ur home screen · tap to play full-screen 🔥',
-    ], note:'works on iPhone 6s and newer · iOS 11.3+ for full PWA support'},
+    {id:'iphone', em:'📱', label:'iPhone (iOS 14 · 15 · 16 · 17 · 18+)', steps:[
+      'open <b>Safari</b> · NOT Chrome · NOT Firefox · NOT Brave · they CAN\'T install on iOS (Apple blocks it)',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for the game to load fully · u\'ll see the splash screen w/ 🧠 logo',
+      'tap the <b>Share button</b> at the BOTTOM CENTER of Safari · looks like <code>[ ⬆ ]</code> · a square with an up-arrow coming out of it',
+      'a panel slides up from the bottom · SCROLL DOWN past Messages/Mail/Copy etc',
+      'find and tap <b>"Add to Home Screen"</b> · icon is a small house with a + on it',
+      'on the next screen u\'ll see "BrainBoard" pre-filled · u can rename it or keep it',
+      'tap <b>"Add"</b> in the top-right corner (blue text)',
+      'Safari closes the sheet · check ur home screen · 🧠 BrainBoard icon should be there',
+      'tap the icon · BOOM · launches full-screen · no browser bars · feels like a real app 🔥',
+    ], verify:[
+      'tap the home-screen icon (NOT through Safari)',
+      'app should open WITHOUT the URL bar at top',
+      'should look 100% identical to the website but full-screen · no Safari UI',
+      'try flipping airplane mode ON and reopening — should still work · proves offline cache locked in',
+    ], troubleshoot:[
+      '<b>Don\'t see Share button?</b> Tap anywhere on the page · the bottom toolbar reappears',
+      '<b>Don\'t see "Add to Home Screen"?</b> u might be in Chrome/Firefox/Brave · close and reopen in <b>Safari</b>',
+      '<b>"Add to Home Screen" greyed out?</b> Private Browsing mode disables it · open a non-private tab',
+      '<b>iOS 13 or older?</b> Update iOS · or just use Safari w/ bookmark for now',
+    ], note:'works perfectly on iPhone 6s+ running iOS 14+ · best experience on iOS 16.4+ which adds PWA notifications + badges'},
 
-    {id:'ipad', em:'📱', label:'iPad (iPadOS 14+)', steps:[
-      'open the link in <b>Safari</b>',
-      'tap the <b>Share button</b> top-right (square with up arrow)',
-      'scroll down → tap <b>"Add to Home Screen"</b>',
-      'name it (or keep "BrainBoard") → tap <b>"Add"</b>',
-      'icon appears on home screen · launches in own window',
-    ], note:'iPadOS 13+ for best experience · split-view supported'},
+    {id:'ipad', em:'📱', label:'iPad (iPadOS 14 · 15 · 16 · 17 · 18+)', steps:[
+      'open <b>Safari</b> on your iPad (other browsers can\'t install PWAs on iPad either)',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for the splash screen to fully load',
+      'tap the <b>Share button</b> in the TOP-RIGHT corner of Safari · looks like <code>[ ⬆ ]</code>',
+      'a popover appears · scroll down if needed',
+      'tap <b>"Add to Home Screen"</b>',
+      'edit the name if u want · tap <b>"Add"</b> top-right',
+      'icon appears on Home Screen · tap to launch in standalone mode',
+      'on iPadOS 16+ · it can run in Split View · Stage Manager · Slide Over',
+    ], verify:[
+      'launch from Home Screen · should fill the whole iPad screen',
+      'no Safari URL bar should be visible',
+      'try going to Settings → Wi-Fi → turn OFF · relaunch · should still load',
+    ], troubleshoot:[
+      '<b>Share button missing?</b> Tap the page once · top toolbar reappears',
+      '<b>Wrong browser?</b> Chrome/Firefox on iPad just open Safari engine but can\'t install · use Safari directly',
+      '<b>Split View not working?</b> Need iPadOS 16+ · or use Slide Over from the dock',
+    ], note:'iPadOS 13+ for full PWA · iPadOS 16+ unlocks Split View + Stage Manager + true desktop-class multitasking'},
 
-    {id:'android', em:'🤖', label:'Android · Chrome', steps:[
-      'open the link in <b>Chrome</b>',
-      'tap the <b>three dots menu (⋮)</b> top right',
-      'tap <b>"Install app"</b> or <b>"Add to Home screen"</b>',
-      'confirm <b>"Install"</b>',
-      'icon shows in app drawer · works offline · feels native 🔥',
-    ], note:'Chrome will sometimes show a popup automatically · take it'},
+    {id:'android', em:'🤖', label:'Android · Chrome (Android 8 · 9 · 10 · 11 · 12 · 13 · 14 · 15+)', steps:[
+      'open <b>Google Chrome</b> on your Android phone',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash to load · sometimes Chrome auto-shows an "Install" banner at the bottom — if so · tap it and skip to step 7',
+      'if no auto-banner: tap the <b>three dots menu (⋮)</b> in the top-right corner of Chrome',
+      'a menu drops down · look for <b>"Install app"</b> · or <b>"Add to Home screen"</b> (older Android Chrome)',
+      'tap it · a confirmation dialog appears',
+      'tap <b>"Install"</b> (or "Add" on older versions)',
+      'icon appears in your app drawer AND on your home screen · just like a real app from Play Store',
+      'tap the icon · app opens in standalone mode · no Chrome chrome 🔥',
+    ], verify:[
+      'open the app drawer · scroll to B · should see 🧠 BrainBoard icon',
+      'tap it · should launch WITHOUT the Chrome address bar at top',
+      'open phone Settings → Apps → BrainBoard should appear in the list (proves it\'s a real installed app)',
+      'enable Airplane Mode · reopen · should still launch and play',
+    ], troubleshoot:[
+      '<b>No "Install app" option?</b> The menu may say <b>"Add to Home screen"</b> instead · same thing · tap it',
+      '<b>"Add to Home screen" creates only a shortcut?</b> Make sure URL is https + sw.js loaded · refresh once and try again',
+      '<b>Chrome won\'t install?</b> Update Chrome to latest version via Play Store',
+      '<b>Auto-banner annoying?</b> Tap × to dismiss · use menu method instead',
+    ], note:'Android 5.0+ supports PWAs · Android 8+ gives best WebAPK behavior (true app integration in settings)'},
 
-    {id:'android-samsung', em:'🤖', label:'Android · Samsung Internet', steps:[
-      'open the link in <b>Samsung Internet</b>',
-      'tap the <b>menu button</b> (three lines bottom right)',
-      'tap <b>"Add page to"</b> → <b>"Home screen"</b>',
-      'confirm <b>"Add"</b>',
-      'icon appears with native-feel launch',
-    ], note:'Samsung Internet 5.0+ supports full PWA install'},
+    {id:'android-samsung', em:'🤖', label:'Android · Samsung Internet (Galaxy phones)', steps:[
+      'open <b>Samsung Internet</b> (the orange compass icon that came with your Galaxy)',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash to fully load',
+      'tap the <b>three horizontal lines menu (☰)</b> at the BOTTOM RIGHT',
+      'a panel slides up · look for <b>"Add page to"</b>',
+      'tap it · select <b>"Home screen"</b>',
+      'a popup confirms the icon name (BrainBoard) · tap <b>"Add"</b>',
+      'icon appears on home screen · works like any installed app',
+    ], verify:[
+      'tap home-screen icon · should open without Samsung Internet toolbar',
+      'try airplane mode · reopen · still works',
+    ], troubleshoot:[
+      '<b>Menu button looks different?</b> Some Samsung Internet versions have it top-right (⋮)',
+      '<b>"Add page to" missing?</b> Update Samsung Internet via Galaxy Store',
+      '<b>Want fewer permissions prompts?</b> Use Chrome instead · also works great on Samsung',
+    ], note:'Samsung Internet 5.0+ supports full PWA install · Samsung Internet 18+ has the smoothest UX'},
 
     {id:'android-firefox', em:'🦊', label:'Android · Firefox', steps:[
-      'open the link in <b>Firefox</b>',
-      'tap the <b>three dots menu (⋮)</b>',
-      'tap <b>"Install"</b> if shown · otherwise <b>"Add to Home screen"</b>',
-      'confirm',
-      'icon installed · launches without browser chrome',
-    ], note:'Firefox 79+ supports PWA install on Android'},
+      'open <b>Firefox</b> on your Android phone',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash to load',
+      'tap the <b>three dots menu (⋮)</b> bottom-right (Firefox) or top-right (some versions)',
+      'tap <b>"Install"</b> if shown · OR <b>"Add to Home screen"</b>',
+      'confirm in the dialog',
+      'icon installed · launches without browser bars',
+    ], verify:[
+      'launch from home screen · no Firefox UI should appear',
+      'airplane mode test: still works',
+    ], troubleshoot:[
+      '<b>No "Install" option?</b> Firefox older than v79 doesn\'t support PWA install · update Firefox',
+      '<b>Still no Install?</b> Switch to Chrome temporarily for the install · then go back to Firefox for browsing',
+    ], note:'Firefox 79+ on Android supports PWA install · earlier versions only do home-screen shortcut'},
 
-    {id:'mac-chrome', em:'💻', label:'Mac · Chrome / Brave / Edge', steps:[
-      'open the link in <b>Chrome</b>, <b>Brave</b>, or <b>Edge</b>',
-      'look for the <b>install icon (⊕ or ⬇)</b> in the address bar — or click the three-dot menu',
-      'click <b>"Install BrainBoard..."</b>',
-      'confirm <b>"Install"</b>',
-      'app opens in own window · added to Launchpad · pin to Dock 🔥',
-    ], note:'macOS 10.15+ for best · works on M1/M2/M3 silicon natively'},
+    {id:'mac-chrome', em:'💻', label:'Mac · Chrome / Brave / Edge / Vivaldi / Arc (macOS 10.15 · 11 · 12 · 13 · 14 · 15+)', steps:[
+      'open <b>Chrome</b>, <b>Brave</b>, <b>Edge</b>, <b>Vivaldi</b>, or <b>Arc</b> (any Chromium-based browser)',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash · fully load',
+      'look in the <b>address bar (URL bar) at the top</b> · on the RIGHT SIDE you should see a small icon that looks like a computer screen with a down-arrow · <code>[ ⊕ ]</code> or <code>[ 🖥️↓ ]</code>',
+      'if no install icon: click the <b>three dots menu (⋮)</b> top-right · choose <b>"Install BrainBoard..."</b> or <b>"Cast, save, and share" → "Install page as app..."</b>',
+      'a dialog pops up · click <b>"Install"</b>',
+      'a new window opens · this is BrainBoard running as its own Mac app',
+      'app icon now appears in <b>Launchpad</b> · drag it to your <b>Dock</b> for quick access',
+      'right-click the dock icon → <b>Options → Keep in Dock</b> · so it stays after quit',
+    ], verify:[
+      'quit the app (⌘Q) · then launch from Launchpad or Dock',
+      'should open in own window · NO Chrome/Brave URL bar visible',
+      '⌘+H should hide it like a real app',
+      'open Activity Monitor · BrainBoard appears as its own process (proves it\'s installed)',
+      'disconnect from wifi · double-click the app icon · should still launch and run',
+    ], troubleshoot:[
+      '<b>No install icon in address bar?</b> Sometimes hidden · click the bookmark star icon area to reveal it · or use the three-dots menu method',
+      '<b>"Install" option missing in menu?</b> The site needs to fully load first · refresh and wait 3 seconds before checking menu',
+      '<b>Arc browser?</b> Arc handles PWAs slightly differently · use ⌘+Shift+I to install · or check Arc settings',
+      '<b>App opens in browser not standalone?</b> Right-click app icon → Options → ensure not "Open in Browser"',
+    ], note:'macOS 10.15 Catalina+ for best experience · M1/M2/M3 Apple Silicon Macs run it natively at full speed'},
 
-    {id:'mac-safari', em:'🍎', label:'Mac · Safari (macOS 14 Sonoma+)', steps:[
-      'open the link in <b>Safari</b>',
-      'click <b>File menu</b> → <b>"Add to Dock..."</b>',
-      'edit name if u want → click <b>Add</b>',
-      'app pinned to Dock · click to launch in own window',
-    ], note:'requires macOS Sonoma (14) or later · older Macs use Chrome path above'},
+    {id:'mac-safari', em:'🍎', label:'Mac · Safari (macOS 14 Sonoma · 15 Sequoia · 16+)', steps:[
+      'open <b>Safari</b> on your Mac',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash to load',
+      'click the <b>"File"</b> menu in the top-left Mac menu bar',
+      'choose <b>"Add to Dock..."</b> (only available macOS Sonoma 14+)',
+      'edit name if u want · click <b>"Add"</b>',
+      'BrainBoard icon now pinned to your Dock',
+      'click it from Dock · opens in its own window · no Safari UI',
+    ], verify:[
+      'quit BrainBoard (⌘Q from app)',
+      'click dock icon again · launches in own window',
+      'NO Safari bookmarks bar · NO URL bar · clean standalone window',
+      'try with wifi off · still loads from cache',
+    ], troubleshoot:[
+      '<b>"Add to Dock..." missing from File menu?</b> Update macOS to 14 Sonoma or later · OR use the Mac · Chrome path above',
+      '<b>App still shows Safari URL?</b> Quit and relaunch from dock · not from Safari',
+      '<b>Pre-Sonoma Mac (macOS 13 or earlier)?</b> Safari doesn\'t support standalone install · use Chrome/Brave/Edge instead',
+    ], note:'requires macOS Sonoma 14+ · older Macs absolutely should use the Mac · Chrome / Brave path'},
 
-    {id:'mac-firefox', em:'🦊', label:'Mac · Firefox', steps:[
-      'Firefox on Mac doesn\'t support PWA install yet · workaround:',
-      'use <b>Chrome / Brave / Edge / Safari</b> for one-time install (see paths above)',
-      'OR bookmark the page (⌘+D) · use as web bookmark',
-      'OR run <code>open -a "Firefox" --args --new-window "https://snailgamedev.github.io/BrainBoard/"</code> for app-mode',
-    ], note:'Firefox PWA on Mac = roadmap item · use other browsers for now'},
+    {id:'mac-firefox', em:'🦊', label:'Mac · Firefox (no native install · use workaround)', steps:[
+      'Firefox on Mac doesn\'t support PWA install · NEVER has · won\'t for the foreseeable',
+      '<b>Best workaround:</b> install via Chrome/Brave/Edge/Safari (see paths above)',
+      'Then you can <b>open the installed app</b> instead of using Firefox · gets standalone behavior',
+      '<b>Alternative workaround:</b> open Terminal · paste this:',
+      '<code>/Applications/Firefox.app/Contents/MacOS/firefox --new-window "https://snailgamedev.github.io/BrainBoard/" --no-remote</code>',
+      'That opens a separate Firefox window with the game · still has Firefox chrome but it\'s isolated',
+      '<b>Bookmark workaround:</b> press <code>⌘+D</code> · save bookmark · pin to bookmarks bar',
+    ], verify:[
+      'if using the Chrome/Safari install method · launch from Dock · no Firefox UI involved',
+      'if using bookmark · always loads in Firefox · just not standalone',
+    ], troubleshoot:[
+      '<b>Firefox PWA extension?</b> "Progressive Web Apps for Firefox" extension exists for Linux/Windows but NOT macOS',
+      '<b>Want it standalone in Firefox-style?</b> Honestly · just use Brave · same engine as Chrome but more privacy-focused',
+    ], note:'Mozilla has no roadmap for PWA install on Mac · use Chrome/Brave/Edge/Safari for the install'},
 
-    {id:'win-chrome', em:'🖥️', label:'Windows · Chrome / Brave', steps:[
-      'open the link in <b>Chrome</b> or <b>Brave</b>',
-      'click the <b>install icon (⊕)</b> in the address bar (right side)',
-      'click <b>"Install"</b>',
-      'icon added to Start Menu · pin to taskbar for quick access',
-    ], note:'Windows 10 + 11 supported · works offline · creates desktop shortcut'},
+    {id:'win-chrome', em:'🖥️', label:'Windows · Chrome / Brave / Vivaldi / Arc (Windows 10 · 11)', steps:[
+      'open <b>Chrome</b>, <b>Brave</b>, <b>Vivaldi</b>, or <b>Arc</b>',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash · fully load',
+      'look in the <b>address bar on the RIGHT</b> · find a small icon that looks like <code>[ ⊕ ]</code> · a monitor with a down-arrow',
+      'if no install icon: click <b>three dots menu (⋮)</b> top-right · click <b>"Install BrainBoard..."</b> or <b>"Save and share → Install page as app..."</b>',
+      'a dialog appears · click <b>"Install"</b>',
+      'a new window pops open · this is the standalone app',
+      'icon appears in your <b>Start Menu</b> · search "BrainBoard" to find it',
+      '<b>Pin to Start</b> or <b>Pin to Taskbar</b> for quick access · right-click the Start Menu entry',
+    ], verify:[
+      'close the app · open Start Menu · type "BrainBoard"',
+      'app appears with its own icon (not a Chrome bookmark)',
+      'click it · standalone window opens · no Chrome URL bar',
+      'right-click taskbar icon → "Pin to taskbar" works',
+      'disconnect wifi · launch from Start · still works',
+    ], troubleshoot:[
+      '<b>No install icon in address bar?</b> Click the lock icon (🔒) first · sometimes triggers the install prompt · or use the menu method',
+      '<b>"Install" greyed out?</b> Site hasn\'t finished loading · wait for splash · refresh once',
+      '<b>App opens in browser anyway?</b> Right-click Start entry → check shortcut target · should be Chrome with app flag',
+      '<b>Want to uninstall?</b> Settings → Apps → Apps & features → BrainBoard → Uninstall',
+    ], note:'Windows 10 build 1809+ for best PWA support · Windows 11 makes it feel even more native'},
 
-    {id:'win-edge', em:'🖥️', label:'Windows · Edge', steps:[
-      'open the link in <b>Edge</b>',
-      'click <b>three dots menu (...)</b> → <b>"Apps"</b> → <b>"Install BrainBoard"</b>',
-      'OR look for the <b>install icon in the address bar</b> · click it',
-      'confirm <b>"Install"</b>',
-      'app pinned to taskbar + Start · also shows in <code>edge://apps</code>',
-    ], note:'Edge has the smoothest PWA experience on Windows'},
-
-    {id:'win-firefox', em:'🦊', label:'Windows · Firefox', steps:[
-      'Firefox on Windows doesn\'t support PWA install · workaround:',
-      'use <b>Chrome / Edge / Brave</b> for proper install (see paths above)',
-      'OR bookmark (Ctrl+D) and pin to bookmarks bar',
-      'OR install <b>"Progressive Web Apps for Firefox"</b> extension for full install',
-    ], note:'or just use Edge — it\'s built in and works great'},
-
-    {id:'chromebook', em:'💻', label:'Chromebook (ChromeOS)', steps:[
-      'open the link in <b>Chrome</b> (only browser on ChromeOS by default)',
-      'click <b>install icon (⊕)</b> in address bar — OR three-dot menu',
+    {id:'win-edge', em:'🖥️', label:'Windows · Edge (built into Windows 10/11)', steps:[
+      'open <b>Microsoft Edge</b> · the blue/teal wave icon · pre-installed on Windows 10+',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash to load',
+      'look at the <b>address bar</b> · on the right side find the install icon · <code>[ ⊕ ]</code>',
+      'OR click <b>three dots menu (...)</b> top-right',
+      'go to <b>"Apps"</b> submenu',
       'click <b>"Install BrainBoard"</b>',
-      'app added to launcher · shows in shelf · feels like a native app',
-    ], note:'Chromebook = PWA paradise · best install experience of any device'},
+      'confirm <b>"Install"</b> in the dialog',
+      'app launches in its own window · pinned to taskbar automatically',
+      'also appears in Edge\'s app list · visit <code>edge://apps</code> to manage installed PWAs',
+    ], verify:[
+      'open <code>edge://apps</code> in Edge · BrainBoard listed there',
+      'launch from taskbar · own window · no Edge UI',
+      'wifi off · still works',
+    ], troubleshoot:[
+      '<b>Apps submenu missing?</b> Update Edge via Settings → About',
+      '<b>App pinned but won\'t open?</b> Right-click taskbar icon → unpin · then reinstall via address bar icon',
+      '<b>Want desktop shortcut?</b> In edge://apps · click app → "Create shortcut to desktop"',
+    ], note:'Edge has the smoothest PWA install/management on Windows · highly recommended over Chrome on Windows'},
 
-    {id:'linux-chrome', em:'🐧', label:'Linux · Chrome / Chromium / Brave / Edge', steps:[
-      'open the link in <b>Chrome</b>, <b>Chromium</b>, <b>Brave</b>, or <b>Edge</b>',
-      'click <b>install icon (⊕)</b> in the address bar',
+    {id:'win-firefox', em:'🦊', label:'Windows · Firefox (limited · use workaround)', steps:[
+      'Firefox on Windows doesn\'t support PWA install natively · same as Mac',
+      '<b>Best path:</b> use <b>Edge</b> or <b>Chrome</b> to install (see paths above) · they\'re free and pre-installed/easy on Windows',
+      '<b>Workaround 1 · Firefox extension:</b> search Firefox addons for <b>"Progressive Web Apps for Firefox"</b> · install · then refresh BrainBoard · install button appears',
+      '<b>Workaround 2 · Bookmark:</b> press <code>Ctrl+D</code> · save bookmark · pin to bookmarks bar',
+      '<b>Workaround 3 · Desktop shortcut:</b> right-click desktop → New → Shortcut → paste URL → name "BrainBoard" → double-click to open in default browser',
+    ], verify:[
+      'if using extension: launches in window resembling standalone',
+      'if using bookmark: just opens in Firefox · not standalone',
+    ], troubleshoot:[
+      '<b>Just use Edge:</b> it\'s built into Windows · works perfectly · no extensions needed',
+    ], note:'Edge or Chrome are the easy paths · Firefox needs extra steps'},
+
+    {id:'chromebook', em:'💻', label:'Chromebook (ChromeOS · any model · any version)', steps:[
+      'open <b>Google Chrome</b> · it\'s the only browser on ChromeOS by default',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash · load',
+      'look at the address bar on the right · install icon <code>[ ⊕ ]</code> · or three-dot menu',
+      'click <b>"Install BrainBoard"</b>',
+      'confirm',
+      'app now lives in your <b>Launcher</b> (the circle button bottom-left) and <b>Shelf</b> (taskbar)',
+      '<b>Pin to Shelf:</b> right-click app icon → Pin',
+    ], verify:[
+      'open Launcher · search "BrainBoard" · should appear',
+      'launches in own window · zero Chrome UI',
+      'turn off wifi · still works from cache',
+      'shows up as a real installed app in chrome://apps',
+    ], troubleshoot:[
+      '<b>No install option?</b> ChromeOS sometimes hides it · refresh page · wait 3 seconds · try menu again',
+      '<b>App opens in tab not window?</b> Right-click app in Launcher → "New window"',
+    ], note:'Chromebook has the BEST PWA experience of any device · ChromeOS is basically built for this · works on ChromeOS 90+ flawlessly'},
+
+    {id:'linux-chrome', em:'🐧', label:'Linux · Chrome / Chromium / Brave / Edge / Vivaldi (any distro)', steps:[
+      'open <b>Chrome</b>, <b>Chromium</b>, <b>Brave</b>, <b>Edge</b>, or <b>Vivaldi</b>',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'wait for splash · full load',
+      'address bar · right side · install icon <code>[ ⊕ ]</code>',
+      'OR three-dot menu → <b>"Install BrainBoard"</b>',
       'click <b>"Install"</b>',
-      '.desktop file added to ~/.local/share/applications · run from app launcher',
-    ], note:'works on Ubuntu · Fedora · Arch · Debian · any distro w/ a Chromium-based browser'},
+      'a <code>.desktop</code> file is added to <code>~/.local/share/applications/</code>',
+      'app launcher (GNOME · KDE · XFCE · whatever) now shows BrainBoard',
+      '<b>To pin to dock/panel:</b> drag from app launcher to your dock',
+    ], verify:[
+      'run <code>ls ~/.local/share/applications/ | grep -i brain</code> in terminal · should show <code>chrome-XXXXX-BrainBoard.desktop</code>',
+      'launch from app launcher · own window · no browser chrome',
+      'disconnect wifi · relaunch · still works',
+    ], troubleshoot:[
+      '<b>Doesn\'t appear in launcher?</b> Run <code>update-desktop-database ~/.local/share/applications/</code> in terminal',
+      '<b>Snap Chromium?</b> Snap sandboxing sometimes blocks PWA install · use system Chrome or apt-installed Chromium',
+      '<b>Wayland vs X11?</b> Both work · Wayland may have minor scaling differences',
+    ], note:'works on Ubuntu · Debian · Fedora · Arch · Manjaro · openSUSE · any distro with a Chromium-based browser'},
 
-    {id:'linux-firefox', em:'🦊', label:'Linux · Firefox', steps:[
-      'Firefox on Linux doesn\'t support PWA install yet · workarounds:',
-      'use Chrome / Chromium / Brave for install (see paths above)',
-      'OR pin as a bookmark (Ctrl+D)',
-      'OR install <b>firefoxpwa</b> package · adds install button',
-    ], note:'or use a Chromium-based browser for full install'},
+    {id:'linux-firefox', em:'🦊', label:'Linux · Firefox (use extension or workaround)', steps:[
+      'Firefox on Linux doesn\'t support PWA install natively',
+      '<b>Best workaround · firefoxpwa:</b>',
+      '1. Install firefoxpwa via your package manager OR from <code>https://github.com/filips123/PWAsForFirefox</code>',
+      '2. Add the Firefox extension <b>"PWAs for Firefox"</b>',
+      '3. Reload BrainBoard · click the new install icon in toolbar',
+      '4. Confirm install',
+      '<b>Easier alternative:</b> install Chromium/Brave/Chrome and use that for install',
+      '<b>Bookmark fallback:</b> <code>Ctrl+D</code> · save · pin to bookmark toolbar',
+    ], verify:[
+      'with firefoxpwa: launches in own window via app launcher',
+      'with bookmark: opens in Firefox · not standalone',
+    ], troubleshoot:[
+      '<b>firefoxpwa not in repo?</b> Use the AppImage from their GitHub releases',
+      '<b>Want native feel without setup?</b> Just use Chromium · same site · works perfect',
+    ], note:'Linux Firefox users · honestly just install Chromium for this · 10 seconds via apt/dnf/pacman'},
 
-    {id:'fallback', em:'🌐', label:'any other device · web bookmark', steps:[
-      'open https://snailgamedev.github.io/BrainBoard/ in any browser',
-      'bookmark the page (usually Ctrl+D / Cmd+D)',
-      'add to home screen / desktop / start menu via browser menu',
-      'works in ANY modern browser · zero install needed to play',
-    ], note:'BrainBoard runs fully in the browser · install is just for icon + offline access'},
+    {id:'fallback', em:'🌐', label:'any other device · just play in browser', steps:[
+      'open ANY modern browser',
+      'go to <b>https://snailgamedev.github.io/BrainBoard/</b>',
+      'play directly in browser · no install needed',
+      'bookmark the page (usually <code>Ctrl+D</code> or <code>Cmd+D</code>) for one-click return',
+      'on most devices · find "Add to home screen" or similar in the browser menu for an app-like shortcut',
+    ], verify:[
+      'bookmark loads instantly each time',
+      'progress saves between sessions (localStorage persists)',
+    ], troubleshoot:[
+      '<b>Game won\'t load?</b> Need a modern browser · Chrome/Safari/Firefox/Edge from 2020+',
+      '<b>Game laggy?</b> Older devices may struggle · enable Performance mode in Settings',
+    ], note:'BrainBoard runs fully in any modern browser · install just gives u offline + icon · the game itself works without install'},
 
     {id:'already', em:'✅', label:'looks like u already installed!', steps:[
-      'BrainBoard is currently running in standalone app mode',
-      'icon should already be on ur home screen / launcher / dock',
-      'tap or click it anytime to open without browser chrome',
-      'updates fetch automatically on open',
+      'BrainBoard is currently running in <b>standalone app mode</b> · no browser bars detected',
+      'icon should already be on ur home screen / launcher / dock / Start menu',
+      'tap or click that icon anytime to open · no need to revisit the website',
+      'updates fetch automatically when u open it · always the latest version',
+      'data is saved locally to this device · won\'t sync to other devices unless u export',
+    ], verify:[
+      'no browser URL bar visible right now ✅',
+      'launching from home screen icon works ✅',
+      'try airplane mode test: turn it on · close app · reopen · should still work',
+    ], troubleshoot:[
+      '<b>Want to share with another device?</b> Use the "📲 send to another device" section below · QR code or link',
+      '<b>Want to clear data and start fresh?</b> Settings → Force Update (or in app · Settings → Clear Cache)',
     ], note:'thx for being installed boii 🙏 share the link to spread the cook'},
   ],
   renderPath(pathId, isRecommended){
     const p = InstallHub.PATHS.find(x=>x.id===pathId);
     if(!p) return '<p class="dim">device not detected · use the fallback below</p>';
     const stepsHtml = p.steps.map((s,i)=>`<li>${s}</li>`).join('');
+    const verifyHtml = (p.verify||[]).map(s=>`<li>${s}</li>`).join('');
+    const tsHtml = (p.troubleshoot||[]).map(s=>`<li>${s}</li>`).join('');
     const wrapClass = isRecommended ? 'install-path recommended' : 'install-path';
     return `<div class="${wrapClass}">
+      <div class="install-section-h">📋 step by step</div>
       <ol class="install-steps">${stepsHtml}</ol>
+      ${verifyHtml ? `
+      <div class="install-section-h" style="margin-top:12px;color:#10B981">✅ verify it worked</div>
+      <ul class="install-steps install-verify">${verifyHtml}</ul>
+      ` : ''}
+      ${tsHtml ? `
+      <div class="install-section-h" style="margin-top:12px;color:#FB923C">🔧 if it didn't work</div>
+      <ul class="install-steps install-troubleshoot">${tsHtml}</ul>
+      ` : ''}
       ${p.note ? `<div class="install-note">💡 ${p.note}</div>` : ''}
     </div>`;
+  },
+  // v0.67 · offline readiness check via SW messaging
+  checkOfflineReady(callback){
+    if(!navigator.serviceWorker?.controller){
+      callback(false, 'no service worker active · refresh once');
+      return;
+    }
+    const channel = new MessageChannel();
+    let resolved = false;
+    const handler = (event) => {
+      if(event.data?.type === 'OFFLINE_READY'){
+        resolved = true;
+        callback(event.data.ready, event.data.ready ? 'fully offline-ready · works without wifi' : 'partial cache · play once more online to fully cache');
+        navigator.serviceWorker.removeEventListener('message', handler);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    navigator.serviceWorker.controller.postMessage('CHECK_OFFLINE');
+    setTimeout(()=>{
+      if(!resolved){
+        callback(false, 'SW not responding · check console');
+        navigator.serviceWorker.removeEventListener('message', handler);
+      }
+    }, 1500);
   }
 };
 
