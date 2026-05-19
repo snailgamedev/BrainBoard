@@ -1246,6 +1246,28 @@ button{
   border:1px solid rgba(96,165,250,.35);
   border-radius:14px;padding:12px 14px;
 }
+/* v0.69 · install hub mega expansion */
+.install-compat{
+  margin:14px 0;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:12px;
+}
+.compat-table{
+  width:100%;border-collapse:collapse;font-size:11px;
+}
+.compat-table th, .compat-table td{
+  padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);
+  text-align:left;
+}
+.compat-table th{
+  font-size:10px;letter-spacing:.06em;
+  color:var(--gold-bright);text-transform:uppercase;
+  font-weight:700;
+}
+.compat-table tr:last-child td{border-bottom:none}
+.install-manage, .install-faq{
+  margin-top:14px;
+}
 /* ==================== v0.68 · BIBLE BREAK + DAILY GOALS + FAITH OPT-IN ==================== */
 .daily-goal-card{
   background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(96,165,250,.1));
@@ -1322,6 +1344,53 @@ button{
   font-family:'Cinzel',serif;font-size:72px;
   color:#A78BFA;font-weight:800;margin:14px 0;
   text-shadow:0 0 24px rgba(167,139,250,.6);
+}
+/* v0.69 · POMODORO · SLEEP · ENERGY · WELLNESS SCORE */
+.pomodoro-card{
+  background:rgba(239,68,68,.08);
+  border:1px solid rgba(239,68,68,.3);
+  border-radius:12px;padding:10px 12px;
+}
+.sleep-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:4px;
+}
+.sleep-btn{
+  background:rgba(96,165,250,.12);
+  border:1px solid rgba(96,165,250,.3);
+  border-radius:8px;padding:8px 4px;cursor:pointer;
+  color:#FFF8E7;font-weight:700;font-family:inherit;
+  font-size:13px;
+}
+.sleep-btn:hover{background:rgba(96,165,250,.25)}
+.sleep-btn:active{transform:scale(.95)}
+.energy-strip{
+  display:grid;grid-template-columns:repeat(10,1fr);gap:2px;
+}
+.energy-pick{
+  background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(251,191,36,.15));
+  border:1px solid rgba(245,158,11,.25);
+  border-radius:6px;padding:6px 2px;cursor:pointer;
+  color:#FFF8E7;font-weight:700;font-family:inherit;font-size:12px;
+}
+.energy-pick:hover{background:linear-gradient(135deg,rgba(239,68,68,.3),rgba(251,191,36,.3))}
+.energy-pick:active{transform:scale(.92)}
+.wellness-score-card{
+  background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(251,191,36,.08));
+  border:1px solid rgba(16,185,129,.35);
+  border-radius:14px;padding:14px;text-align:center;
+}
+.ws-big{
+  font-family:'Cinzel',serif;font-size:54px;font-weight:800;
+  color:#10B981;line-height:1;
+}
+.ws-max{font-size:22px;color:#FFF8E7;opacity:.7}
+.ws-bar{
+  height:12px;background:rgba(255,255,255,.1);
+  border-radius:99px;overflow:hidden;margin-top:10px;
+}
+.ws-fill{
+  height:100%;background:linear-gradient(90deg,#10B981,#FBBF24,#FFD700);
+  transition:width .6s;
 }
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
@@ -1758,7 +1827,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · free forever · works offline · v0.68.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · wellness baked in · works offline · v0.69.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1799,7 +1868,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.68.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.69.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1919,7 +1988,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.68.0';
+const VERSION = '0.69.0';
 
 // ----- STATE -----
 const State = {
@@ -10070,6 +10139,7 @@ const App = {
         <div class="install-hero-sub">${isStandalone ? '✅ already running standalone · ur installed!' : 'recommended steps below · or scroll for every other device'}</div>
         ${window._deferredPrompt && !isStandalone ? `<button class="btn-primary install-now-btn" onclick="App.installPWA()">⚡ INSTALL NOW · one tap</button>` : ''}
       </div>
+      ${InstallHub.renderCompatibilityMatrix()}
       ${InstallHub.renderPath(dev.pathId, true)}
       <div class="install-offline-card">
         <div class="install-section-h" style="margin:0 0 8px;color:#60A5FA">📶 offline readiness</div>
@@ -10100,6 +10170,8 @@ const App = {
         <div id="install-qr-slot" style="margin-top:12px;text-align:center"></div>
         <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="App._renderInstallQR()">📱 show QR code · scan from phone</button>
       </div>
+      ${InstallHub.renderManageSection(isStandalone)}
+      ${InstallHub.renderFAQ()}
     `;
 
     document.getElementById('aux-body').innerHTML = `
@@ -12422,8 +12494,50 @@ const Wellness = {
         <button class="btn-secondary" onclick="Wellness.logWater()">💧 +1 glass water</button>
         <button class="btn-secondary" onclick="Wellness.markBreakTaken()">🌿 took a break</button>
         <button class="btn-secondary" onclick="Wellness.touchGrass()">🌱 touched grass</button>
+        <button class="btn-secondary" onclick="Wellness.brainDump()">🧠 brain dump · clear ur head</button>
+        <button class="btn-secondary" onclick="Wellness.pullAffirmation()">💭 pull an affirmation</button>
+      </div>
+
+      <div class="wellness-section-h">🧘 reset rituals</div>
+      <div class="wellness-actions">
         <button class="btn-secondary" onclick="Wellness.startStretchFlow()">🤸 guided stretch · 3 min</button>
-        <button class="btn-secondary" onclick="Wellness.startBreathTimer()">🌬️ 4-7-8 breathing · 2 min</button>
+        <button class="btn-secondary" onclick="Wellness.startBreathTimer()">🌬️ 4-7-8 breath · 2 min</button>
+        <button class="btn-secondary" onclick="Wellness.startQuickWorkout()">💪 quick workout · 90 sec</button>
+        <button class="btn-secondary" onclick="Wellness.openMeditationPicker()">🧘 meditation · pick length</button>
+      </div>
+
+      <div class="wellness-section-h">🍅 pomodoro · auto-cycle</div>
+      <div class="pomodoro-card">
+        ${w.pomodoroActive ?
+          `<div style="text-align:center;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:700;color:#10B981">🍅 ACTIVE · ${w.pomodoroPhase}</div>
+            <div class="dim" style="font-size:11px">cycle in progress · ima nudge u</div>
+          </div>
+          <button class="btn-secondary" style="width:100%" onclick="Wellness.stopPomodoro();App.openWellnessHub()">stop pomodoro</button>`
+        :
+          `<p class="dim" style="font-size:11.5px;margin:4px 0 8px;text-align:center">25min play · 5min break · auto-cycles · ima ping when it's time</p>
+          <button class="btn-primary" style="width:100%" onclick="Wellness.startPomodoro();App.openWellnessHub()">🍅 start pomodoro</button>`
+        }
+      </div>
+
+      <div class="wellness-section-h">💤 sleep log · ${Wellness.avgSleepLast7()}h avg · last 7d</div>
+      <div class="sleep-grid">
+        ${[5,6,7,8,9,10].map(h=>`<button class="sleep-btn" onclick="Wellness.logSleep(${h})">${h}h</button>`).join('')}
+      </div>
+
+      <div class="wellness-section-h">🌡️ energy check · 1-10</div>
+      <div class="energy-strip">
+        ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="energy-pick" onclick="Wellness.logEnergy(${n})">${n}</button>`).join('')}
+      </div>
+      ${Wellness.avgEnergyToday() > 0 ? `<div class="dim" style="font-size:11px;text-align:center;margin-top:4px">today avg: <b style="color:var(--gold-bright)">${Wellness.avgEnergyToday()}/10</b></div>` : ''}
+
+      <div class="wellness-section-h">📊 today's wellness score</div>
+      <div class="wellness-score-card">
+        ${(()=>{const s = Wellness.computeWellnessScore(); return `
+          <div class="ws-big">${s.score}<span class="ws-max">/100</span></div>
+          <div class="ws-bar"><div class="ws-fill" style="width:${s.score}%"></div></div>
+          <button class="btn-secondary" style="margin-top:10px;width:100%;font-size:12px" onclick="Wellness.showWeeklyReport()">📊 weekly report</button>
+        `;})()}
       </div>
 
       ${bibleSection}
@@ -12694,6 +12808,316 @@ const Wellness = {
     Save.write();
     if(w.wellnessStreak === 3) Ach.unlock('wellness_streak_3');
     if(w.wellnessStreak === 7) Ach.unlock('wellness_streak_7');
+  },
+
+  // v0.69 · 🍅 POMODORO mode · 25min play · 5min break · auto-cycles
+  startPomodoro(){
+    const w = Wellness.ensure();
+    w.pomodoroActive = true;
+    w.pomodoroStart = Date.now();
+    w.pomodoroPhase = 'play'; // 'play' or 'rest'
+    Save.write();
+    Toast.show('🍅 Pomodoro started · 25min play · 5min break · ima nudge u', 3500);
+    SFX.chime();
+    Wellness._scheduleNextPomodoro();
+  },
+  stopPomodoro(){
+    const w = Wellness.ensure();
+    w.pomodoroActive = false;
+    if(Wellness._pomodoroTimeout){ clearTimeout(Wellness._pomodoroTimeout); Wellness._pomodoroTimeout = null; }
+    Save.write();
+    Toast.show('🍅 Pomodoro stopped');
+  },
+  _scheduleNextPomodoro(){
+    const w = Wellness.ensure();
+    if(!w.pomodoroActive) return;
+    const min = w.pomodoroPhase === 'play' ? 25 : 5;
+    if(Wellness._pomodoroTimeout) clearTimeout(Wellness._pomodoroTimeout);
+    Wellness._pomodoroTimeout = setTimeout(() => {
+      if(!Wellness.ensure().pomodoroActive) return;
+      if(w.pomodoroPhase === 'play'){
+        w.pomodoroPhase = 'rest';
+        w.pomodoroStart = Date.now();
+        Save.write();
+        Modal.show(`
+          <div class="big">🍅</div>
+          <h3 style="color:var(--gold-bright)">Pomodoro break time</h3>
+          <p style="font-size:13px;margin:10px 0">25 min done · take 5 min · stretch · hydrate · breathe</p>
+          <button class="btn-primary" onclick="Wellness.markBreakTaken();">✅ took it</button>
+          <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="Wellness.stopPomodoro();Modal.close()">stop Pomodoro</button>
+        `);
+        SFX.chime(); haptic(30);
+      } else {
+        w.pomodoroPhase = 'play';
+        w.pomodoroStart = Date.now();
+        Save.write();
+        Toast.show('🍅 break done · 25min play cycle started');
+        SFX.tap();
+      }
+      Wellness._scheduleNextPomodoro();
+    }, min * 60000);
+  },
+
+  // v0.69 · 💪 QUICK WORKOUT · 3 moves · 30s each
+  startQuickWorkout(){
+    const moves = [
+      {em:'🤸', name:'10 jumping jacks', sec:30},
+      {em:'💪', name:'10 push-ups (or wall push-ups)', sec:30},
+      {em:'🧍', name:'30s plank · or 10 squats', sec:30},
+    ];
+    let i = 0;
+    const next = () => {
+      if(i >= moves.length){
+        Modal.close();
+        Wallet.add({coin:60, brain:2});
+        Toast.show('💪 quick workout done · +60🪙 +2🧠 · BODY MOVED');
+        Activity.log('ach','💪','quick workout · 90 sec done');
+        Wellness.bumpWellnessStreak();
+        SFX.holy(); haptic(40); confetti({variant:'star',count:30});
+        const w = Wellness.ensure();
+        w.workoutsDone = (w.workoutsDone||0) + 1;
+        Save.write();
+        if(w.workoutsDone===1) Ach.unlock('workout_first');
+        if(w.workoutsDone>=10) Ach.unlock('workout_10');
+        return;
+      }
+      const m = moves[i];
+      const start = Date.now();
+      const render = () => {
+        const remain = Math.max(0, m.sec - Math.floor((Date.now()-start)/1000));
+        Modal.show(`
+          <div class="big">${m.em}</div>
+          <h3 style="color:var(--gold-bright)">${m.name}</h3>
+          <div class="bible-timer" style="color:#10B981">${remain}</div>
+          <p class="dim" style="font-size:11px">move ${i+1} of ${moves.length} · go at ur pace</p>
+          <button class="btn-primary" style="margin-top:10px" onclick="Wellness._workoutNext()">▶ next</button>
+          <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="Modal.close()">stop · finish later</button>
+        `);
+        if(remain <= 0){ clearInterval(Wellness._workoutTimer); Wellness._workoutTimer=null; setTimeout(next, 400); }
+      };
+      render();
+      Wellness._workoutTimer = setInterval(render, 1000);
+      Wellness._workoutNext = () => { clearInterval(Wellness._workoutTimer); Wellness._workoutTimer=null; i++; next(); };
+      i++;
+    };
+    next();
+  },
+  _workoutNext(){ /* assigned dynamically · noop fallback */ },
+
+  // v0.69 · 🧠 BRAIN DUMP · write 3 things off ur mind
+  brainDump(){
+    Modal.show(`
+      <div class="big">🧠</div>
+      <h3 style="color:var(--gold-bright)">brain dump</h3>
+      <p class="dim" style="font-size:12px;margin:8px 0">3 things stuck in ur head · write em down · let em go · u don't have to save</p>
+      <textarea id="bd-input" class="name-input" placeholder="1. ...&#10;2. ...&#10;3. ..." style="height:120px;resize:vertical;font-family:inherit;width:100%;padding:10px"></textarea>
+      <p class="dim" style="font-size:11px;margin:6px 0">private · stays in ur browser · not synced anywhere</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="Modal.close()">close · no save</button>
+        <button class="btn-primary" onclick="Wellness._brainDumpSave()">🧠 save · feel lighter</button>
+      </div>
+    `);
+    setTimeout(()=>document.getElementById('bd-input')?.focus(),100);
+  },
+  _brainDumpSave(){
+    const txt = document.getElementById('bd-input')?.value || '';
+    const w = Wellness.ensure();
+    if(!w.brainDumps) w.brainDumps = [];
+    if(txt.trim()){
+      w.brainDumps.unshift({txt: txt.slice(0,500), ts: Date.now()});
+      if(w.brainDumps.length > 10) w.brainDumps.length = 10;
+    }
+    Wallet.add({brain:2});
+    Toast.show('🧠 brain dumped · +2🧠 · ur head lighter');
+    Activity.log('ach','🧠','brain dump · cleared the mental cache');
+    Wellness.bumpWellnessStreak();
+    Save.write();
+    Modal.close();
+    SFX.chime(); haptic(20);
+  },
+
+  // v0.69 · 💤 SLEEP LOG · log hours · last 7 days rolling
+  logSleep(hours){
+    const w = Wellness.ensure();
+    if(!w.sleepLog) w.sleepLog = [];
+    const today = new Date().toDateString();
+    // overwrite today if already logged
+    w.sleepLog = w.sleepLog.filter(s => new Date(s.ts).toDateString() !== today);
+    w.sleepLog.unshift({hours, ts: Date.now()});
+    if(w.sleepLog.length > 14) w.sleepLog.length = 14;
+    Wallet.add({brain: hours >= 7 ? 3 : 1});
+    Toast.show(`💤 ${hours}h logged · ${hours>=7?'rested · +3🧠':'+1🧠'}`);
+    Wellness.bumpWellnessStreak();
+    Save.write();
+    SFX.chime(); haptic(15);
+    if(w.sleepLog.length >= 7) Ach.unlock('sleep_week');
+  },
+  avgSleepLast7(){
+    const w = Wellness.ensure();
+    const last7 = (w.sleepLog||[]).slice(0,7);
+    if(!last7.length) return 0;
+    return (last7.reduce((a,b)=>a+b.hours,0) / last7.length).toFixed(1);
+  },
+
+  // v0.69 · 💭 AFFIRMATION reader · rotates uplifting phrases
+  AFFIRMATIONS_SECULAR: [
+    'u are capable of more than u know',
+    'small steps compound · u keep showing up',
+    'ur brain is stronger today than yesterday',
+    'rest is part of progress · not the opposite',
+    'mistakes are data · not verdicts',
+    'breathe slow · ur body is on ur team',
+    'u get to begin again as many times as u need',
+    'consistency > intensity',
+    'ur worth isn\'t a leaderboard',
+    'today is one of the days u show up',
+  ],
+  AFFIRMATIONS_FAITH: [
+    '"I can do all things through Christ who strengthens me." — Phil 4:13',
+    '"Be still and know that I am God." — Psalm 46:10',
+    '"His mercies are new every morning." — Lam 3:23',
+    '"My grace is sufficient for you." — 2 Cor 12:9',
+    '"You are fearfully and wonderfully made." — Psalm 139:14',
+    '"Cast your cares on Him for He cares for you." — 1 Peter 5:7',
+    '"In all things God works for the good of those who love Him." — Romans 8:28',
+    '"Come to me · I will give you rest." — Matt 11:28',
+    '"The joy of the LORD is your strength." — Neh 8:10',
+    '"Trust in the LORD with all your heart." — Prov 3:5',
+  ],
+  pullAffirmation(){
+    const w = Wellness.ensure();
+    const pool = w.faithBreaks ? Wellness.AFFIRMATIONS_FAITH : Wellness.AFFIRMATIONS_SECULAR;
+    const msg = pool[Math.floor(Math.random()*pool.length)];
+    Modal.show(`
+      <div class="big">💭</div>
+      <h3 style="color:var(--gold-bright)">affirmation</h3>
+      <p style="font-size:16px;margin:18px 8px;line-height:1.6;font-style:italic">"${msg}"</p>
+      <button class="btn-primary" onclick="Wellness._affirmRead()">🙏 received</button>
+      <button class="btn-secondary" style="margin-top:6px;width:100%" onclick="Wellness.pullAffirmation()">↻ another</button>
+    `);
+    SFX.chime(); haptic(10);
+  },
+  _affirmRead(){
+    Modal.close();
+    Wallet.add({brain:1, faith:1});
+    Toast.show('💭 affirmation received · +1🧠 +1✝️');
+    Wellness.bumpWellnessStreak();
+    SFX.tap(); haptic(15);
+  },
+
+  // v0.69 · 🌡️ ENERGY slider · log 1-10 how u feel · before/after
+  logEnergy(level){
+    const w = Wellness.ensure();
+    if(!w.energyLog) w.energyLog = [];
+    w.energyLog.unshift({level, ts: Date.now()});
+    if(w.energyLog.length > 30) w.energyLog.length = 30;
+    Wellness.bumpWellnessStreak();
+    Save.write();
+    Toast.show(`🌡️ energy ${level}/10 logged`);
+    SFX.tap(); haptic(10);
+  },
+  avgEnergyToday(){
+    const w = Wellness.ensure();
+    const today = new Date().toDateString();
+    const todayLogs = (w.energyLog||[]).filter(e => new Date(e.ts).toDateString() === today);
+    if(!todayLogs.length) return 0;
+    return (todayLogs.reduce((a,b)=>a+b.level,0)/todayLogs.length).toFixed(1);
+  },
+
+  // v0.69 · 📊 WELLNESS SCORE · composite of all habits
+  computeWellnessScore(){
+    const w = Wellness.ensure();
+    Wellness.syncDailyWater();
+    const prog = Wellness.todayWellnessProgress();
+    let score = 0;
+    const components = [
+      {name:'breaks', val: Math.min(1, prog.breaks.have/prog.breaks.need) * 25},
+      {name:'water',  val: Math.min(1, prog.water.have /prog.water.need)  * 25},
+      {name:'mood',   val: prog.mood.have>=1 ? 15 : 0},
+      {name:'grass',  val: prog.grass.have>=1 ? 15 : 0},
+      {name:'streak', val: Math.min(20, (w.wellnessStreak||0)*3)},
+    ];
+    components.forEach(c => score += c.val);
+    return {score: Math.round(score), max: 100, components};
+  },
+
+  // v0.69 · 🧘 CUSTOM meditation timer · 1-30min
+  startMeditation(minutes){
+    minutes = Math.max(1, Math.min(30, minutes||5));
+    const totalSec = minutes * 60;
+    const start = Date.now();
+    const render = () => {
+      const remain = Math.max(0, totalSec - Math.floor((Date.now()-start)/1000));
+      const m = Math.floor(remain/60);
+      const s = remain%60;
+      Modal.show(`
+        <div class="big">🧘</div>
+        <h3 style="color:var(--gold-bright)">meditation</h3>
+        <p class="dim" style="font-size:12px">close ur eyes · follow ur breath · just be</p>
+        <div class="bible-timer" style="color:#10B981">${m}:${String(s).padStart(2,'0')}</div>
+        <button class="btn-secondary" onclick="Wellness._stopMeditation()">finish early</button>
+      `);
+      if(remain <= 0){
+        clearInterval(Wellness._meditTimer);
+        Wellness._meditTimer = null;
+        Modal.close();
+        Wallet.add({coin:40, brain:2, faith:1});
+        Toast.show(`🧘 ${minutes}min meditation done · +40🪙 +2🧠 +1✝️`);
+        Activity.log('ach','🧘',`meditated ${minutes} min`);
+        Wellness.bumpWellnessStreak();
+        SFX.holy(); haptic(40);
+        const w = Wellness.ensure();
+        w.meditationsDone = (w.meditationsDone||0)+1;
+        Save.write();
+        if(w.meditationsDone===1) Ach.unlock('meditation_first');
+        if(w.meditationsDone>=10) Ach.unlock('meditation_10');
+      }
+    };
+    render();
+    Wellness._meditTimer = setInterval(render, 1000);
+  },
+  _stopMeditation(){
+    if(Wellness._meditTimer){ clearInterval(Wellness._meditTimer); Wellness._meditTimer=null; }
+    Modal.close();
+    Toast.show('🧘 stopped · come back when ready');
+  },
+  openMeditationPicker(){
+    Modal.show(`
+      <div class="big">🧘</div>
+      <h3>pick a length</h3>
+      <p class="dim" style="font-size:12px;margin:6px 0">close eyes · follow breath · just be</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0">
+        <button class="btn-secondary" onclick="Wellness.startMeditation(1)">1 min</button>
+        <button class="btn-secondary" onclick="Wellness.startMeditation(3)">3 min</button>
+        <button class="btn-secondary" onclick="Wellness.startMeditation(5)">5 min</button>
+        <button class="btn-secondary" onclick="Wellness.startMeditation(10)">10 min</button>
+        <button class="btn-secondary" onclick="Wellness.startMeditation(15)">15 min</button>
+        <button class="btn-secondary" onclick="Wellness.startMeditation(20)">20 min</button>
+      </div>
+      <button class="btn-secondary" style="width:100%" onclick="Modal.close()">cancel</button>
+    `);
+  },
+
+  // v0.69 · 📊 weekly wellness report · Sunday rollup
+  showWeeklyReport(){
+    const w = Wellness.ensure();
+    const score = Wellness.computeWellnessScore();
+    const avgSleep = Wellness.avgSleepLast7();
+    const last7Moods = (w.moodLog||[]).slice(0,7).map(m=>m.mood).join(' · ');
+    Modal.show(`
+      <div class="big">📊</div>
+      <h3 style="color:var(--gold-bright)">weekly wellness report</h3>
+      <div class="dim" style="font-size:11px;margin-bottom:10px">ur 7-day rollup</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="lbl">today's score</div><div class="val" style="color:#10B981">${score.score}/100</div></div>
+        <div class="stat-card"><div class="lbl">streak</div><div class="val">${w.wellnessStreak||0}d</div></div>
+        <div class="stat-card"><div class="lbl">breaks all-time</div><div class="val">${w.breaksTaken||0}</div></div>
+        <div class="stat-card"><div class="lbl">avg sleep</div><div class="val">${avgSleep}h</div></div>
+      </div>
+      ${last7Moods ? `<p style="font-size:12px;margin:10px 0;text-align:center">recent moods: ${last7Moods}</p>` : ''}
+      <button class="btn-primary" style="margin-top:14px" onclick="Modal.close()">📊 got it</button>
+    `);
+    SFX.chime();
   },
 };
 
@@ -13215,6 +13639,123 @@ const InstallHub = {
       ${p.note ? `<div class="install-note">💡 ${p.note}</div>` : ''}
     </div>`;
   },
+  // v0.69 · device compatibility matrix · at-a-glance
+  renderCompatibilityMatrix(){
+    return `<div class="install-compat">
+      <div class="install-section-h">📊 device compatibility · at-a-glance</div>
+      <table class="compat-table">
+        <tr><th>device</th><th>install</th><th>offline</th><th>standalone</th></tr>
+        <tr><td>📱 iPhone (iOS 11.3+)</td><td>✅ Safari only</td><td>✅</td><td>✅</td></tr>
+        <tr><td>📱 iPad (iPadOS 13+)</td><td>✅ Safari only</td><td>✅</td><td>✅</td></tr>
+        <tr><td>🤖 Android (5.0+)</td><td>✅ Chrome/Samsung/FF</td><td>✅</td><td>✅</td></tr>
+        <tr><td>💻 Mac (10.15+)</td><td>✅ Chrome/Edge/Brave</td><td>✅</td><td>✅</td></tr>
+        <tr><td>🍎 Mac (Sonoma 14+)</td><td>✅ Safari too</td><td>✅</td><td>✅</td></tr>
+        <tr><td>🖥️ Win 10/11</td><td>✅ Edge/Chrome/Brave</td><td>✅</td><td>✅</td></tr>
+        <tr><td>💻 Chromebook</td><td>✅ Chrome (best UX)</td><td>✅</td><td>✅</td></tr>
+        <tr><td>🐧 Linux</td><td>✅ Chromium-based</td><td>✅</td><td>✅</td></tr>
+        <tr><td>🌐 Old browser</td><td>❌ play in tab</td><td>❌</td><td>❌</td></tr>
+      </table>
+      <p class="dim" style="font-size:10.5px;text-align:center;margin-top:6px;line-height:1.5">all install methods give u offline + standalone · except old browsers which still let u play in tab</p>
+    </div>`;
+  },
+
+  // v0.69 · post-install management section
+  renderManageSection(isInstalled){
+    return `<div class="install-manage">
+      <div class="install-section-h">🔧 manage ur installed app</div>
+      <details class="install-other">
+        <summary>📲 how to uninstall · any device</summary>
+        <div class="install-path" style="padding:12px 14px">
+          <ul style="font-size:12px;line-height:1.7;padding-left:18px;margin:0">
+            <li><b>iPhone/iPad</b>: long-press the home-screen icon → "Remove App" → "Delete App"</li>
+            <li><b>Android</b>: long-press app icon → drag to "Uninstall" at top (or "App info" → Uninstall)</li>
+            <li><b>Mac (Chrome/Brave)</b>: right-click app icon in Launchpad → "Remove" · OR <code>chrome://apps</code> → right-click → "Remove from Chrome"</li>
+            <li><b>Mac (Safari)</b>: right-click Dock icon → "Options → Remove from Dock"</li>
+            <li><b>Windows</b>: Settings → Apps → Apps & features → BrainBoard → Uninstall · OR right-click Start tile → Uninstall</li>
+            <li><b>Chromebook</b>: right-click app in Launcher → "Uninstall"</li>
+            <li><b>Linux</b>: <code>rm ~/.local/share/applications/chrome-*BrainBoard*.desktop</code> · OR via Chrome app launcher</li>
+          </ul>
+        </div>
+      </details>
+      <details class="install-other">
+        <summary>🔄 force update · clear cache</summary>
+        <div class="install-path" style="padding:12px 14px">
+          <ol style="font-size:12px;line-height:1.7;padding-left:20px;margin:0">
+            <li>open BrainBoard normally</li>
+            <li>tap ⚙️ settings (top-right of lobby)</li>
+            <li>scroll to bottom · tap <b>"Force Update"</b></li>
+            <li>OR just hard-refresh in browser: <code>Ctrl/Cmd + Shift + R</code></li>
+            <li>OR add <code>?nuke=1</code> to URL for full cache wipe</li>
+          </ol>
+        </div>
+      </details>
+      <details class="install-other">
+        <summary>💾 backup ur save / sync to another device</summary>
+        <div class="install-path" style="padding:12px 14px">
+          <p style="font-size:12px;line-height:1.7;margin:0 0 6px">save data is browser-local · not auto-synced across devices · BUT u can export/import:</p>
+          <ol style="font-size:12px;line-height:1.7;padding-left:20px;margin:0">
+            <li>tap ⚙️ Settings → scroll to "📦 Backup save"</li>
+            <li>tap <b>"Export"</b> · file downloads to ur device</li>
+            <li>on the other device: Settings → "📥 Import save" → pick the file</li>
+            <li>boom · ur progress lives there too</li>
+          </ol>
+        </div>
+      </details>
+      <details class="install-other">
+        <summary>📵 notification permissions (optional)</summary>
+        <div class="install-path" style="padding:12px 14px">
+          <p style="font-size:12px;line-height:1.7;margin:0">BrainBoard doesn't request notifications · everything\'s in-app · ur device stays quiet · ur choice when u play</p>
+        </div>
+      </details>
+      <details class="install-other">
+        <summary>🚀 make BrainBoard the default for browser-tab opens</summary>
+        <div class="install-path" style="padding:12px 14px">
+          <p style="font-size:12px;line-height:1.7;margin:0 0 6px">on most installed PWAs · ur OS will offer to open links in the app instead of a browser tab:</p>
+          <ul style="font-size:12px;line-height:1.7;padding-left:18px;margin:0">
+            <li><b>iOS 17+</b>: Settings → Default Apps → can choose BrainBoard for matching links</li>
+            <li><b>Mac</b>: Chrome shows "Open in BrainBoard" prompt the next time u visit the URL</li>
+            <li><b>Android</b>: long-press URL → "Open in BrainBoard app"</li>
+          </ul>
+        </div>
+      </details>
+    </div>`;
+  },
+
+  // v0.69 · FAQ section
+  renderFAQ(){
+    return `<div class="install-faq">
+      <div class="install-section-h">❓ common questions</div>
+      <details class="install-other">
+        <summary>does this cost money? · ever?</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">FREE FOREVER · no ads · no in-app purchases · no subscription · zero · the gems and coins are play money · doesnt cost real $</p></div>
+      </details>
+      <details class="install-other">
+        <summary>does it work without internet?</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">YES · once installed · works fully offline · the only thing that needs internet is the FIRST load + occasional update checks · play on planes · subway · camping · anywhere</p></div>
+      </details>
+      <details class="install-other">
+        <summary>does my data sync between devices?</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">no auto-sync · saves to local storage · use the Export/Import in Settings to move ur save between devices manually · per-browser-per-device by default</p></div>
+      </details>
+      <details class="install-other">
+        <summary>is my data private?</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">100% local · saves on ur device · we don't collect anything · no analytics · no servers tracking u · ur game · ur data</p></div>
+      </details>
+      <details class="install-other">
+        <summary>how do updates work?</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">on every launch · the service worker checks for new version in background · cache updates silently · next launch = latest · no manual update needed</p></div>
+      </details>
+      <details class="install-other">
+        <summary>i'm getting weird errors / things won't load</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">try these in order: (1) hard refresh (Cmd/Ctrl+Shift+R) · (2) add <code>?nuke=1</code> to URL · (3) uninstall + reinstall · (4) try a different browser to verify the install · still broken? open an issue on github</p></div>
+      </details>
+      <details class="install-other">
+        <summary>can i play on my Tesla / refrigerator screen / smart TV?</summary>
+        <div class="install-path" style="padding:12px 14px"><p style="font-size:12px;line-height:1.7;margin:0">if it has a modern browser · YES · open the URL · play in tab · install if the browser supports it · Tesla browser confirmed works · most smart-TV browsers work as long as they're Chromium-based</p></div>
+      </details>
+    </div>`;
+  },
+
   // v0.67 · offline readiness check via SW messaging
   checkOfflineReady(callback){
     if(!navigator.serviceWorker?.controller){
