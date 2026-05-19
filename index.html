@@ -1265,7 +1265,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">v0.60.0 · chart finish · avatar simplified · 8 weak games trimmed · BP passive · ready for players · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · v0.60.1 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1306,7 +1306,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.60.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.60.1</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1423,7 +1423,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.60.0';
+const VERSION = '0.60.1';
 
 // ----- STATE -----
 const State = {
@@ -3777,7 +3777,7 @@ const Demo = {
 // ====================================================================
 const Tour = {
   steps: [
-    {sel:'.room-door', t:'🏠 ROOMS', d:'8 themed rooms · 66 games · tap any to enter'},
+    {sel:'.room-door', t:'🏠 ROOMS', d:'8 themed rooms · 61 games · tap any to enter'},
     {sel:'#help-btn', t:'❓ HELP', d:'how-to-play hub · always one tap away'},
     {sel:'.icon-btn[onclick*="openSettings"]', t:'⚙️ SETTINGS', d:'language · pace · cinematic · music · all yours'},
     {sel:'.foot-btn:nth-child(7)', t:'🔥 FRENZY', d:'7th foot button · 3 mini-rounds · daily leaderboard'},
@@ -10647,7 +10647,7 @@ const App = {
     const pulse=document.getElementById('help-pulse'); if(pulse) pulse.style.display='none';
     document.getElementById('aux-title').innerHTML = '❓ How to Play';
     const sections = [
-      {em:'🏠',t:'The Lobby',d:'8 themed rooms host 66+ games · 7 foot buttons unlock STATS · ACHIEVEMENTS · SHOP · BATTLE PASS · HALL OF FAME · FRIENDS · DAILY FRENZY.',cta:null},
+      {em:'🏠',t:'The Lobby',d:'8 themed rooms host 61 games. Foot bar: PROFILE · SHOP · PASS · DAILY · FRIENDS · FRENZY · ⚡ QUICK PLAY (random game tuned to your skill).',cta:null},
       {em:'🎮',t:'Playing Games',d:'Tap a room → tap a game card → see RULES + LEADERBOARD + MEDALS in the intro modal → ▶ START. Wins earn coins/brain/faith/gems.',cta:null},
       {em:'🎬',t:'Cinematic Intros',d:'Every game opens with a 3-phase splash (logo → countdown → GO). Tap to skip. Toggle full/short/off in Settings → Cinematic.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
       {em:'🔥',t:'Daily Frenzy',d:'7th foot button. 3 mini-rounds (or 5 in Gauntlet). Combo XP per round. Daily SPOTLIGHT round = 2x score. Streak bonus stacks up to +75 coins.',cta:{label:'🔥 Open Frenzy',fn:'openFrenzy'}},
@@ -10657,7 +10657,7 @@ const App = {
       {em:'🎒',t:'Avatar Designer',d:'Tap your name in the lobby. 46+ items across 6 slots · hue/size/scene/frame/anim · save loadouts.',cta:{label:'🎨 Avatar',fn:'openAvatar'}},
       {em:'🎫',t:'Battle Pass',d:'Monthly seasonal rotation · earn XP from every game · 10 tiers of rewards. Resets first day each month.',cta:{label:'🎫 Open Pass',fn:'openBP'}},
       {em:'🧬',t:'Brain DNA',d:'PROFILE shows your radar of strengths (memory/speed/pattern/logic/word/faith) · grows as you win.',cta:{label:'👤 Profile',fn:'openProfile'}},
-      {em:'🌐',t:'Language',d:'Toggle EN/ES in Settings. 20 verses are bilingual. Auto-detects from browser on first launch.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
+      {em:'⚡',t:'Quick Play',d:'Bottom-right foot button picks a random game weighted toward ones you haven\'t mastered yet. Best button for "I just wanna play".',cta:{label:'⚡ Quick Play',fn:'quickPlay'}},
       {em:'🤝',t:'Friends',d:'Add by code · message · gift gems · cheer · MVP of week. Required for non-CPU duels.',cta:{label:'🤝 Friends',fn:'openFriends'}},
       {em:'🏆',t:'Medal Cabinet',d:'Every game you have medals in · bronze 🥉 silver 🥈 gold 🥇 based on your leaderboard rank.',cta:{label:'🏆 Open Cabinet',fn:'openCabinet'}},
       {em:'📅',t:'Weekly Tournament',d:'Top 10 Frenzy scores of the week → gem prizes Sunday midnight. #1 wins 50💎.',cta:{label:'📅 Open Tournament',fn:'openWeeklyTourney'}},
@@ -10668,7 +10668,7 @@ const App = {
       <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
         <div style="font-size:42px">🎓</div>
         <b style="color:var(--gold-bright);font-size:16px">how to play</b>
-        <div class="dim" style="font-size:11px;margin-top:4px">12 sections · tap any to jump in</div>
+        <div class="dim" style="font-size:11px;margin-top:4px">${sections.length} sections · tap any to jump in</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px">
         ${sections.map(s=>`<div class="setting-row" style="display:block;padding:12px">
