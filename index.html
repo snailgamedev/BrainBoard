@@ -2118,7 +2118,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · 9-step tutorial · lossless sync · chill timers · v0.76.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · lossless sync · v0.77.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2159,7 +2159,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.76.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.77.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -2281,7 +2281,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.76.0';
+const VERSION = '0.77.0';
 
 // ----- STATE -----
 const State = {
@@ -9756,9 +9756,12 @@ const App = {
       UI.show('lobby');
       App.checkDaily();
       App.renderLobbyExtras();
-      Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · craft more anytime in your profile`);
-      // v0.37 fire tutorial after a short delay
-      if(!State.data.tutorialSeen){ setTimeout(()=>App.showTutorial(), 1800); }
+      Toast.show(`welcome, <b>${State.data.name}</b>! 🙏 · tap any room to start playing`, 4500);
+      // v0.77 · GHOST intel · tutorial no longer auto-pops over lobby · users can launch from ❓ Help Hub instead
+      // Soft second toast nudges toward Help Hub at 4s · non-blocking · easy to ignore
+      if(!State.data.tutorialSeen){
+        setTimeout(()=>Toast.show('💡 stuck? tap ❓ top-right for a 90-sec tour', 3500), 4800);
+      }
     }
   },
 
@@ -12887,7 +12890,8 @@ const Wellness = {
     if(w.breaksTaken >= 10) Ach.unlock('breaks_10');
     if(w.breaksTaken >= 50) Ach.unlock('breaks_50');
     // v0.68 · gentle one-time faith opt-in nudge AFTER 3 breaks · never again if dismissed
-    if(w.breaksTaken === 3 && !w.faithLevel || (w.breaksTaken === 3 && w.faithLevel === 'none' && !w._faithOptInAsked)){
+    // v0.77 · RAVEN intel · parenthesized properly · OR precedence bug fixed
+    if(w.breaksTaken === 3 && (!w.faithLevel || w.faithLevel === 'none') && !w._faithOptInAsked){
       w._faithOptInAsked = true;
       Save.write();
       setTimeout(() => Wellness.faithOptInPrompt(), 1200);
@@ -14316,10 +14320,7 @@ const Sync = {
     Sync._markSynced();
     Modal.close();
     Toast.show('✅ overwrite complete · welcome back ur save · refreshing UI');
-    setTimeout(()=>{
-      UI.updateWallet();
-      try{ App.toLobby(); }catch(e){}
-    }, 600);
+    setTimeout(()=>Sync._postSyncRefresh(), 600);
     SFX.holy(); haptic(40); confetti({variant:'gold',count:50});
     Ach.unlock('sync_first');
     Sync._pendingImport = null;
@@ -14334,13 +14335,20 @@ const Sync = {
     Sync._markSynced();
     Modal.close();
     Toast.show('🤝 merged · best of both worlds');
-    setTimeout(()=>{
-      UI.updateWallet();
-      try{ App.toLobby(); }catch(e){}
-    }, 600);
+    setTimeout(()=>Sync._postSyncRefresh(), 600);
     SFX.holy(); haptic(40); confetti({variant:'gold',count:50});
     Ach.unlock('sync_first');
     Sync._pendingImport = null;
+  },
+
+  // v0.77 · HAWK intel · full post-sync UI refresh · not just wallet
+  _postSyncRefresh(){
+    try{ UI.updateWallet(); }catch(e){}
+    try{ applyAppTheme(State.data.appTheme||'cobalt'); }catch(e){}
+    try{ document.body.classList.toggle('large-text', !!State.data.settings?.largeText); }catch(e){}
+    try{ document.body.classList.toggle('color-blind', !!State.data.settings?.colorBlindSafe); }catch(e){}
+    try{ Music.play(State.data.settings?.musicStyle || 'lobby'); }catch(e){}
+    try{ App.toLobby(); }catch(e){}
   },
 
   // Merge strategy: take MAX of counter-like fields · UNION of array/obj keys · keep "this" for prefs
@@ -14459,19 +14467,29 @@ const Sync = {
     });
     out.friends = Object.values(friendMap);
 
-    // Quests · only same-date matters · take more progressed
+    // Quests · v0.77 · HAWK intel · fallback when neither has today
     if(a.quests?.date === today || b.quests?.date === today){
       const todayQuests = a.quests?.date === today ? a.quests : b.quests;
       const otherQuests = a.quests?.date === today ? b.quests : a.quests;
       const mergedList = (todayQuests.list||[]).map(q => {
         const peer = (otherQuests?.list||[]).find(p => p.id === q.id);
-        return peer && peer.date === today ? {...q, progress: Math.max(q.progress||0, peer.progress||0)} : q;
+        return peer ? {...q, progress: Math.max(q.progress||0, peer.progress||0)} : q;
       });
       out.quests = {
         date: today,
         list: mergedList,
         claimed: [...new Set([...(a.quests?.claimed||[]), ...(b.quests?.claimed||[])])],
       };
+    } else {
+      // Neither has today · keep newer dated set · union claimed
+      const aDate = a.quests?.date ? new Date(a.quests.date).getTime() : 0;
+      const bDate = b.quests?.date ? new Date(b.quests.date).getTime() : 0;
+      const newer = aDate >= bDate ? a.quests : b.quests;
+      out.quests = newer ? {
+        date: newer.date || '',
+        list: newer.list || [],
+        claimed: [...new Set([...(a.quests?.claimed||[]), ...(b.quests?.claimed||[])])],
+      } : {date:'', list:[], claimed:[]};
     }
 
     // Leaderboards · UNION entries per key
