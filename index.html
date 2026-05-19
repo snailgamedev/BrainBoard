@@ -1411,6 +1411,56 @@ button{
 .sc-arrow{
   font-size:24px;color:var(--gold-bright);text-align:center;
 }
+/* v0.73 · SHARE HUB */
+.share-platform-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 12px;
+}
+.share-platform-btn{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:10px 4px;cursor:pointer;
+  color:#FFF8E7;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:transform .12s, background .12s;
+}
+.share-platform-btn:hover{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4)}
+.share-platform-btn:active{transform:scale(.94)}
+.sp-em{font-size:22px;line-height:1}
+.sp-name{font-size:10.5px;font-weight:700;color:var(--gold-bright);text-align:center;line-height:1.2}
+.share-tone-card{
+  background:rgba(124,58,237,.1);
+  border:1px solid rgba(167,139,250,.3);
+  border-radius:12px;padding:10px;margin-top:10px;
+}
+.share-tone-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;
+}
+.share-tone-btn{
+  background:rgba(124,58,237,.18);
+  border:1px solid rgba(167,139,250,.35);
+  border-radius:8px;padding:6px 4px;cursor:pointer;
+  color:#FFF8E7;font-family:inherit;font-size:11px;font-weight:600;
+  transition:background .15s, transform .12s;
+}
+.share-tone-btn:hover{background:rgba(124,58,237,.3)}
+.share-tone-btn.sel{background:rgba(245,158,11,.3);border-color:#FBBF24}
+.share-tone-btn:active{transform:scale(.94)}
+.share-preview{
+  margin-top:8px;background:rgba(0,0,0,.3);
+  border-radius:8px;padding:10px;
+  font-size:11.5px;line-height:1.5;
+  color:#FFF8E7;
+  border:1px dashed rgba(245,158,11,.3);
+  font-style:italic;
+}
+.share-stats{
+  display:flex;justify-content:space-around;gap:6px;
+  margin-top:10px;padding-top:8px;
+  border-top:1px dashed rgba(255,255,255,.1);
+  font-size:11px;
+}
+.share-stats div{color:rgba(255,248,231,.85);text-align:center}
+.share-stats b{color:var(--gold-bright);font-family:'Cinzel',serif}
 /* ==================== v0.68 · BIBLE BREAK + DAILY GOALS + FAITH OPT-IN ==================== */
 .daily-goal-card{
   background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(96,165,250,.1));
@@ -1970,7 +2020,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · cross-device sync · wellness baked in · works offline · v0.72.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · cross-device sync · share anywhere · works offline · v0.73.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2011,7 +2061,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.72.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.73.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -2078,6 +2128,7 @@ button{
       <button class="foot-btn" onclick="App.openInstallHub()"><span class="em">📥</span>INSTALL</button>
       <button class="foot-btn" onclick="App.openWellnessHub()"><span class="em">💪</span>WELLNESS</button>
       <button class="foot-btn" onclick="App.openAccount()"><span class="em">🔄</span>SYNC</button>
+      <button class="foot-btn" onclick="Share.openHub()"><span class="em">📣</span>SHARE</button>
     </div>
   </div>
 </section>
@@ -2132,7 +2183,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.72.0';
+const VERSION = '0.73.0';
 
 // ----- STATE -----
 const State = {
@@ -11898,7 +11949,7 @@ const App = {
     const pulse=document.getElementById('help-pulse'); if(pulse) pulse.style.display='none';
     document.getElementById('aux-title').innerHTML = '❓ How to Play';
     const sections = [
-      {em:'🏠',t:'The Lobby',d:'8 themed rooms host 61 games. Foot bar (10 buttons): PROFILE · SHOP · PASS · DAILY · FRIENDS · FRENZY · ⚡ QUICK PLAY · 📥 INSTALL · 💪 WELLNESS · 🔄 SYNC',cta:null},
+      {em:'🏠',t:'The Lobby',d:'8 themed rooms host 61 games. Foot bar (11 buttons): PROFILE · SHOP · PASS · DAILY · FRIENDS · FRENZY · ⚡ QUICK PLAY · 📥 INSTALL · 💪 WELLNESS · 🔄 SYNC · 📣 SHARE',cta:null},
       {em:'🎮',t:'Playing Games',d:'Tap a room → tap a game card → see RULES + LEADERBOARD + MEDALS in the intro modal → ▶ START. Wins earn coins/brain/faith/gems.',cta:null},
       {em:'🎬',t:'Cinematic Intros',d:'Every game opens with a 3-phase splash (logo → countdown → GO). Tap to skip. Toggle full/short/off in Settings → Cinematic.',cta:{label:'⚙️ Settings',fn:'openSettings'}},
       {em:'🔥',t:'Daily Frenzy',d:'7th foot button. 3 mini-rounds (or 5 in Gauntlet). Combo XP per round. Daily SPOTLIGHT round = 2x score. Streak bonus stacks up to +75 coins.',cta:{label:'🔥 Open Frenzy',fn:'openFrenzy'}},
@@ -11912,6 +11963,7 @@ const App = {
       {em:'📥',t:'Install Hub',d:'Install BrainBoard as a real app on any device · iPhone · Android · Mac · Windows · Linux · Chromebook · works offline after install · zero browser bars.',cta:{label:'📥 Install',fn:'openInstallHub'}},
       {em:'💪',t:'Wellness Hub',d:'Built-in break · hydration · stretch · breathing · pomodoro · meditation · sleep log · mood · brain dump · affirmations · optional Bible breaks (faith opt-in).',cta:{label:'💪 Wellness',fn:'openWellnessHub'}},
       {em:'🔄',t:'Cross-device Sync',d:'Sync ur save to another device · code · QR · file · or link · backend-free · merge or overwrite · ur save NEVER touches a server.',cta:{label:'🔄 Sync',fn:'openAccount'}},
+      {em:'📣',t:'Share Hub',d:'Spread the cook · 12 share methods · Twitter · Facebook · WhatsApp · SMS · Email · Reddit · Telegram · QR · native share · copy link · invite w/ friend code · PNG card.',cta:null},
       {em:'🤝',t:'Friends',d:'Add by code · message · gift gems · cheer · MVP of week. Required for non-CPU duels.',cta:{label:'🤝 Friends',fn:'openFriends'}},
       {em:'🏆',t:'Medal Cabinet',d:'Every game you have medals in · bronze 🥉 silver 🥈 gold 🥇 based on your leaderboard rank.',cta:{label:'🏆 Open Cabinet',fn:'openCabinet'}},
       {em:'📅',t:'Weekly Tournament',d:'Top 10 Frenzy scores of the week → gem prizes Sunday midnight. #1 wins 50💎.',cta:{label:'📅 Open Tournament',fn:'openWeeklyTourney'}},
@@ -13515,6 +13567,238 @@ const BibleBreak = {
 // ====================================================================
 // 🔄 v0.71 · CROSS-DEVICE SYNC · backend-free · sync code · QR · file
 // ====================================================================
+// ====================================================================
+// 📣 v0.73 · SHARE HUB · spread the cook · 8+ ways to share
+// ====================================================================
+const Share = {
+  URL: 'https://snailgamedev.github.io/BrainBoard/',
+
+  TEXT_VARIANTS: [
+    {tone:'hype',    em:'🔥', text:'yo · check this game out · 61 brain games · free forever · works offline · installs anywhere'},
+    {tone:'casual',  em:'🎮', text:'found a brain game · pretty fun · 61 different games in one'},
+    {tone:'faith',   em:'🙏', text:'faith-forward brain game · scripture room · daily blessings · all 61 games free'},
+    {tone:'short',   em:'⚡', text:'this brain game is fire'},
+    {tone:'pitch',   em:'🧠', text:'BrainBoard · 61 brain training games · faith path optional · works offline · installs on any device · free'},
+    {tone:'challenge', em:'⚔️', text:`I just hit ${(typeof State!=='undefined'?State.data?.totals?.wins:0)||0} wins on BrainBoard · think u can beat me?`},
+  ],
+
+  count(){
+    if(!State.data.shareCount) State.data.shareCount = 0;
+    State.data.shareCount++;
+    Save.write();
+    if(State.data.shareCount === 1) Ach.unlock('share_first');
+    if(State.data.shareCount >= 10) Ach.unlock('share_10');
+  },
+
+  buildText(toneIdx){
+    const v = Share.TEXT_VARIANTS[toneIdx||0] || Share.TEXT_VARIANTS[0];
+    return `${v.em} ${v.text}\n\n${Share.URL}`;
+  },
+
+  // MAIN SHARE HUB modal
+  openHub(){
+    const wins = State.data?.totals?.wins || 0;
+    const playersInvited = State.data?.shareCount || 0;
+    const friendCode = State.data?.account?.friendCode || '';
+    Modal.show(`
+      <div class="big">📣</div>
+      <h3 style="color:var(--gold-bright)">spread the cook</h3>
+      <p class="dim" style="font-size:11.5px;margin:4px 0 10px">pick ur platform · or copy/QR · send to anyone anywhere</p>
+
+      <div class="share-platform-grid">
+        <button class="share-platform-btn" onclick="Share.copyLink()">
+          <div class="sp-em">📋</div>
+          <div class="sp-name">copy link</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.nativeShare()">
+          <div class="sp-em">📤</div>
+          <div class="sp-name">native share</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.showQR()">
+          <div class="sp-em">📱</div>
+          <div class="sp-name">show QR</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toTwitter()">
+          <div class="sp-em">🐦</div>
+          <div class="sp-name">Twitter / X</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toFacebook()">
+          <div class="sp-em">📘</div>
+          <div class="sp-name">Facebook</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toWhatsApp()">
+          <div class="sp-em">💬</div>
+          <div class="sp-name">WhatsApp</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toSMS()">
+          <div class="sp-em">📱</div>
+          <div class="sp-name">SMS / Text</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toEmail()">
+          <div class="sp-em">📧</div>
+          <div class="sp-name">Email</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toReddit()">
+          <div class="sp-em">👽</div>
+          <div class="sp-name">Reddit</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.toTelegram()">
+          <div class="sp-em">✈️</div>
+          <div class="sp-name">Telegram</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.shareScreenshot()">
+          <div class="sp-em">📸</div>
+          <div class="sp-name">share PNG card</div>
+        </button>
+        <button class="share-platform-btn" onclick="Share.openInviteCode()">
+          <div class="sp-em">🎫</div>
+          <div class="sp-name">invite w/ friend code</div>
+        </button>
+      </div>
+
+      <div class="share-tone-card">
+        <div class="install-section-h" style="margin-top:0">✍️ pick ur message tone</div>
+        <div class="share-tone-grid">
+          ${Share.TEXT_VARIANTS.map((v,i)=>`<button class="share-tone-btn" onclick="Share.pickTone(${i})">${v.em} ${v.tone}</button>`).join('')}
+        </div>
+        <p class="dim" style="font-size:10.5px;margin-top:8px;text-align:center">selected tone applies to ALL share methods below · preview ↓</p>
+        <div id="share-preview" class="share-preview">${Share.buildText(0).replace(/\n/g,'<br>')}</div>
+      </div>
+
+      <div class="share-stats">
+        <div><b>🔥 ${wins}</b> ur wins</div>
+        <div><b>📣 ${playersInvited}</b> shared count</div>
+        ${friendCode ? `<div><b>🎫 ${friendCode}</b></div>` : ''}
+      </div>
+
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="Modal.close()">close</button>
+    `);
+    Share._tone = 0; // default
+    SFX.tap();
+  },
+
+  pickTone(i){
+    Share._tone = i;
+    const p = document.getElementById('share-preview');
+    if(p) p.innerHTML = Share.buildText(i).replace(/\n/g,'<br>');
+    // Highlight selected
+    document.querySelectorAll('.share-tone-btn').forEach((b,idx)=>{
+      b.classList.toggle('sel', idx===i);
+    });
+    haptic(8); SFX.tap();
+  },
+
+  copyLink(){
+    const txt = Share.buildText(Share._tone||0);
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(txt).then(()=>Toast.show('📋 copied! paste anywhere'));
+    } else {
+      Toast.show('📋 manual copy: ' + Share.URL);
+    }
+    Share.count();
+    haptic(15); SFX.tap();
+  },
+
+  nativeShare(){
+    const txt = Share.buildText(Share._tone||0);
+    if(navigator.share){
+      navigator.share({title:'BrainBoard', text:txt, url:Share.URL})
+        .then(()=>{ Toast.show('📤 shared!'); Share.count(); })
+        .catch(()=>{});
+    } else {
+      Share.copyLink();
+    }
+    haptic(15);
+  },
+
+  showQR(){
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(Share.URL)}&color=FBBF24&bgcolor=0F0820`;
+    Modal.show(`
+      <div class="big">📱</div>
+      <h3 style="color:var(--gold-bright)">scan to play</h3>
+      <p class="dim" style="font-size:11.5px;margin:6px 0">point a phone camera at this · tap the link · ur in</p>
+      <img src="${qrSrc}" alt="BrainBoard QR" style="border-radius:16px;border:3px solid #FBBF24;background:#0F0820;padding:10px;display:block;margin:14px auto;max-width:300px">
+      <p style="font-size:11px;text-align:center;margin:4px 0"><code>${Share.URL}</code></p>
+      <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="Share.openHub()">← back to share hub</button>
+    `);
+    Share.count();
+    SFX.sparkle();
+  },
+
+  toTwitter(){
+    const txt = Share.buildText(Share._tone||0);
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+    Share.count(); Toast.show('🐦 opening Twitter / X');
+  },
+  toFacebook(){
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Share.URL)}`, '_blank', 'noopener');
+    Share.count(); Toast.show('📘 opening Facebook');
+  },
+  toWhatsApp(){
+    const txt = Share.buildText(Share._tone||0);
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+    Share.count(); Toast.show('💬 opening WhatsApp');
+  },
+  toSMS(){
+    const txt = Share.buildText(Share._tone||0);
+    location.href = `sms:?body=${encodeURIComponent(txt)}`;
+    Share.count(); Toast.show('📱 opening SMS');
+  },
+  toEmail(){
+    const subj = encodeURIComponent('check this brain game');
+    const body = encodeURIComponent(Share.buildText(Share._tone||0));
+    location.href = `mailto:?subject=${subj}&body=${body}`;
+    Share.count(); Toast.show('📧 opening email');
+  },
+  toReddit(){
+    const title = encodeURIComponent('BrainBoard · 61 free brain games · plays anywhere');
+    const url   = encodeURIComponent(Share.URL);
+    window.open(`https://www.reddit.com/submit?title=${title}&url=${url}`, '_blank', 'noopener');
+    Share.count(); Toast.show('👽 opening Reddit');
+  },
+  toTelegram(){
+    const txt = encodeURIComponent(Share.buildText(Share._tone||0));
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(Share.URL)}&text=${txt}`, '_blank', 'noopener');
+    Share.count(); Toast.show('✈️ opening Telegram');
+  },
+
+  shareScreenshot(){
+    // Reuse existing StatsScreenshot which makes a profile PNG
+    if(typeof StatsScreenshot !== 'undefined' && StatsScreenshot.generate){
+      StatsScreenshot.generate();
+      Share.count();
+    } else {
+      Toast.show('📸 PNG card not available · use copy link');
+    }
+  },
+
+  openInviteCode(){
+    const code = State.data?.account?.friendCode || 'NO-CODE';
+    const txt = `🎫 my BrainBoard friend code is ${code} · add me when u install at ${Share.URL}`;
+    Modal.show(`
+      <div class="big">🎫</div>
+      <h3 style="color:var(--gold-bright)">invite w/ friend code</h3>
+      <p style="font-size:13px;margin:8px 0">share ur friend code · they can add u after they install · duel · cheer · gift gems</p>
+      <div style="font-family:'Cinzel',serif;font-size:30px;letter-spacing:.3em;margin:14px 0;color:var(--gold-bright);text-align:center">${code}</div>
+      <p class="dim" style="font-size:11.5px;text-align:center;margin:6px 0">share message:</p>
+      <textarea readonly class="sync-code-box" style="min-height:60px;font-size:12px" onclick="this.select()">${txt}</textarea>
+      <div class="modal-actions" style="flex-direction:column;gap:6px">
+        <button class="btn-primary" onclick="Share._copyInvite()">📋 copy invite message</button>
+        <button class="btn-secondary" onclick="Share.openHub()">← back to share hub</button>
+      </div>
+    `);
+  },
+  _copyInvite(){
+    const code = State.data?.account?.friendCode || 'NO-CODE';
+    const txt = `🎫 my BrainBoard friend code is ${code} · add me when u install at ${Share.URL}`;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(txt).then(()=>Toast.show('📋 invite copied!'));
+    }
+    Share.count();
+    haptic(15); SFX.chime();
+  },
+};
+
 const Sync = {
   // Encode save as a portable base64 blob
   encodeSave(){
