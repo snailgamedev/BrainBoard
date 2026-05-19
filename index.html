@@ -64,11 +64,11 @@ body.color-blind .word-cell.yellow{background:#FFC107 !important}
 #onboard{ overflow-y:auto; }
 .modal-card{ max-height:90vh; overflow-y:auto; }
 
-/* v0.23 PRO POLISH · consistent micro-anims · mobile-tight */
+/* v0.23 PRO POLISH · consistent micro-anims · mobile-tight · v0.74 11-button foot bar */
 @media (max-width:540px){
   .lobby-foot{ grid-template-columns:repeat(4,1fr) !important; }
-  .lobby-foot .foot-btn{ font-size:10px; padding:10px 4px; }
-  .lobby-foot .foot-btn .em{ font-size:18px; }
+  .lobby-foot .foot-btn{ font-size:10.5px; padding:12px 4px; min-height:60px; }
+  .lobby-foot .foot-btn .em{ font-size:20px; }
   .hud{ padding:8px 10px; }
   .hud-row{ gap:6px; flex-wrap:wrap; }
   .wallet-chip{ padding:4px 7px; font-size:11px; }
@@ -89,7 +89,8 @@ body.color-blind .word-cell.yellow{background:#FFC107 !important}
   .splash-cta{ padding:14px 28px; font-size:15px; }
 }
 @media (max-width:380px){
-  .lobby-foot{ grid-template-columns:repeat(4,1fr) !important; }
+  .lobby-foot{ grid-template-columns:repeat(3,1fr) !important; }
+  .lobby-foot .foot-btn{ font-size:10px; padding:10px 3px; min-height:58px; }
   .room-door{ min-height:88px; }
   .splash-title{ font-size:36px !important; }
   .splash-emoji{ font-size:54px !important; }
@@ -369,12 +370,13 @@ button{
 .room-logic{background:linear-gradient(135deg,#0E7490 0%,#581C87 100%)}
 .room-speed{background:linear-gradient(135deg,#DC2626 0%,#7C2D12 100%)}
 .room-daily{background:linear-gradient(135deg,#10B981 0%,#064E3B 100%)}
+/* v0.74 · foot bar · 11 buttons · auto-wrap · min tap target 56px height */
 .lobby-foot{
-  display:grid;grid-template-columns:repeat(7,1fr);gap:5px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));
+  gap:6px;
   margin-top:8px;
 }
-.foot-btn{font-size:10px}
-.foot-btn .em{font-size:20px}
 .foot-btn{
   background:rgba(255,255,255,.06);
   border:1px solid rgba(255,255,255,.12);
@@ -383,8 +385,39 @@ button{
   color:var(--cream);
   font-size:11px;font-weight:600;
   text-align:center;
+  min-height:64px;          /* v0.74 · WCAG touch target 44px+ comfortable buffer */
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
 }
-.foot-btn .em{display:block;font-size:22px;margin-bottom:2px}
+.foot-btn .em{display:block;font-size:22px;line-height:1;margin-bottom:2px}
+.foot-btn:active{transform:scale(.95)}
+/* v0.74 · per-game LEVEL badge */
+.lv-badge{
+  display:inline-block;
+  background:linear-gradient(135deg,#A78BFA,#7C3AED);
+  color:#fff;font-size:9px;font-weight:800;
+  padding:2px 6px;border-radius:99px;
+  margin-left:6px;letter-spacing:.04em;
+  vertical-align:middle;
+}
+/* v0.74 · mega START button in game intro · primary client easier launch */
+.game-start-mega{
+  flex:1;
+  font-size:17px !important;
+  font-weight:800 !important;
+  padding:18px 24px !important;
+  letter-spacing:.05em;
+  background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;
+  color:#0F0820 !important;
+  border:none !important;
+  border-radius:14px !important;
+  box-shadow:0 0 0 0 rgba(251,191,36,.7);
+  animation:gameStartPulse 1.8s ease-in-out infinite;
+}
+@keyframes gameStartPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.55)}
+  50%{box-shadow:0 0 0 12px rgba(251,191,36,0)}
+}
+.game-start-mega:active{transform:scale(.97)}
 
 /* ==================== ROOM SCREEN ==================== */
 .room-screen{
@@ -2020,7 +2053,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · cross-device sync · share anywhere · works offline · v0.73.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · chill timers · per-game levels · share anywhere · v0.74.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2061,7 +2094,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.73.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.74.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -2183,7 +2216,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.73.0';
+const VERSION = '0.74.0';
 
 // ----- STATE -----
 const State = {
@@ -2224,7 +2257,7 @@ const DEFAULT_SAVE = {
   totals:{wins:0,losses:0,games:0},
   perGame:{}, // {gameId:{wins,best,plays}}
   ach:{}, // {achId:unlockTs}
-  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true,skipGameIntro:false,difficulty:'normal',largeText:false,colorBlindSafe:false,music:true,musicVolume:0.35},
+  settings:{sfx:true,haptic:true,kidSafe:false,tts:false,scriptureOnWin:true,pauseOnHide:true,skipGameIntro:false,difficulty:'normal',largeText:false,colorBlindSafe:false,music:true,musicVolume:0.35,timerSpeed:'chill',tapTargets:'big'},
   // v0.3 additions
   avatar:{character:'monk',hat:'none',face:'none',aura:'none',pet:'none',outfit:'plain'},
   activityLog:[], // recent events {ts, type, msg}
@@ -9030,11 +9063,11 @@ const GameIntro = {
         </div>
         ${State._equippedPowerup?`<div style="text-align:center;margin-top:6px;font-size:11px;color:var(--gold-bright)">equipped: ${POWERUP_DEFS.find(p=>p.id===State._equippedPowerup).em} ${POWERUP_DEFS.find(p=>p.id===State._equippedPowerup).name}</div>`:''}
       </div>`:''}
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="App._gameIntroBack()">← back</button>
-        <button class="btn-primary" onclick="App._gameIntroStart()">▶ START</button>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="btn-secondary" style="flex:0 0 auto;padding:14px 18px" onclick="App._gameIntroBack()">← back</button>
+        <button class="btn-primary game-start-mega" onclick="App._gameIntroStart()">▶ START GAME</button>
       </div>
-      <p class="dim text-center" style="font-size:10px;margin-top:8px;opacity:.5">tip: turn off intros in Settings if you want to skip</p>`);
+      <p class="dim text-center" style="font-size:10px;margin-top:8px;opacity:.5">tip: turn off intros in Settings if you want to skip · or adjust timer speed</p>`);
     State._pendingGame = game;
     SFX.tap();
     haptic(8);
@@ -9702,9 +9735,11 @@ const App = {
       // v0.31 RESUME indicator
       const hasSaved = State.data._savedGames?.[key];
       const resumeBadge = hasSaved ? '<div class="stat" style="background:rgba(34,211,238,.25);color:#67e8f9;font-size:9px;margin-bottom:2px">📥 SAVED</div>' : '';
+      // v0.74 · per-game level badge
+      const lvBadge = GameLevel.badge(rid, g.id);
       const card = el('button','game-card',`
         <div class="em">${g.em}</div>
-        <div class="info"><h3>${g.name}</h3><div class="sub">${g.sub}</div></div>
+        <div class="info"><h3>${g.name}${lvBadge}</h3><div class="sub">${g.sub}</div></div>
         <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">${resumeBadge}${prBadge}<div class="stat">${stat.wins}🏆</div></div>`);
       card.onclick = ()=>{ haptic(8); GameIntro.show(rid, g); };
       body.appendChild(card);
@@ -10280,6 +10315,17 @@ const App = {
     Toast.show('▶ playing aux track · 4-chord loop');
     Ach.unlock('music_tested');
   },
+  // v0.74 · timer speed setter · primary client feedback
+  setTimerSpeed(t){
+    if(!State.data.settings) State.data.settings = {};
+    State.data.settings.timerSpeed = t;
+    Save.write();
+    haptic(15); SFX.tap();
+    const labels = {'extra-chill':'🐢 EXTRA CHILL','chill':'😌 CHILL','normal':'⏱️ NORMAL','sweat':'💪 SWEAT'};
+    Toast.show(`timer: ${labels[t]||t} · applies on next game start`);
+    Ach.unlock('timer_tuned');
+    App.openSettings();
+  },
   setDifficulty(d){
     if(!State.data.settings) State.data.settings = {};
     State.data.settings.difficulty = d;
@@ -10725,6 +10771,17 @@ const App = {
         </div>
         <p class="dim" style="font-size:10px;margin-top:6px">
           ${s.difficulty==='casual'?'😊 Easy · gentler rank climb':s.difficulty==='hardcore'?'🔥 Hard · steeper losses · for grinders':'⚖️ Normal · balanced'}
+        </p>
+        <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">⏱️ TIMER SPEED · how fast timed games feel</h3>
+        <p class="dim" style="font-size:11px;margin-bottom:6px">primary client said games were too quick · slow them down here</p>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+          <button class="av-tool-btn ${s.timerSpeed==='extra-chill'?'active':''}" onclick="App.setTimerSpeed('extra-chill')">🐢 EXTRA CHILL · 60% more time</button>
+          <button class="av-tool-btn ${(s.timerSpeed==='chill'||!s.timerSpeed)?'active':''}" onclick="App.setTimerSpeed('chill')">😌 CHILL · 30% more · default</button>
+          <button class="av-tool-btn ${s.timerSpeed==='normal'?'active':''}" onclick="App.setTimerSpeed('normal')">⏱️ NORMAL · original</button>
+          <button class="av-tool-btn ${s.timerSpeed==='sweat'?'active':''}" onclick="App.setTimerSpeed('sweat')">💪 SWEAT · 15% faster</button>
+        </div>
+        <p class="dim" style="font-size:10px;margin-top:6px">
+          ${(s.timerSpeed==='extra-chill')?'🐢 EXTRA CHILL · ample time for everything':(s.timerSpeed==='normal')?'⏱️ NORMAL · the og pace':(s.timerSpeed==='sweat')?'💪 SWEAT · for grinders only':'😌 CHILL · most players win at this pace'}
         </p>
         <h3 style="margin:14px 0 6px;color:var(--gold-bright);font-size:13px">🎨 APP THEME</h3>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
@@ -12388,6 +12445,46 @@ const App = {
 // ====================================================================
 // 📊 v0.63 · TRACKER · single source of truth for streak/play-day/daily-counters
 // ====================================================================
+// ====================================================================
+// ⏱️ v0.74 · TIMER MULTIPLIER · "primary client" feedback · slow timed modes down
+// ====================================================================
+const TimerMult = {
+  MULTIPLIERS: {
+    'extra-chill': 1.6,
+    'chill':       1.3,
+    'normal':      1.0,
+    'sweat':       0.85,
+  },
+  get current(){
+    const s = State.data?.settings?.timerSpeed || 'chill';
+    return TimerMult.MULTIPLIERS[s] || 1.3;
+  },
+  apply(sec){
+    if(typeof sec !== 'number' || sec <= 0) return sec;
+    return Math.round(sec * TimerMult.current);
+  }
+};
+// Short alias used by game definitions to wrap timeLeft values
+function _t(sec){ return TimerMult.apply(sec); }
+
+// v0.74 · PER-GAME LEVEL · grows w/ wins · displayed in room cards + game intro
+const GameLevel = {
+  forGame(roomId, gameId){
+    const stat = State.data?.perGame?.[`${roomId}:${gameId}`] || {};
+    const wins = stat.wins || 0;
+    // Level curve: 1 (0 wins) · 2 (1) · 3 (3) · 4 (6) · 5 (10) · 6 (15) · 7 (21) · 8 (28) · 9 (36) · 10 (45+)
+    const thresholds = [0,1,3,6,10,15,21,28,36,45,60,80];
+    let lv = 1;
+    thresholds.forEach((t,i) => { if(wins >= t) lv = i + 1; });
+    return Math.min(lv, 12);
+  },
+  badge(roomId, gameId){
+    const lv = GameLevel.forGame(roomId, gameId);
+    if(lv <= 1) return '';
+    return `<span class="lv-badge">Lv ${lv}</span>`;
+  }
+};
+
 const Tracker = {
   todayKey(){ return new Date().toDateString(); },
   yesterdayKey(){ return new Date(Date.now()-86400000).toDateString(); },
@@ -15470,7 +15567,7 @@ const MemoryGame = {
 const StroopGame = {
   start(){
     State.gameInst = this;
-    this.score = 0; this.timeLeft = 30;
+    this.score = 0; this.timeLeft = _t(30);
     this.colors = [
       {n:'RED',hex:'#EF4444'},{n:'BLUE',hex:'#3B82F6'},
       {n:'GREEN',hex:'#10B981'},{n:'YELLOW',hex:'#F59E0B'},
@@ -15542,7 +15639,7 @@ const StroopGame = {
 const MathGame = {
   start(){
     State.gameInst = this;
-    this.score = 0; this.timeLeft = 30; this.input='';
+    this.score = 0; this.timeLeft = _t(30); this.input='';
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
@@ -15693,7 +15790,7 @@ const VerseGame = {
 const AnagramGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45;
+    this.score=0; this.timeLeft = _t(45);
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
@@ -15917,7 +16014,7 @@ const ReactionGame = {
 const SequenceGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60;
+    this.score=0; this.timeLeft = _t(60);
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
@@ -15992,7 +16089,7 @@ const BIBLE_BOOKS = {
 const BooksGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45;
+    this.score=0; this.timeLeft = _t(45);
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
@@ -16128,7 +16225,7 @@ const SPOT_PATTERNS = [
 const SpotGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45;
+    this.score=0; this.timeLeft = _t(45);
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
@@ -16187,7 +16284,7 @@ const SpotGame = {
 const HuntGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45;
+    this.score=0; this.timeLeft = _t(45);
     this.next();
     this.timer = setInterval(()=>{
       this.timeLeft--;
@@ -16270,7 +16367,7 @@ const HuntGame = {
 const ColorMatchGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=30;
+    this.score=0; this.timeLeft = _t(30);
     this.colors = [
       {n:'RED',hex:'#EF4444'},{n:'BLUE',hex:'#3B82F6'},
       {n:'GREEN',hex:'#10B981'},{n:'YELLOW',hex:'#F59E0B'},
@@ -16339,7 +16436,7 @@ const ColorMatchGame = {
 const WhackGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=30;
+    this.score=0; this.timeLeft = _t(30);
     this.activeIdx = -1;
     this.target = '🌟';
     this.next();
@@ -16714,7 +16811,7 @@ function mixedTriviaPool(){
 const TriviaGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60; this.q=0;
+    this.score=0; this.timeLeft = _t(60); this.q=0;
     // v0.30 kid-safe filter
     this.questions = filterKidSafe([...BIBLE_TRIVIA].sort(()=>Math.random()-.5), x=>x.q).slice(0,10);
     this.next();
@@ -16883,7 +16980,7 @@ const DEFINITIONS = [
 const DefineGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60; this.q=0;
+    this.score=0; this.timeLeft = _t(60); this.q=0;
     this.questions = [...DEFINITIONS].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer = setInterval(()=>{
@@ -17151,7 +17248,7 @@ const RIDDLES = [
 const RiddleGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.q=0; this.timeLeft=90;
+    this.score=0; this.q=0; this.timeLeft = _t(90);
     this.questions = [...RIDDLES].sort(()=>Math.random()-.5).slice(0,8);
     this.next();
     this.timer = setInterval(()=>{
@@ -17444,7 +17541,7 @@ const SYNONYMS = [
 const SynonymGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45; this.q=0;
+    this.score=0; this.timeLeft = _t(45); this.q=0;
     this.questions=[...SYNONYMS].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--; if(this.timeLeft<=0){this.end();return;} this.render();},1000);
@@ -17553,9 +17650,9 @@ const NumberMemoryGame = {
 const TapFrenzyGame = {
   start(){
     State.gameInst=this;
-    this.taps=0; this.timeLeft=5; this.startMs=Date.now();
+    this.duration = _t(5); this.taps=0; this.timeLeft = this.duration; this.startMs=Date.now();
     this.timer=setInterval(()=>{
-      this.timeLeft=Math.max(0, 5 - Math.floor((Date.now()-this.startMs)/1000));
+      this.timeLeft=Math.max(0, this.duration - Math.floor((Date.now()-this.startMs)/1000));
       if(this.timeLeft<=0){this.end();return;}
       this.render();
     },200);
@@ -17603,7 +17700,7 @@ const COMMANDMENTS = [
 const CommandmentsGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.q=0; this.timeLeft=45;
+    this.score=0; this.q=0; this.timeLeft = _t(45);
     this.questions=[...COMMANDMENTS].sort(()=>Math.random()-.5).slice(0,8);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -17647,7 +17744,7 @@ const CommandmentsGame = {
 const OddOneGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.q=0; this.timeLeft=45;
+    this.score=0; this.q=0; this.timeLeft = _t(45);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
     UI.show('game');
@@ -17719,7 +17816,7 @@ const CAPITALS = [
 const CapitalsGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.q=0; this.timeLeft=45;
+    this.score=0; this.q=0; this.timeLeft = _t(45);
     this.questions=[...CAPITALS].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -18053,7 +18150,7 @@ const CupPongGame = {
 const WordBuildGame = {
   start(){
     State.gameInst=this;
-    this.timeLeft=90; this.score=0; this.wordsBuilt=[]; this.current='';
+    this.timeLeft = _t(90); this.score=0; this.wordsBuilt=[]; this.current='';
     // Pick 7 letters with a good vowel mix
     const vowels='AEIOU'.split('');
     const consonants='BCDFGHJKLMNPRSTW'.split('');
@@ -18791,7 +18888,7 @@ const MiniGolfGame = {
 const PatternMatchGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45; this.q=0;
+    this.score=0; this.timeLeft = _t(45); this.q=0;
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
     UI.show('game');
@@ -18880,7 +18977,7 @@ const ANTONYMS = [
 const AntonymGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45; this.q=0;
+    this.score=0; this.timeLeft = _t(45); this.q=0;
     this.questions=[...ANTONYMS].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -18922,7 +19019,7 @@ const AntonymGame = {
 const FastAddGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=30; this.input='';
+    this.score=0; this.timeLeft = _t(30); this.input='';
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
     UI.show('game');
@@ -18986,7 +19083,7 @@ const DISCIPLES = [
 const DiscipleGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60; this.q=0;
+    this.score=0; this.timeLeft = _t(60); this.q=0;
     this.questions=[...DISCIPLES].sort(()=>Math.random()-.5).slice(0,8);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -19178,7 +19275,7 @@ const ROMANS = [
 const RomanGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45; this.q=0;
+    this.score=0; this.timeLeft = _t(45); this.q=0;
     this.questions=[...ROMANS].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -19291,7 +19388,7 @@ const OrderSortGame = {
 const PyramidGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60; this.q=0;
+    this.score=0; this.timeLeft = _t(60); this.q=0;
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
     UI.show('game');
@@ -19386,7 +19483,7 @@ const SPELLING_BEE = [
 const SpellingGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=45; this.q=0;
+    this.score=0; this.timeLeft = _t(45); this.q=0;
     this.questions=[...SPELLING_BEE].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -19443,7 +19540,7 @@ const PROPHECIES = [
 const ProphecyGame = {
   start(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60; this.q=0;
+    this.score=0; this.timeLeft = _t(60); this.q=0;
     this.questions=[...PROPHECIES].sort(()=>Math.random()-.5).slice(0,6);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
@@ -19769,7 +19866,7 @@ const NewEquationGame = (()=>{
   const game={};
   game.start=function(){
     State.gameInst=this;
-    this.score=0; this.timeLeft=60; this.q=0;
+    this.score=0; this.timeLeft = _t(60); this.q=0;
     this.questions=[...EQUATIONS].sort(()=>Math.random()-.5).slice(0,10);
     this.next();
     this.timer=setInterval(()=>{this.timeLeft--;if(this.timeLeft<=0){this.end();return;}this.render();},1000);
