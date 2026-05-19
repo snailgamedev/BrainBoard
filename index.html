@@ -1175,6 +1175,31 @@ button{
   border-radius:12px;padding:12px 14px;
 }
 .install-tips ul li{margin-bottom:3px}
+/* ==================== v0.66 · WELLNESS PANEL ==================== */
+.wellness-panel{
+  max-width:520px;margin:0 auto;
+}
+.wellness-stat-row{
+  display:flex;gap:8px;margin-bottom:12px;
+}
+.wellness-stat{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px 6px;background:rgba(96,165,250,.12);
+  border:1px solid rgba(96,165,250,.3);
+  border-radius:12px;
+}
+.we-em{font-size:22px;line-height:1}
+.we-val{
+  font-family:'Cinzel',serif;font-weight:800;
+  font-size:22px;color:#60A5FA;margin-top:4px;
+}
+.we-lbl{font-size:10px;opacity:.8;margin-top:2px;text-align:center}
+.wellness-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;
+}
+.wellness-actions .btn-secondary{
+  padding:12px;font-size:13px;font-weight:700;
+}
 .recent-log{
   display:flex;flex-direction:column;gap:6px;
 }
@@ -1610,7 +1635,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · installs anywhere · v0.65.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward · free forever · installs anywhere · wellness baked in · v0.66.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -1651,7 +1676,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.65.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.66.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -1716,6 +1741,7 @@ button{
       <button class="foot-btn" onclick="App.openFrenzy()"><span class="em">🔥</span>FRENZY</button>
       <button class="foot-btn" onclick="App.quickPlay()"><span class="em">⚡</span>QUICK PLAY</button>
       <button class="foot-btn" onclick="App.openInstallHub()"><span class="em">📥</span>INSTALL</button>
+      <button class="foot-btn" onclick="App.openWellnessHub()"><span class="em">💪</span>WELLNESS</button>
     </div>
   </div>
 </section>
@@ -1770,7 +1796,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.65.0';
+const VERSION = '0.66.0';
 
 // ----- STATE -----
 const State = {
@@ -1785,6 +1811,23 @@ const DEFAULT_SAVE = {
   emoji:'🙏', joinedAt:Date.now(), lastDailyClaim:0,
   wallet:{coin:0,gem:0,brain:0,faith:0,ticket:0,key:0},
   iq:50, streak:0, lastPlayDate:null, peakStreak:0, daysPlayed:0, gamesToday:0, gamesTodayDate:'',  // v0.22 starts humble · v0.63 tracking expanded
+  // v0.66 · WELLNESS system · break + hydration + posture + eye + bedtime tracking
+  wellness:{
+    enabled:true,
+    waterEvery:6,           // remind every N games
+    breakEvery:12,          // hard break every N games
+    eyeRule20:true,         // 20-20-20 eye rest reminder
+    postureCheck:true,      // posture reminder on break
+    bedtimeCutoff:23,       // hour (24h) past which wind-down banner shows
+    sessionMaxMin:60,       // soft cap on continuous play minutes
+    waterCount:0,           // glasses logged today
+    waterCountDate:'',      // sync key for daily water counter
+    breaksTaken:0,          // total breaks logged
+    lastWaterReminderGameNum:0,
+    lastBreakReminderGameNum:0,
+    lastEyeReminderTs:0,
+    sessionStartTs:0,       // current continuous session
+  },
   // v0.64 · MEGA TRACKING · 7 features wired
   playCalendar:{},          // {dateString: gamesPlayed} · last 30 days kept
   roomMastery:{},           // {roomId: {gamesWon: set serialized, perfectDays: 0}}
@@ -9789,6 +9832,22 @@ const App = {
     Ach.unlock('theme_picked');
     App.openSettings();
   },
+  // v0.66 · Wellness hub
+  openWellnessHub(){
+    document.getElementById('aux-title').innerHTML = '💪 Wellness';
+    document.getElementById('aux-body').innerHTML = `
+      <div class="install-wrap">
+        <div class="install-hero" style="background:linear-gradient(135deg,rgba(96,165,250,.2),rgba(16,185,129,.18))">
+          <div class="install-hero-em">💪</div>
+          <div class="install-hero-title">brain games hit different when ur body's right</div>
+          <div class="install-hero-sub">hydration · breaks · eye rest · bedtime · all optional · all configurable</div>
+        </div>
+        ${Wellness.renderPanel()}
+        <button class="btn-secondary" style="margin-top:14px;width:100%" onclick="App.toLobby()">← back to lobby</button>
+      </div>`;
+    UI.show('aux');
+    Ach.unlock('wellness_opened');
+  },
   // v0.64 · Goal creator popup
   _openGoalCreator(){
     const opts = Goals.TYPES.map(t=>{
@@ -12017,6 +12076,207 @@ const Tracker = {
 };
 
 // ====================================================================
+// 💪 v0.66 · WELLNESS · breaks · hydration · eyes · posture · bedtime
+// ====================================================================
+const Wellness = {
+  ensure(){
+    if(!State.data.wellness) State.data.wellness = {
+      enabled:true, waterEvery:6, breakEvery:12, eyeRule20:true, postureCheck:true,
+      bedtimeCutoff:23, sessionMaxMin:60,
+      waterCount:0, waterCountDate:'', breaksTaken:0,
+      lastWaterReminderGameNum:0, lastBreakReminderGameNum:0, lastEyeReminderTs:0,
+      sessionStartTs:0,
+    };
+    return State.data.wellness;
+  },
+  syncDailyWater(){
+    const w = Wellness.ensure(), today = new Date().toDateString();
+    if(w.waterCountDate !== today){ w.waterCount = 0; w.waterCountDate = today; Save.write(); }
+  },
+  startSession(){
+    const w = Wellness.ensure();
+    if(!w.sessionStartTs) w.sessionStartTs = Date.now();
+  },
+  sessionMinutes(){
+    const w = Wellness.ensure();
+    if(!w.sessionStartTs) return 0;
+    return Math.round((Date.now() - w.sessionStartTs) / 60000);
+  },
+  // Called after every recordResult · checks if a reminder should fire
+  checkReminders(){
+    const w = Wellness.ensure();
+    if(!w.enabled) return;
+    Wellness.syncDailyWater();
+    Wellness.startSession();
+    const total = State.data.totals.games || 0;
+    // BREAK reminder (hard) — every N games OR session > sessionMaxMin
+    const sessionLong = Wellness.sessionMinutes() >= (w.sessionMaxMin||60);
+    if(total > 0 && (total - (w.lastBreakReminderGameNum||0)) >= (w.breakEvery||12) || sessionLong){
+      w.lastBreakReminderGameNum = total;
+      w.sessionStartTs = 0; // reset session timer
+      Save.write();
+      return Wellness.fireBreakModal(sessionLong);
+    }
+    // WATER reminder (soft) — every M games
+    if(total > 0 && (total - (w.lastWaterReminderGameNum||0)) >= (w.waterEvery||6)){
+      w.lastWaterReminderGameNum = total;
+      Save.write();
+      return Wellness.fireWaterToast();
+    }
+    // EYE rule 20-20-20 — every ~20 min of session
+    if(w.eyeRule20){
+      const sinceEye = Date.now() - (w.lastEyeReminderTs||0);
+      if(sinceEye > 20*60000){
+        w.lastEyeReminderTs = Date.now();
+        Save.write();
+        Wellness.fireEyeToast();
+      }
+    }
+    // BEDTIME wind-down
+    const hr = new Date().getHours();
+    if(hr >= (w.bedtimeCutoff||23) || hr <= 4){
+      Wellness.fireBedtimeBanner(hr);
+    }
+  },
+  fireBreakModal(sessionLong){
+    const w = Wellness.ensure();
+    const tips = [
+      '🚶 walk around the room · feel ur legs',
+      '🪟 look out a window · find something green',
+      '🧘 5 deep breaths · slow in · slow out',
+      '🤸 stretch ur arms overhead · roll ur shoulders',
+      '👀 close ur eyes for 30 seconds',
+      '💧 grab water · drink at least half a glass',
+      '🦵 stand up · do 10 squats or a few lunges',
+      '🧠 think of one good thing happening rn',
+    ];
+    const pickedTips = tips.sort(()=>Math.random()-.5).slice(0,4);
+    const minNote = sessionLong ? `<p style="color:#FBBF24;font-size:11px;margin:4px 0">⏰ you've been at it ${Wellness.sessionMinutes()} min straight · ur brain earned this</p>` : '';
+    Modal.show(`
+      <div class="big">🌿</div>
+      <h3 style="color:var(--gold-bright)">break time boi</h3>
+      <p style="font-size:13px;margin:8px 0">step away for 2-3 min · ur brain locks in better after a reset</p>
+      ${minNote}
+      <ul style="text-align:left;font-size:12.5px;line-height:1.7;margin:10px 0;padding-left:22px">
+        ${pickedTips.map(t=>`<li>${t}</li>`).join('')}
+      </ul>
+      <div class="verse" style="margin-top:10px">"Come unto me · I will give you rest."<cite>— Matthew 11:28</cite></div>
+      <div class="modal-actions" style="flex-direction:column;gap:8px">
+        <button class="btn-primary" onclick="Wellness.markBreakTaken()">✅ took the break · feelin good</button>
+        <button class="btn-secondary" onclick="Modal.close()">skip for now</button>
+      </div>
+    `);
+    SFX.chime(); haptic(20);
+  },
+  markBreakTaken(){
+    Modal.close();
+    const w = Wellness.ensure();
+    w.breaksTaken = (w.breaksTaken||0) + 1;
+    Wallet.add({coin:25, brain:1});
+    Toast.show(`🌿 break taken · +25🪙 +1🧠 · ${w.breaksTaken} breaks all-time`);
+    Activity.log('ach','🌿', `took a break · brain reset`);
+    SFX.holy(); haptic(30);
+    Save.write();
+    if(w.breaksTaken === 1) Ach.unlock('first_break');
+    if(w.breaksTaken >= 10) Ach.unlock('breaks_10');
+    if(w.breaksTaken >= 50) Ach.unlock('breaks_50');
+  },
+  fireWaterToast(){
+    const w = Wellness.ensure();
+    const cnt = w.waterCount||0;
+    Toast.show(`💧 hydration check · ${cnt} ${cnt===1?'glass':'glasses'} today · <button onclick="Wellness.logWater()" style="background:rgba(96,165,250,.3);border:1px solid #60A5FA;border-radius:99px;padding:3px 10px;color:#fff;font-weight:700;font-size:11px;cursor:pointer">+1 💧</button>`, 5500);
+  },
+  logWater(){
+    Wellness.syncDailyWater();
+    const w = Wellness.ensure();
+    w.waterCount = (w.waterCount||0) + 1;
+    Wallet.add({brain:1});
+    Toast.show(`💧 logged · ${w.waterCount} today · +1🧠`);
+    if(w.waterCount === 1) Ach.unlock('water_first');
+    if(w.waterCount >= 8) Ach.unlock('water_8_in_day');
+    Save.write();
+    haptic(15); SFX.tap();
+  },
+  fireEyeToast(){
+    Toast.show(`👀 eye rest · look 20 feet away for 20 seconds · 20-20-20 rule keeps eyes sharp`, 4500);
+  },
+  fireBedtimeBanner(hr){
+    // Show once per night max · use sessionStorage flag
+    const today = new Date().toDateString() + '-bed';
+    if(sessionStorage.getItem(today)) return;
+    sessionStorage.setItem(today, '1');
+    Toast.show(`🌙 it's late · ${hr}:00 · maybe wind down · ur streak will be there tomorrow`, 6000);
+  },
+  // Render the wellness panel for Settings
+  renderPanel(){
+    const w = Wellness.ensure();
+    Wellness.syncDailyWater();
+    return `<div class="wellness-panel">
+      <div class="wellness-stat-row">
+        <div class="wellness-stat"><span class="we-em">💧</span><span class="we-val">${w.waterCount||0}</span><span class="we-lbl">water today</span></div>
+        <div class="wellness-stat"><span class="we-em">🌿</span><span class="we-val">${w.breaksTaken||0}</span><span class="we-lbl">breaks all-time</span></div>
+        <div class="wellness-stat"><span class="we-em">⏰</span><span class="we-val">${Wellness.sessionMinutes()}m</span><span class="we-lbl">this session</span></div>
+      </div>
+      <div class="wellness-actions">
+        <button class="btn-secondary" onclick="Wellness.logWater()">💧 +1 glass</button>
+        <button class="btn-secondary" onclick="Wellness.markBreakTaken()">🌿 took a break</button>
+      </div>
+      <div class="setting-row">
+        <div><b>Wellness reminders</b><div class="dim" style="font-size:11px">water · breaks · eye rest · bedtime</div></div>
+        <div class="toggle ${w.enabled?'on':''}" onclick="Wellness.toggle('enabled')"></div>
+      </div>
+      <div class="setting-row">
+        <div><b>Water reminder every</b><div class="dim" style="font-size:11px">${w.waterEvery} games</div></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="Wellness.adjust('waterEvery',-2)">−</button>
+          <button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="Wellness.adjust('waterEvery',2)">+</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div><b>Break modal every</b><div class="dim" style="font-size:11px">${w.breakEvery} games · or ${w.sessionMaxMin}min session</div></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="Wellness.adjust('breakEvery',-3)">−</button>
+          <button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="Wellness.adjust('breakEvery',3)">+</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div><b>Eye rest (20-20-20)</b><div class="dim" style="font-size:11px">toast every 20min of session</div></div>
+        <div class="toggle ${w.eyeRule20?'on':''}" onclick="Wellness.toggle('eyeRule20')"></div>
+      </div>
+      <div class="setting-row">
+        <div><b>Bedtime wind-down</b><div class="dim" style="font-size:11px">${w.bedtimeCutoff}:00 cutoff</div></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="Wellness.adjust('bedtimeCutoff',-1)">−</button>
+          <button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="Wellness.adjust('bedtimeCutoff',1)">+</button>
+        </div>
+      </div>
+      <p class="dim" style="font-size:11px;margin-top:10px;text-align:center;line-height:1.6">
+        💪 take care of ur body · it's the only one u got<br>
+        ${randomVerse().t.slice(0,60)}...
+      </p>
+    </div>`;
+  },
+  toggle(field){
+    const w = Wellness.ensure();
+    w[field] = !w[field];
+    Save.write();
+    SFX.tap(); haptic(10);
+    App.openWellnessHub?.(); // re-render if open
+  },
+  adjust(field, delta){
+    const w = Wellness.ensure();
+    const bounds = {
+      waterEvery:[2,20], breakEvery:[5,40], bedtimeCutoff:[18,26], sessionMaxMin:[15,180]
+    };
+    const [min,max] = bounds[field] || [1,100];
+    w[field] = Math.max(min, Math.min(max, (w[field]||0)+delta));
+    Save.write();
+    SFX.tap(); haptic(10);
+    App.openWellnessHub?.();
+  },
+};
+
+// ====================================================================
 // 📥 v0.65 · INSTALL HUB · every device · every OS · auto-detect + step-by-step
 // ====================================================================
 const InstallHub = {
@@ -12449,6 +12709,8 @@ function recordResult(roomId, gameId, won, rewards={}){
   try{ Tracker.recordWinResult(won); }catch(e){}
   // v0.64 · goal progress check
   try{ Goals.bumpOnResult(roomId, gameId, won, rewards); }catch(e){}
+  // v0.66 · wellness reminders · breaks · water · eye rest · bedtime
+  try{ setTimeout(()=>Wellness.checkReminders(), 1800); }catch(e){}
   // pass roomId so Modal.win can apply natural-faith rule without explicit param
   State._lastResultRoom = roomId;
   const key = `${roomId}:${gameId}`;
