@@ -418,6 +418,71 @@ button{
   50%{box-shadow:0 0 0 12px rgba(251,191,36,0)}
 }
 .game-start-mega:active{transform:scale(.97)}
+/* v0.75 · TUTORIAL MODAL · 9-step walkthrough · CAEE'd */
+.tutorial-modal{
+  text-align:center;
+  animation:fadeUp .4s ease-out;
+}
+.tut-progress-wrap{
+  margin-bottom:14px;
+}
+.tut-progress-bar{
+  height:6px;background:rgba(255,255,255,.1);
+  border-radius:99px;overflow:hidden;margin-bottom:8px;
+}
+.tut-progress-fill{
+  height:100%;background:linear-gradient(90deg,#A78BFA,#FBBF24);
+  transition:width .4s ease-out;
+}
+.tut-dots{
+  display:flex;justify-content:center;gap:6px;margin:6px 0;
+}
+.tut-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  cursor:pointer;
+  transition:background .2s, transform .15s;
+}
+.tut-dot.done{background:rgba(167,139,250,.6)}
+.tut-dot.active{background:#FBBF24;transform:scale(1.4);box-shadow:0 0 12px rgba(251,191,36,.8)}
+.tut-dot:hover{transform:scale(1.2)}
+.tut-step-count{
+  font-size:10.5px;color:rgba(255,255,255,.55);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.tut-big-em{
+  font-size:80px;line-height:1;margin:14px 0 8px;
+  animation:winBounce 2.4s ease-in-out infinite;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.4));
+}
+.tut-title{
+  font-family:'Cinzel',serif;
+  font-size:20px;color:var(--gold-bright);
+  margin:0 0 10px;letter-spacing:.04em;
+}
+.tut-desc{
+  font-size:13.5px;line-height:1.65;
+  color:#FFF8E7;margin:0 0 20px;
+  padding:0 6px;
+}
+.tut-actions{
+  display:grid;grid-template-columns:1fr 1.5fr;gap:8px;
+  margin-top:10px;
+}
+.tut-btn-back, .tut-btn-next{
+  padding:14px 12px !important;
+  font-size:13px !important;
+  font-weight:700 !important;
+  border-radius:12px !important;
+  min-height:50px;
+}
+.tut-btn-next{
+  background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;
+  color:#0F0820 !important;
+  letter-spacing:.04em;
+}
+.tut-btn-next:active{transform:scale(.96)}
+.tut-btn-back:active{transform:scale(.96)}
 
 /* ==================== ROOM SCREEN ==================== */
 .room-screen{
@@ -2053,7 +2118,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · chill timers · per-game levels · share anywhere · v0.74.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · 9-step tutorial · chill timers · per-game levels · v0.75.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2094,7 +2159,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.74.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.75.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -2216,7 +2281,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.74.0';
+const VERSION = '0.75.0';
 
 // ----- STATE -----
 const State = {
@@ -9340,37 +9405,69 @@ const App = {
       <button class="btn-primary" onclick="Modal.close()">📊 got it</button>`);
     SFX.chime(); confetti();
   },
-  showTutorial(){
-    if(State.data.tutorialSeen) return;
+  // v0.75 · TUTORIAL · CAEE'd · 9-step interactive walkthrough · skip · back · progress bar · big tap targets
+  TUTORIAL_STEPS: [
+    {em:'🧠', t:'welcome to BrainBoard', d:'61 brain games · 8 rooms · faith-forward · free forever · plays anywhere on any device. lemme show u around real quick · or skip · ur call'},
+    {em:'🏠', t:'8 themed rooms · 61 games', d:'Word Lab · Brain Gym · Mind Games · Number Crunch · Scripture · Logic Lab · Speed Wing · Daily Court. each room has 6-11 games. tap any room door from the lobby.'},
+    {em:'🎮', t:'how to play a game', d:'(1) tap a room door · (2) tap a game card · (3) read the intro · (4) tap the BIG GOLD START GAME button · u in. wins give coins/gems/brain points · grow ur Brain Rank.'},
+    {em:'⚡', t:'⚡ Quick Play · ur shortcut', d:'foot bar has a ⚡ QUICK PLAY button · picks a random game weighted toward ones u haven\'t mastered. perfect for "I just wanna play" · skip the browsing.'},
+    {em:'🦶', t:'11 foot buttons · everything\'s here', d:'PROFILE · SHOP · PASS · DAILY · FRIENDS · FRENZY · QUICK PLAY · INSTALL · WELLNESS · SYNC · SHARE. ur whole game lives in those buttons. tap each one to explore.'},
+    {em:'💪', t:'wellness baked in', d:'breaks · water · stretches · breathing · pomodoro · meditation · mood log · brain dump · sleep log. all optional. faith path opt-in adds Bible breaks. ur body on ur team.'},
+    {em:'📥', t:'install on ur device · works offline', d:'tap 📥 INSTALL · ur device auto-detected · step-by-step shown. installs as a real app w/ icon · works without wifi after first load · feels native everywhere.'},
+    {em:'🔄', t:'play on multiple devices', d:'tap 🔄 SYNC · generate a code / QR / link / file · open on ur other device · MERGE or OVERWRITE. zero backend · ur save NEVER touches a server.'},
+    {em:'⚙️', t:'tune the pace · ur game', d:'tap ⚙️ top-right · ⏱️ TIMER SPEED to slow / speed up · 🎮 DIFFICULTY for rank pace · 🎬 CINEMATIC INTROS toggle · 🎨 THEME · MUSIC · all in there.'},
+  ],
+  showTutorial(idx){
+    if(idx === undefined && State.data.tutorialSeen) return;
     // Don't override another modal · retry later
-    if(document.getElementById('modal')?.classList.contains('active')){
+    if(idx === undefined && document.getElementById('modal')?.classList.contains('active')){
       setTimeout(()=>App.showTutorial(), 2000);
       return;
     }
     // Don't override game screen
-    if(document.getElementById('game')?.classList.contains('active')) return;
+    if(idx === undefined && document.getElementById('game')?.classList.contains('active')) return;
+
+    idx = idx || 0;
+    const steps = App.TUTORIAL_STEPS;
+    const step = steps[idx];
+    if(!step) return App._completeTutorial();
+
+    const pct = Math.round(((idx+1)/steps.length)*100);
+    const dotsHtml = steps.map((_,i) => `<div class="tut-dot${i===idx?' active':''}${i<idx?' done':''}" onclick="App.showTutorial(${i})"></div>`).join('');
+
+    Modal.show(`
+      <div class="tutorial-modal">
+        <div class="tut-progress-wrap">
+          <div class="tut-progress-bar"><div class="tut-progress-fill" style="width:${pct}%"></div></div>
+          <div class="tut-dots">${dotsHtml}</div>
+          <div class="tut-step-count">step ${idx+1} of ${steps.length}</div>
+        </div>
+        <div class="tut-big-em">${step.em}</div>
+        <h3 class="tut-title">${step.t}</h3>
+        <p class="tut-desc">${step.d}</p>
+        <div class="tut-actions">
+          ${idx > 0 ? `<button class="btn-secondary tut-btn-back" onclick="App.showTutorial(${idx-1})">← back</button>` : `<button class="btn-secondary tut-btn-back" onclick="App._completeTutorial(true)">skip · just play</button>`}
+          ${idx < steps.length-1
+            ? `<button class="btn-primary tut-btn-next" onclick="App.showTutorial(${idx+1})">next ▶</button>`
+            : `<button class="btn-primary tut-btn-next" onclick="App._completeTutorial()">LET'S COOK 🔥</button>`}
+        </div>
+      </div>
+    `);
+    if(idx === 0) SFX.chime();
+    else SFX.tap();
+    haptic(8);
+  },
+  _completeTutorial(skipped){
+    Modal.close();
     State.data.tutorialSeen = true;
     Save.write();
     Ach.unlock('tutorial_done');
-    Modal.show(`<div style="text-align:center;padding:6px">
-      <div style="font-size:54px">🎓</div>
-      <h3 style="margin:8px 0">welcome to BrainBoard</h3>
-      <div style="background:rgba(245,158,11,.08);padding:14px 16px;border-radius:10px;border-left:3px solid var(--gold);text-align:left;font-size:12px;line-height:1.7">
-        <b>📍 8 ROOMS</b> · tap any door · pick a game<br>
-        <b>👤 YOUR NAME (top-left)</b> · tap to redesign your saint<br>
-        <b>⚙️ SETTINGS (top-right gear)</b> · difficulty · music · accessibility · account<br>
-        <b>🛒 SHOP</b> · power-ups · bundles · daily deal · exchange<br>
-        <b>🏆 STATS</b> · brain rank · DNA radar · per-game · history<br>
-        <b>🎫 PASS</b> · monthly battle pass w/ rewards<br>
-        <b>🤝 FRIENDS</b> · 6-char codes · chat<br>
-        <b>📋 QUESTS</b> · 3 daily · auto reset midnight<br>
-        <b>🎵 MUSIC</b> · procedural per-screen · volume in Settings<br>
-        <b>🌅 SPLASH</b> · returns each launch · personalized greeting<br>
-      </div>
-      <p class="dim text-center" style="font-size:11px;margin-top:10px">that's it · go play 🧠⚡</p>
-      <button class="btn-primary" style="margin-top:8px;width:100%" onclick="Modal.close()">▶ LET'S GO</button>
-    </div>`);
-    SFX.holy(); confetti();
+    if(!skipped){
+      SFX.holy(); confetti({variant:'gold',count:40});
+      Toast.show('🎓 tutorial complete · ready to cook 🔥');
+    } else {
+      Toast.show('⚡ tutorial skipped · open ❓ Help anytime');
+    }
   },
   splashJump(roomId){
     // PWA install button on splash if available
@@ -10314,6 +10411,14 @@ const App = {
     setTimeout(()=>Music.play('aux'),100);
     Toast.show('▶ playing aux track · 4-chord loop');
     Ach.unlock('music_tested');
+  },
+  // v0.75 · replay tutorial · resets seen flag then triggers fresh walkthrough
+  replayTutorial(){
+    State.data.tutorialSeen = false;
+    Save.write();
+    Modal.close();
+    setTimeout(()=>App.showTutorial(0), 200);
+    haptic(15); SFX.tap();
   },
   // v0.74 · timer speed setter · primary client feedback
   setTimerSpeed(t){
@@ -12026,6 +12131,7 @@ const App = {
       {em:'📅',t:'Weekly Tournament',d:'Top 10 Frenzy scores of the week → gem prizes Sunday midnight. #1 wins 50💎.',cta:{label:'📅 Open Tournament',fn:'openWeeklyTourney'}},
       {em:'⏸',t:'Pause anywhere',d:'Press P during any game or tap ⏸ in the game header · 3-2-1 resume countdown.',cta:null},
       {em:'⌨️',t:'Keyboard shortcuts',d:'1-7 = foot buttons · ? = help · M = mute · P = pause · Esc = lobby',cta:null},
+      {em:'🎓',t:'Replay the tutorial',d:'9-step walkthrough · rooms · games · foot bar · wellness · install · sync · share · settings. takes ~90 seconds.',cta:{label:'🎓 Start tutorial',fn:'replayTutorial'}},
     ];
     let html = `<div class="settings-list">
       <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
