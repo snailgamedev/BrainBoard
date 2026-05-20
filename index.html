@@ -2337,7 +2337,10 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.78.0';
+// 🛡️ v0.79 SAVE GUARDIAN · belt+suspenders backup keys
+const BACKUP_KEY = 'brainboard_v1_backup';
+const SNAPSHOT_KEY = 'brainboard_v1_snapshot';
+const VERSION = '0.79.0';
 
 // ----- STATE -----
 const State = {
@@ -3945,6 +3948,7 @@ const ACHIEVEMENTS = [
   {id:'duel_10wins',em:'👑',t:'Duel Lord',d:'Win 10 duels'},
   {id:'coach_fused',em:'🌀',t:'Fusion Master',d:'Fuse 2 Coach tier emojis'},
   {id:'coach_apostle',em:'✝️',t:'Coach Apostle',d:'Evolve Coach to Apostle tier'},
+  {id:'tf_perfect',em:'💎',t:'Pure Form',d:'10/10 perfect on True or False'},
 ];
 
 // ====================================================================
@@ -8311,9 +8315,34 @@ const Save = {
     }catch{return null}
   },
   write(){
-    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(State.data)); }catch{}
+    try{
+      const json = JSON.stringify(State.data);
+      localStorage.setItem(SAVE_KEY, json);
+      // 🛡️ v0.79 belt+suspenders · also write to BACKUP_KEY after main write succeeds
+      try{ localStorage.setItem(BACKUP_KEY, json); }catch{}
+    }catch{}
   },
-  reset(){ localStorage.removeItem(SAVE_KEY); location.reload(); }
+  reset(){ localStorage.removeItem(SAVE_KEY); location.reload(); },
+  // 🛡️ v0.79 SAVE GUARDIAN · independent fallback layers
+  snapshot(){
+    try{
+      if(State.data) localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(State.data));
+    }catch{}
+  },
+  loadBackup(){
+    try{
+      const raw = localStorage.getItem(BACKUP_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch{return null}
+  },
+  loadSnapshot(){
+    try{
+      const raw = localStorage.getItem(SNAPSHOT_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch{return null}
+  }
 };
 
 // ====================================================================
@@ -9280,9 +9309,29 @@ const ROOMS = {
 const App = {
   init(){
     try{
-      const saved = Save.load();
+      // 🛡️ v0.79 SAVE GUARDIAN · main → backup → snapshot → DEFAULT
+      let saved = Save.load();
+      let restoredFrom = null;
+      if(!(saved && saved.v)){
+        const bk = Save.loadBackup();
+        if(bk && bk.v){ saved = bk; restoredFrom = 'backup'; }
+        else{
+          const snap = Save.loadSnapshot();
+          if(snap && snap.v){ saved = snap; restoredFrom = 'snapshot'; }
+        }
+      }
       if(saved && saved.v){ State.data = {...DEFAULT_SAVE, ...saved}; }
       else{ State.data = JSON.parse(JSON.stringify(DEFAULT_SAVE)); }
+      // 🛡️ v0.79 if we restored from a fallback layer, re-persist main + tell user
+      if(restoredFrom){
+        try{ Save.write(); }catch{}
+        const tmsg = restoredFrom==='backup'
+          ? '🛡️ Save restored from backup · welcome back boii'
+          : '🛡️ Save restored from 5-min snapshot · welcome back';
+        setTimeout(()=>{ try{ Toast.show(tmsg, 4200); }catch{} }, 1400);
+      }
+      // 🛡️ v0.79 kick off 5-min auto-snapshot (independent fallback layer)
+      try{ setInterval(()=>Save.snapshot(), 5*60*1000); }catch{}
       UI.updateWallet();
       Account.ensureFriendCode();
       // v0.20 apply persistent accessibility settings
@@ -13858,6 +13907,15 @@ const Updates = {
   // Recent patch notes · keyed by version · newest first
   // Add new entries here when shipping
   NOTES: [
+    {v:'0.79.0', when:'2026-05-20', em:'🛡️', title:'SAVE GUARDIAN · Anchor Hold', changes:[
+      '🚑 Fixed: error screen no longer nukes entire save when you click clear',
+      '🛡️ NEW · automatic backup save · written every time main save updates',
+      '📸 NEW · 5-minute auto-snapshot · independent fallback',
+      '🔄 NEW · boot-time auto-restore if main save is missing or corrupt',
+      '🪖 Error screen now shows a "KEEP SAVE + RELOAD" option · soft-reset first',
+      '⚠️ ?nuke URL now confirms before wiping cache · save was never at risk but now even cache wipe is explicit',
+      '✝️ Mind Games: True or False now playable (was throwing ReferenceError)',
+    ]},
     {v:'0.78.0', when:'2026-05-19', em:'🆕', title:'In-Game Update Detection', changes:[
       '🆕 NEW · Updates module · know when ur on a new version',
       '🆕 NEW · "What\'s New" modal auto-pops on version bump',
@@ -17345,6 +17403,160 @@ const TriviaGame = {
 };
 
 // ====================================================================
+// 🎮 TRUE OR FALSE (Mind Games) · trivia + bible · 10 Qs · 3-strike
+// ====================================================================
+const TF_POOL = [
+  // ── Scripture / Bible (10) ──
+  {q:'Jesus walked on water', a:true,  fact:'Matthew 14:25 — He came to them walking on the sea.'},
+  {q:'Moses parted the Red Sea', a:true,  fact:'Exodus 14:21 — the Lord drove the sea back by a strong east wind.'},
+  {q:'There are 12 disciples named in the Gospels', a:true,  fact:'Matthew 10:2-4 lists the Twelve.'},
+  {q:'Jonah was swallowed by a whale shark', a:false, fact:'Jonah 1:17 — a "great fish" (not specified as a shark) prepared by God.'},
+  {q:'David defeated Goliath with a sling and a stone', a:true,  fact:'1 Samuel 17:50 — with a sling and a stone.'},
+  {q:'The book of Psalms has exactly 100 chapters', a:false, fact:'Psalms has 150 chapters.'},
+  {q:'Adam and Eve had a son named Cain', a:true,  fact:'Genesis 4:1 — she conceived and bore Cain.'},
+  {q:'The shortest verse in the Bible is "Jesus wept"', a:true,  fact:'John 11:35 — two words in English.'},
+  {q:'There are 4 Gospels in the New Testament', a:true,  fact:'Matthew, Mark, Luke, John.'},
+  {q:'Paul wrote the book of Revelation', a:false, fact:'Revelation was written by John on the island of Patmos.'},
+  // ── Science (8) ──
+  {q:'Light travels faster than sound', a:true,  fact:'Light ≈ 299,792 km/s · sound ≈ 343 m/s in air.'},
+  {q:'Goldfish only have a 3-second memory', a:false, fact:'Goldfish remember things for months — a debunked myth.'},
+  {q:'Water boils at 100°C at sea level', a:true,  fact:'Standard atmospheric pressure boiling point.'},
+  {q:'Humans have 5 senses and no more', a:false, fact:'We have more — balance, temperature, proprioception, etc.'},
+  {q:'The sun is a star', a:true,  fact:'A G-type main-sequence star (yellow dwarf).'},
+  {q:'Bats are blind', a:false, fact:'Bats can see — many species see quite well, plus echolocation.'},
+  {q:'Diamonds are made of carbon', a:true,  fact:'Pure carbon arranged in a crystal lattice.'},
+  {q:'Lightning never strikes the same place twice', a:false, fact:'The Empire State Building is hit ~25 times per year.'},
+  // ── History (6) ──
+  {q:'The Great Wall of China is visible from space with the naked eye', a:false, fact:'NASA confirms it is not visible to the unaided eye from low Earth orbit.'},
+  {q:'Napoleon Bonaparte was extremely short for his time', a:false, fact:'He was about 5\'7" — average for a Frenchman of his era.'},
+  {q:'The Wright brothers made the first powered flight in 1903', a:true,  fact:'December 17, 1903 at Kitty Hawk, North Carolina.'},
+  {q:'World War II ended in 1945', a:true,  fact:'Japan formally surrendered on September 2, 1945.'},
+  {q:'Ancient Egyptians built the pyramids using slave labor', a:false, fact:'Evidence shows skilled paid workers built them — not slaves.'},
+  {q:'Vikings wore horned helmets in battle', a:false, fact:'A 19th-century costume invention — no archaeological evidence.'},
+  // ── General Trivia (6) ──
+  {q:'Honey never spoils', a:true,  fact:'Edible honey has been found in 3,000-year-old Egyptian tombs.'},
+  {q:'A group of crows is called a murder', a:true,  fact:'Yes — a "murder of crows" is the collective noun.'},
+  {q:'Bananas grow on trees', a:false, fact:'Banana plants are herbaceous — technically giant herbs, not trees.'},
+  {q:'An octopus has three hearts', a:true,  fact:'Two pump blood to the gills, one to the rest of the body.'},
+  {q:'Tomatoes are vegetables, botanically speaking', a:false, fact:'Botanically they are fruits — berries, in fact.'},
+  {q:'The Eiffel Tower can grow taller in summer', a:true,  fact:'Iron expands with heat — it grows ~15 cm in summer.'},
+];
+const TFGame = {
+  start(){
+    State.gameInst=this;
+    this.score=0; this.streak=0; this.bestStreak=0; this.wrong=0; this.idx=0; this.total=10; this.gemBonus=0; this.coinsEarned=0;
+    this.qs = [...TF_POOL].sort(()=>Math.random()-.5).slice(0,this.total);
+    this._answered=false;
+    UI.show('game');
+    this.next();
+  },
+  next(){
+    if(this.idx>=this.total || this.wrong>=3){ this.end(); return; }
+    this.current = this.qs[this.idx];
+    this.idx++;
+    this._answered=false;
+    this.render();
+  },
+  pick(answer){
+    if(this._answered) return;
+    this._answered=true;
+    const correct = (answer===this.current.a);
+    if(correct){
+      this.score++; this.streak++;
+      if(this.streak>this.bestStreak) this.bestStreak=this.streak;
+      this.coinsEarned += 5;
+      if(this.streak>=5){ this.gemBonus += 1; }
+      SFX.correct(); haptic(8);
+    } else {
+      this.wrong++; this.streak=0;
+      SFX.wrong(); haptic(20);
+    }
+    this.renderReveal(correct);
+    _t && _t(0); // ensure timer wrapper available (no-op if absent)
+    this._revealTimer = setTimeout(()=>this.next(), (typeof _t==='function'?_t(1800):1800));
+  },
+  render(){
+    const stats = document.getElementById('g-stats');
+    if(stats) stats.innerHTML = `<b>✅ True or False</b> · score: <b>${this.score}</b> · 🔥 streak: <b>${this.streak}</b> · Q <b>${this.idx}/${this.total}</b> · ❌ <b>${this.wrong}/3</b>`;
+    if(this.current) speak && speak(this.current.q);
+    const area = document.getElementById('g-area');
+    if(!area) return;
+    area.innerHTML='';
+    const wrap = el('div','stroop-area');
+    wrap.appendChild(el('div','dim','True or False?'));
+    const w = el('div','math-q', this.current.q);
+    w.style.fontSize='22px';
+    w.style.color='var(--cream)';
+    w.style.fontFamily="'Cinzel',serif";
+    w.style.maxWidth='340px';
+    w.style.lineHeight='1.4';
+    w.style.padding='12px';
+    wrap.appendChild(w);
+    const grid = el('div','stroop-grid');
+    grid.style.gap='14px';
+    const tb = el('button','stroop-btn','✅ TRUE');
+    tb.style.background='linear-gradient(135deg,#16A34A,#065F46)';
+    tb.style.minHeight='80px';
+    tb.style.fontSize='22px';
+    tb.onclick=()=>this.pick(true);
+    grid.appendChild(tb);
+    const fb = el('button','stroop-btn','❌ FALSE');
+    fb.style.background='linear-gradient(135deg,#DC2626,#7F1D1D)';
+    fb.style.minHeight='80px';
+    fb.style.fontSize='22px';
+    fb.onclick=()=>this.pick(false);
+    grid.appendChild(fb);
+    wrap.appendChild(grid);
+    area.appendChild(wrap);
+  },
+  renderReveal(correct){
+    const area = document.getElementById('g-area');
+    if(!area) return;
+    area.innerHTML='';
+    const wrap = el('div','stroop-area');
+    const banner = el('div','math-q', correct ? '✅ Correct!' : '❌ Not quite');
+    banner.style.color = correct ? 'var(--gold-bright)' : '#FCA5A5';
+    banner.style.fontSize='26px';
+    banner.style.fontFamily="'Cinzel',serif";
+    wrap.appendChild(banner);
+    const truthLine = el('div','dim','Answer: '+(this.current.a?'TRUE':'FALSE'));
+    truthLine.style.fontSize='15px';
+    truthLine.style.marginTop='6px';
+    wrap.appendChild(truthLine);
+    const fact = el('div','math-q', this.current.fact||'');
+    fact.style.fontSize='15px';
+    fact.style.color='var(--cream)';
+    fact.style.maxWidth='340px';
+    fact.style.lineHeight='1.45';
+    fact.style.padding='10px';
+    fact.style.opacity='.92';
+    wrap.appendChild(fact);
+    area.appendChild(wrap);
+  },
+  end(){
+    if(this._revealTimer){ clearTimeout(this._revealTimer); this._revealTimer=null; }
+    const perfect = (this.score===this.total);
+    const threshold = (typeof Coach!=='undefined' && Coach.adjustThreshold) ? Coach.adjustThreshold('mind','tf',7) : 7;
+    const won = this.score>=threshold;
+    const totalCoin = (won?30:0) + this.coinsEarned;
+    const rewards = won
+      ? {coin: totalCoin, brain:2, gem:this.gemBonus||0}
+      : {coin: Math.max(10, this.coinsEarned), brain:1};
+    try{ recordResult('mind','tf',won,rewards); }catch(e){}
+    if(perfect){ try{ Ach.unlock('tf_perfect'); }catch(e){} }
+    const title = perfect ? `💎 PURE FORM · ${this.score}/${this.total}` : (won?`${this.score}/${this.total} · Truth Seeker!`:`${this.score}/${this.total}`);
+    if(won){
+      Modal.win({rewards, title, emoji: perfect?'💎':'✅',
+        retry:()=>TFGame.start(), lobby:()=>App.toLobby()});
+    } else {
+      Modal.lose({title:`${this.score}/${this.total}`, msg: this.wrong>=3?'3 wrong — try again!':'aim for 7+ correct!',
+        retry:()=>TFGame.start(), lobby:()=>App.toLobby()});
+    }
+  },
+  cleanup(){ if(this._revealTimer){ clearTimeout(this._revealTimer); this._revealTimer=null; } }
+};
+
+// ====================================================================
 // 🎮 GAME 19 · DEFINE IT (Word Lab)
 // ====================================================================
 const DEFINITIONS = [
@@ -20614,16 +20826,23 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   });
 }
 // v0.46 Hard cache buster · open with ?nuke to force-clear all SW caches
+// 🛡️ v0.79 SAVE GUARDIAN · confirm before wiping cache (save is untouched but user should know)
 if(location.search.includes('nuke')){
   try{
-    if(navigator.serviceWorker){
-      navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));
-      navigator.serviceWorker.controller?.postMessage('CLEAR_CACHE');
+    const ok = confirm('⚠️ Full cache nuke incoming.\n\nYour save is SAFE (localStorage is untouched).\n\nContinue?');
+    if(!ok){
+      // bail · strip nuke from URL so refresh doesn't re-prompt
+      try{ history.replaceState({}, '', location.origin+location.pathname); }catch{}
+    }else{
+      if(navigator.serviceWorker){
+        navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));
+        navigator.serviceWorker.controller?.postMessage('CLEAR_CACHE');
+      }
+      if(window.caches){
+        caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
+      }
+      setTimeout(()=>{ location.href = location.origin+location.pathname+'?cleared'; }, 500);
     }
-    if(window.caches){
-      caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
-    }
-    setTimeout(()=>{ location.href = location.origin+location.pathname+'?cleared'; }, 500);
   }catch(e){}
 }
 
@@ -20662,7 +20881,8 @@ _tickToNextMinute();
 function _showFatal(e){
   const msg = (e && (e.message||String(e)))||'unknown error';
   const stack = (e && e.stack)||'';
-  const html = '<div style="position:fixed;inset:0;background:#1E3A8A;color:#FFF8E7;padding:24px;font-family:monospace;overflow:auto;z-index:9999"><h2 style="color:#FBBF24;font-size:18px;margin-bottom:12px;font-family:serif">⚠️ BrainBoard error</h2><pre style="white-space:pre-wrap;font-size:13px;background:#0a1633;padding:14px;border-radius:8px;border:1px solid #F59E0B">'+msg+'\n\n'+stack+'</pre><div style="margin-top:14px;padding:14px;background:#0a1633;border-radius:8px"><b>Try:</b><br>1. tap below to clear save<br>2. then refresh</div><button onclick="try{localStorage.clear()}catch(e){};location.reload()" style="margin-top:14px;padding:14px 24px;background:#FBBF24;color:#0F172A;border:none;border-radius:99px;font-weight:800;font-size:15px;cursor:pointer">🗑️ CLEAR + RELOAD</button></div>';
+  // 🛡️ v0.79 SAVE GUARDIAN · show actual error · offer SOFT reload first · only nuke SAVE_KEY (not localStorage.clear)
+  const html = '<div style="position:fixed;inset:0;background:#1E3A8A;color:#FFF8E7;padding:24px;font-family:monospace;overflow:auto;z-index:9999"><h2 style="color:#FBBF24;font-size:18px;margin-bottom:12px;font-family:serif">⚠️ BrainBoard error</h2><pre style="white-space:pre-wrap;font-size:13px;background:#0a1633;padding:14px;border-radius:8px;border:1px solid #F59E0B">'+msg+'\n\n'+stack+'</pre><div style="margin-top:14px;padding:14px;background:#0a1633;border-radius:8px"><b>Try:</b><br>1. soft reload first (keeps ur save)<br>2. only reset save if soft reload still errors</div><div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px"><button onclick="location.reload()" style="padding:14px 22px;background:#22C55E;color:#0F172A;border:none;border-radius:99px;font-weight:800;font-size:15px;cursor:pointer">🛡️ KEEP SAVE + RELOAD</button><button onclick="if(confirm(\'This will reset your BrainBoard save. Continue?\')){try{localStorage.removeItem(\'brainboard_v1\')}catch(e){};location.reload()}" style="padding:14px 22px;background:#FBBF24;color:#0F172A;border:none;border-radius:99px;font-weight:800;font-size:15px;cursor:pointer">🗑️ RESET SAVE + RELOAD</button></div><div style="margin-top:12px;font-size:12px;color:#CBD5E1;line-height:1.5">💡 If you have cross-device sync set up, your save is also on your other devices.</div></div>';
   const div = document.createElement('div');
   div.innerHTML = html;
   document.body.appendChild(div);
