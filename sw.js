@@ -1,7 +1,7 @@
-// BrainBoard Service Worker · v0.79.0
+// BrainBoard Service Worker · v0.80.0
 // STALE-WHILE-REVALIDATE · instant offline load · silent background updates
 // works fully WITHOUT WIFI after first install
-const VERSION = 'brainboard-v0.79.0';
+const VERSION = 'brainboard-v0.80.0';
 
 // CORE pre-cache · everything needed for offline standalone launch
 const CORE = [
@@ -9,6 +9,7 @@ const CORE = [
   './index.html',
   './manifest.json',
   './sw.js',
+  './version.json',
 ];
 
 // Pre-cache CORE on install · skip waiting so new SW takes over immediately
