@@ -483,6 +483,62 @@ button{
 }
 .tut-btn-next:active{transform:scale(.96)}
 .tut-btn-back:active{transform:scale(.96)}
+/* v0.78 · WHAT'S NEW · patch notes modal */
+.update-list{
+  display:flex;flex-direction:column;gap:8px;
+  max-height:50vh;overflow-y:auto;
+  text-align:left;
+}
+.update-entry{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(245,158,11,.25);
+  border-radius:10px;
+  overflow:hidden;
+}
+.update-entry summary{
+  cursor:pointer;
+  padding:10px 12px;
+  list-style:none;
+  display:grid;
+  grid-template-columns:auto auto 1fr auto;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+}
+.update-entry summary::-webkit-details-marker{display:none}
+.update-entry summary::after{
+  content:'▸';
+  color:var(--gold-bright);
+  font-size:11px;
+  transition:transform .2s;
+  grid-column:5 / 6;
+}
+.update-entry[open] summary::after{transform:rotate(90deg)}
+.update-em{font-size:22px;line-height:1}
+.update-v{
+  color:var(--gold-bright);
+  font-family:'Cinzel',serif;
+  font-size:13px;
+  font-weight:800;
+}
+.update-title{
+  font-weight:700;
+  font-size:12px;
+}
+.update-when{
+  font-size:10px;
+  opacity:.6;
+  font-family:monospace;
+}
+.update-changes{
+  margin:0;
+  padding:8px 14px 12px 32px;
+  font-size:11.5px;
+  line-height:1.6;
+  border-top:1px dashed rgba(245,158,11,.2);
+  background:rgba(0,0,0,.12);
+}
+.update-changes li{margin-bottom:3px}
 
 /* ==================== ROOM SCREEN ==================== */
 .room-screen{
@@ -2118,7 +2174,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · lossless sync · v0.77.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · auto-updates · v0.78.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2159,7 +2215,7 @@ button{
       </div>
       <button class="icon-btn" id="help-btn" onclick="App.openHelpHub()" style="margin-right:4px;position:relative">❓<span id="help-pulse" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:#FBBF24;border-radius:50%;box-shadow:0 0 8px #FBBF24;animation:helpPulse 1.6s ease-in-out infinite;display:none"></span></button>
       <button class="icon-btn" onclick="App.openSettings()">⚙️</button>
-      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24">v0.77.0</span>
+      <span id="version-badge" style="margin-left:6px;padding:3px 8px;background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(124,58,237,.18));border:1px solid rgba(245,158,11,.5);border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#FBBF24" onclick="Updates.showWhatsNew(false)">v0.78.0</span>
     </div>
     <div class="hud-row">
       <button class="profile-tag" onclick="App.openAvatar()" style="border:none;cursor:pointer">
@@ -2281,7 +2337,7 @@ button{
 // ====================================================================
 
 const SAVE_KEY = 'brainboard_v1';
-const VERSION = '0.77.0';
+const VERSION = '0.78.0';
 
 // ----- STATE -----
 const State = {
@@ -10415,6 +10471,12 @@ const App = {
     Toast.show('▶ playing aux track · 4-chord loop');
     Ach.unlock('music_tested');
   },
+  // v0.78 · show patch notes manually
+  showPatchNotes(){
+    Modal.close();
+    setTimeout(()=>Updates.showWhatsNew(false), 200);
+    haptic(10); SFX.tap();
+  },
   // v0.75 · replay tutorial · resets seen flag then triggers fresh walkthrough
   replayTutorial(){
     State.data.tutorialSeen = false;
@@ -12135,6 +12197,7 @@ const App = {
       {em:'⏸',t:'Pause anywhere',d:'Press P during any game or tap ⏸ in the game header · 3-2-1 resume countdown.',cta:null},
       {em:'⌨️',t:'Keyboard shortcuts',d:'1-7 = foot buttons · ? = help · M = mute · P = pause · Esc = lobby',cta:null},
       {em:'🎓',t:'Replay the tutorial',d:'9-step walkthrough · rooms · games · foot bar · wellness · install · sync · share · settings. takes ~90 seconds.',cta:{label:'🎓 Start tutorial',fn:'replayTutorial'}},
+      {em:'🆕',t:'What\'s new · patch notes',d:'see what\'s changed in recent versions · ship history · every CAEE captured.',cta:{label:'🆕 View patch notes',fn:'showPatchNotes'}},
     ];
     let html = `<div class="settings-list">
       <div class="lobby-banner" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(245,158,11,.18))">
@@ -13788,6 +13851,128 @@ const BibleBreak = {
 // ====================================================================
 // 📣 v0.73 · SHARE HUB · spread the cook · 8+ ways to share
 // ====================================================================
+// ====================================================================
+// 🆕 v0.78 · UPDATES · version awareness · patch notes · "what's new"
+// ====================================================================
+const Updates = {
+  // Recent patch notes · keyed by version · newest first
+  // Add new entries here when shipping
+  NOTES: [
+    {v:'0.78.0', when:'2026-05-19', em:'🆕', title:'In-Game Update Detection', changes:[
+      '🆕 NEW · Updates module · know when ur on a new version',
+      '🆕 NEW · "What\'s New" modal auto-pops on version bump',
+      '🆕 NEW · patch notes accessible from Help Hub anytime',
+      '✅ FIX · squad mem 3x CAEE\'d w/ full agent dossiers',
+    ]},
+    {v:'0.77.0', when:'2026-05-19', em:'🎖️', title:'Operation Diamond Cut', changes:[
+      '🪖 NEW · permanent 7-agent squad (GHOST · HAWK · CIPHER · RAVEN · ORACLE · BLADE · MEDIC)',
+      '⛑️ FIX · faith opt-in operator precedence bug',
+      '⛑️ FIX · quests merge fallback when neither save has today\'s date',
+      '⛑️ FIX · post-sync UI refresh expanded · theme + accessibility + music',
+      '⛑️ FIX · tutorial auto-pop removed · soft toast instead',
+    ]},
+    {v:'0.76.0', when:'2026-05-19', em:'🔄', title:'Operation Carry-The-Save', changes:[
+      '🔧 FIX · Sync._mergeData now handles 15+ missing fields',
+      '🔧 FIX · gamesToday lazy-reset bug (midnight rollover)',
+      '🧠 NEW · brain dump shows recent dumps history',
+    ]},
+    {v:'0.75.0', when:'2026-05-19', em:'🎓', title:'Tutorial CAEE', changes:[
+      '🆕 NEW · 9-step interactive tutorial w/ progress bar',
+      '🆕 NEW · replay tutorial from Help Hub',
+    ]},
+    {v:'0.74.0', when:'2026-05-19', em:'⏱️', title:'Primary Client Feedback', changes:[
+      '⏱️ NEW · TIMER SPEED setting · 4 presets (extra-chill → sweat)',
+      '🏆 NEW · per-game LEVEL badges',
+      '🦶 NEW · foot bar responsive grid · 11 buttons clean',
+      '▶ NEW · MEGA START button in game intro',
+    ]},
+    {v:'0.73.0', when:'2026-05-19', em:'📣', title:'Share Hub', changes:[
+      '📣 NEW · 12 share methods · Twitter · WhatsApp · Reddit · QR · etc',
+      '✍️ NEW · 6 tone variants for share text',
+    ]},
+    {v:'0.72.0', when:'2026-05-19', em:'🛸', title:'Final Audit Ship', changes:[
+      '🔍 audit · all foot buttons + handlers verified',
+      '🐛 FIX · stale "7 foot buttons" → 11 in Help Hub',
+    ]},
+    {v:'0.71.0', when:'2026-05-19', em:'🐐', title:'Cross-Device Sync', changes:[
+      '🔄 NEW · Sync ur save · code · QR · file · URL',
+      '🤝 NEW · merge or overwrite · best-of-both wins',
+    ]},
+    {v:'0.70.0', when:'2026-05-19', em:'🌐', title:'Browser Prereq', changes:[
+      '🌐 NEW · install hub shows how to get Chrome/Edge/Brave if u don\'t have them',
+    ]},
+    {v:'0.69.0', when:'2026-05-19', em:'💪', title:'Wellness Mega + Install Hub Max', changes:[
+      '💪 NEW · 8 wellness features (pomodoro · workout · brain dump · sleep · etc)',
+      '📥 NEW · install hub w/ compatibility matrix + FAQ + manage section',
+    ]},
+  ],
+
+  // Last-seen version is stored in localStorage (separate from State.data to survive resets)
+  lastSeenKey: 'brainboard.lastSeenVersion',
+
+  getLastSeen(){ try{ return localStorage.getItem(Updates.lastSeenKey); }catch(e){ return null; } },
+  setLastSeen(v){ try{ localStorage.setItem(Updates.lastSeenKey, v); }catch(e){} },
+
+  isNewVersion(){
+    const last = Updates.getLastSeen();
+    if(!last) return true; // first ever launch
+    return last !== VERSION;
+  },
+
+  // List patch notes between lastSeen and current
+  notesSinceLastSeen(){
+    const last = Updates.getLastSeen();
+    if(!last) return Updates.NOTES.slice(0, 3); // first launch · show 3 latest
+    const idx = Updates.NOTES.findIndex(n => n.v === last);
+    if(idx < 0) return Updates.NOTES.slice(0, 5); // unknown old · cap to 5
+    return Updates.NOTES.slice(0, idx); // everything newer than last seen
+  },
+
+  // Auto-fire on boot · only if version differs
+  maybeShowOnBoot(){
+    if(!Updates.isNewVersion()) return;
+    setTimeout(() => Updates.showWhatsNew(true), 2200); // after lobby settles
+  },
+
+  showWhatsNew(autoTrigger){
+    const notes = autoTrigger ? Updates.notesSinceLastSeen() : Updates.NOTES.slice(0, 5);
+    if(!notes.length){ Updates.setLastSeen(VERSION); return; }
+    const html = notes.map(n => `
+      <details class="update-entry" ${n === notes[0] ? 'open' : ''}>
+        <summary>
+          <span class="update-em">${n.em}</span>
+          <b class="update-v">v${n.v}</b>
+          <span class="update-title">${n.title}</span>
+          <span class="update-when">${n.when}</span>
+        </summary>
+        <ul class="update-changes">
+          ${n.changes.map(c => `<li>${c}</li>`).join('')}
+        </ul>
+      </details>
+    `).join('');
+
+    const greeting = autoTrigger
+      ? `<p class="dim" style="font-size:12px;text-align:center;margin:6px 0 12px">welcome back · ur on the new build · check what changed</p>`
+      : `<p class="dim" style="font-size:12px;text-align:center;margin:6px 0 12px">recent ships · 5 most recent</p>`;
+
+    Modal.show(`
+      <div class="big">🆕</div>
+      <h3 style="color:var(--gold-bright)">What's New · v${VERSION}</h3>
+      ${greeting}
+      <div class="update-list">${html}</div>
+      <button class="btn-primary" style="margin-top:14px;width:100%" onclick="Updates.acknowledge()">✅ got it · let's play</button>
+    `);
+    SFX.chime(); haptic(20);
+  },
+
+  acknowledge(){
+    Updates.setLastSeen(VERSION);
+    Modal.close();
+    Toast.show(`🆕 caught up to v${VERSION} · cookin`);
+    SFX.tap();
+  },
+};
+
 const Share = {
   URL: 'https://snailgamedev.github.io/BrainBoard/',
 
@@ -20493,6 +20678,8 @@ function _bootOnce(){
   }
   // v0.71 · sync URL auto-import · after init so State is loaded
   try{ Sync.checkUrlImport(); }catch(e){ console.warn('sync url import err', e); }
+  // v0.78 · auto-show what's new if user is on a fresh version
+  try{ Updates.maybeShowOnBoot(); }catch(e){ console.warn('updates check err', e); }
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', _bootOnce);
