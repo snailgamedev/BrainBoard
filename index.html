@@ -2195,7 +2195,7 @@ button{
   <div id="splash-personal"></div>
   <button class="splash-cta" onclick="App.tapEnter()">▶ TAP TO ENTER</button>
   <div id="splash-quick"></div>
-  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · auto-updates · v0.78.0 · 🙏</div>
+  <div class="splash-foot">61 brain games · 8 rooms · faith-forward (opt-in) · auto-updates · v0.82.0 · 🙏</div>
 </section>
 
 <!-- ============ ONBOARDING ============ -->
@@ -2361,7 +2361,7 @@ const SAVE_KEY = 'brainboard_v1';
 // 🛡️ v0.79 SAVE GUARDIAN · belt+suspenders backup keys
 const BACKUP_KEY = 'brainboard_v1_backup';
 const SNAPSHOT_KEY = 'brainboard_v1_snapshot';
-const VERSION = '0.81.0';
+const VERSION = '0.82.0';
 
 // ----- STATE -----
 const State = {
@@ -3958,7 +3958,7 @@ const ACHIEVEMENTS = [
   {id:'lb_top3_daily',em:'🥉',t:'Top 3 Daily',d:'Finish daily leaderboard top 3'},
   {id:'lb_top1_daily',em:'🥇',t:'Daily Champion',d:'Reach #1 on a daily leaderboard'},
   {id:'lb_top3_weekly',em:'📅',t:'Week Warrior',d:'Top 3 on a weekly leaderboard'},
-  {id:'cinematic_seen',em:'🎬',t:'Cinematic',d:'Watch a per-game cinematic intro'},
+  {id:'cinematic_game',em:'🎬',t:'Cinematic',d:'Watch a per-game cinematic intro'},
   {id:'cinematic_lover',em:'🎞️',t:'Director',d:'Watch 50 cinematic intros'},
   {id:'shop_rec_buy',em:'🛒',t:'Recommended',d:'Buy a Recommended item'},
   {id:'lang_es',em:'🌐',t:'¡Hola!',d:'Switch app language to Spanish'},
@@ -4158,7 +4158,7 @@ const Cinematic = {
       speed:['#DC2626','#FB923C'], daily:['#10B981','#6EE7B7']
     };
     const pal = palettes[roomId] || ['#7C3AED','#A78BFA'];
-    Ach.unlock('cinematic_seen');
+    Ach.unlock('cinematic_game');
     State.data._cinematicCount = (State.data._cinematicCount||0)+1;
     if(State.data._cinematicCount>=50) Ach.unlock('cinematic_lover');
     // v0.81 · first-game-of-session boost · extra flair on opening cinematic
@@ -11113,6 +11113,8 @@ const App = {
           <button class="btn-secondary" onclick="App.openAbout()">ℹ️ about</button>
           <button class="btn-secondary" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)" onclick="if(confirm('reset all progress?'))Save.reset()">🗑️ reset</button>
         </div>
+        ${State.data._admin?`<button class="btn-primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#FBBF24,#b8862b);color:#1a1405" onclick="App.openAdmin()">👑 ADMIN THRONE · ${State.data._admin}</button>`:''}
+        <div class="dim text-center" style="font-size:10px;margin-top:12px;cursor:pointer;user-select:none" onclick="App.adminTap()" title="">v${VERSION}</div>
       </div>`;
     document.querySelectorAll('.toggle').forEach(t=>t.onclick=()=>{
       const k = t.dataset.set;
@@ -11129,6 +11131,69 @@ const App = {
       }
     });
     UI.show('aux');
+  },
+  // 👑 ADMIN THRONE (OME = Eli · Coda = me) — in Settings, tap the version line 5× → type OME/Coda
+  adminTap(){
+    if(State.data._admin){ App.openAdmin(); return; }
+    App._admTaps = (App._admTaps||0) + 1;
+    clearTimeout(App._admTimer); App._admTimer = setTimeout(()=>{ App._admTaps = 0; }, 1200);
+    if(App._admTaps >= 5){
+      App._admTaps = 0;
+      const name = (prompt('👑 Admin access — who goes there?')||'').trim();
+      if(!name) return;
+      if(['OME','CODA'].includes(name.toUpperCase())){
+        State.data._admin = name.toUpperCase()==='OME' ? 'OME' : 'Coda';
+        Save.write(); try{ SFX.win(); }catch(e){}
+        Toast.show('👑 Welcome to the throne, '+State.data._admin+'!');
+        App.openAdmin();
+      } else { Toast.show('🚫 Not on the royal list.'); }
+    }
+  },
+  openAdmin(){
+    if(!State.data._admin) return;
+    const w = State.data.wallet;
+    document.getElementById('aux-title').innerHTML = '👑 Admin Throne';
+    document.getElementById('aux-body').innerHTML = `
+      <p class="dim" style="font-size:12px;margin-bottom:8px">signed in as <b style="color:var(--gold-bright)">${State.data._admin}</b> · keys to the kingdom 🗝️</p>
+      <p class="dim" style="font-size:11px;margin-bottom:12px">🪙 ${fmt(w.coin||0)} · 💎 ${w.gem||0} · 🧠 ${w.brain||0} · ✝️ ${w.faith||0}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn-secondary" onclick="App.bbAdm('coin')">🪙 +100K coins</button>
+        <button class="btn-secondary" onclick="App.bbAdm('gem')">💎 +500 gems</button>
+        <button class="btn-secondary" onclick="App.bbAdm('brain')">🧠 +500 brain</button>
+        <button class="btn-secondary" onclick="App.bbAdm('faith')">✝️ +200 faith</button>
+        <button class="btn-secondary" onclick="App.bbAdm('tk')">🎟️ +50 tix/keys</button>
+        <button class="btn-secondary" onclick="App.bbAdm('rank')">🧠 Max Brain Rank</button>
+        <button class="btn-secondary" onclick="App.bbAdm('ach')">🏆 All achievements</button>
+        <button class="btn-primary" onclick="App.bbAdm('all')">✨ UNLOCK ALL</button>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn-secondary" style="flex:1;background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)" onclick="if(confirm('reset all progress?'))Save.reset()">🧹 Wipe</button>
+        <button class="btn-secondary" style="flex:1" onclick="App.bbAdm('signout')">🚪 Sign out</button>
+      </div>
+      <p class="dim text-center" style="font-size:11px;margin-top:14px;font-style:italic;line-height:1.5">"To whom much is given, much will be required." — Luke 12:48 🙏<br>even kings answer to the King.</p>
+      <button class="btn-secondary" style="width:100%;margin-top:12px" onclick="App.openSettings()">‹ back to settings</button>`;
+    UI.show('aux');
+  },
+  bbAdm(what){
+    if(!State.data._admin) return;
+    switch(what){
+      case 'coin': Wallet.add({coin:100000}); Toast.show('🪙 +100,000 coins'); break;
+      case 'gem': Wallet.add({gem:500}); Toast.show('💎 +500 gems'); break;
+      case 'brain': Wallet.add({brain:500}); Toast.show('🧠 +500 brain'); break;
+      case 'faith': Wallet.add({faith:200}); Toast.show('✝️ +200 faith'); break;
+      case 'tk': Wallet.add({ticket:50,key:50}); Toast.show('🎟️ +50 tickets · 🔑 +50 keys'); break;
+      case 'rank': State.data.iq = 9999; Save.write(); Toast.show('🧠 Max Brain Rank'); break;
+      case 'ach': ACHIEVEMENTS.forEach(a=>{ if(!State.data.ach[a.id]) State.data.ach[a.id]=Date.now(); }); Save.write(); Toast.show('🏆 All '+ACHIEVEMENTS.length+' achievements'); break;
+      case 'all':
+        Wallet.add({coin:100000,gem:500,brain:500,faith:200,ticket:50,key:50});
+        State.data.iq = 9999;
+        ACHIEVEMENTS.forEach(a=>{ if(!State.data.ach[a.id]) State.data.ach[a.id]=Date.now(); });
+        Save.write(); try{ SFX.win(); }catch(e){}
+        Toast.show('✨ The whole kingdom is yours, '+State.data._admin+'!');
+        break;
+      case 'signout': State.data._admin=null; Save.write(); Toast.show('🚪 Signed out'); App.openSettings(); return;
+    }
+    App.openAdmin();
   },
   // v0.57 · PROFILE merge · Stats + Achievements tabbed
   openProfile(tab){
