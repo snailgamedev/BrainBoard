@@ -569,13 +569,16 @@ button{
 .mini-chip.gold{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:var(--gold-bright)}
 .mini-chip.faith{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)}
 .back-btn{
-  width:36px;height:36px;
-  background:rgba(255,255,255,.08);
+  width:44px;height:44px;
+  background:linear-gradient(180deg,var(--gold),#d97706);
   border-radius:50%;
-  font-size:18px;
+  font-size:22px;font-weight:900;line-height:1;
   display:grid;place-items:center;
-  color:var(--cream);border:none;
+  color:#0F172A;border:2px solid var(--gold-bright);cursor:pointer;
+  box-shadow:0 6px 18px -6px var(--gold);transition:filter .15s,transform .12s;
 }
+.back-btn:hover{filter:brightness(1.1)}
+.back-btn:active{transform:scale(.92)}
 .room-title-block{flex:1}
 .room-title-block h2{font-size:18px;color:var(--gold-bright);font-weight:700}
 .room-title-block .sub{font-size:11px;opacity:.7}
@@ -2361,7 +2364,7 @@ const SAVE_KEY = 'brainboard_v1';
 // 🛡️ v0.79 SAVE GUARDIAN · belt+suspenders backup keys
 const BACKUP_KEY = 'brainboard_v1_backup';
 const SNAPSHOT_KEY = 'brainboard_v1_snapshot';
-const VERSION = '0.82.0';
+const VERSION = '0.83.0';
 
 // ----- STATE -----
 const State = {
