@@ -4340,7 +4340,7 @@ const Frenzy = {
         const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
         const ans = op==='+'?a+b: op==='-'?a-b : a*b;
         const opts=[ans];
-        while(opts.length<4){ const d=ans+Math.floor(Math.random()*10)-5; if(!opts.includes(d) && d>=0) opts.push(d); }
+        for(let _fg1=0;opts.length<4&&_fg1++<400;){ const d=ans+Math.floor(Math.random()*10)-5; if(!opts.includes(d) && d>=0) opts.push(d); }
         opts.sort((x,y)=>x-y);
         area.innerHTML=`<div style="font-size:48px;font-weight:900;color:var(--gold-bright);text-align:center;margin:10px 0">${a} ${op} ${b}</div>
           <div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
@@ -4438,7 +4438,7 @@ const Frenzy = {
         const b=Math.floor(Math.random()*9)+2;
         const ans = op==='+'?x+b: op==='-'?x-b: x*b;
         const opts=[x];
-        while(opts.length<4){ const d=x+Math.floor(Math.random()*10)-5; if(!opts.includes(d) && d>=0 && d<=20) opts.push(d); }
+        for(let _fg2=0;opts.length<4&&_fg2++<400;){ const d=x+Math.floor(Math.random()*10)-5; if(!opts.includes(d) && d>=0 && d<=20) opts.push(d); }
         opts.sort((a,b)=>a-b);
         area.innerHTML=`<div class="dim" style="text-align:center;font-size:11px">⏱ ${t}s · score ${score}</div>
           <div style="font-size:36px;font-weight:900;color:var(--gold-bright);text-align:center;margin:18px 0">? ${op} ${b} = ${ans}</div>
@@ -16567,7 +16567,7 @@ const AnagramGame = {
     }
     this.scrambled = scrambled;
     const distract = [];
-    while(distract.length<3){
+    for(let _fg3=0;distract.length<3&&_fg3++<400;){
       const d = WORDS[Math.floor(Math.random()*WORDS.length)];
       if(d!==this.target && !distract.includes(d)) distract.push(d);
     }
@@ -16796,7 +16796,7 @@ const SequenceGame = {
     const p = patterns[Math.floor(Math.random()*patterns.length)]();
     this.q=p.seq; this.answer=p.next;
     const distract=[];
-    while(distract.length<3){
+    for(let _fg4=0;distract.length<3&&_fg4++<400;){
       const d = p.next + (Math.random()<.5?-1:1)*(Math.floor(Math.random()*5)+1);
       if(d!==p.next && !distract.includes(d) && d>0) distract.push(d);
     }
@@ -17143,7 +17143,7 @@ const ColorMatchGame = {
   next(){
     this.target = this.colors[Math.floor(Math.random()*this.colors.length)];
     const distract = [];
-    while(distract.length<3){
+    for(let _fg5=0;distract.length<3&&_fg5++<400;){
       const c = this.colors[Math.floor(Math.random()*this.colors.length)];
       if(c.n!==this.target.n && !distract.find(d=>d.n===c.n)) distract.push(c);
     }
@@ -18622,7 +18622,7 @@ const CommandmentsGame = {
   next(){if(this.q>=this.questions.length){this.end();return;}
     this.current=this.questions[this.q];
     const distract=[];
-    while(distract.length<3){const n=Math.floor(Math.random()*10)+1; if(n!==this.current.n && !distract.includes(n)) distract.push(n);}
+    for(let _fg6=0;distract.length<3&&_fg6++<400;){const n=Math.floor(Math.random()*10)+1; if(n!==this.current.n && !distract.includes(n)) distract.push(n);}
     this.options=[this.current.n,...distract].sort((a,b)=>a-b);
     this.q++; this._answered=false; this.render();
   },
@@ -19816,7 +19816,7 @@ const PatternMatchGame = {
     this.missing = this.sequence[this.missingIdx];
     // 4 options · correct + 3 distractors
     const distract=[];
-    while(distract.length<3){
+    for(let _fg7=0;distract.length<3&&_fg7++<400;){
       const s = shapes[Math.floor(Math.random()*shapes.length)];
       if(s!==this.missing && !distract.includes(s)) distract.push(s);
     }
@@ -20140,7 +20140,7 @@ const ImageRecallGame = {
     this.target = this.shown[Math.floor(Math.random()*5)];
     // distractors
     const distract=[];
-    while(distract.length<3){
+    for(let _fg8=0;distract.length<3&&_fg8++<400;){
       const e=pool[Math.floor(Math.random()*pool.length)];
       if(!this.shown.includes(e) && !distract.includes(e)) distract.push(e);
     }
@@ -20201,7 +20201,7 @@ const CardSortGame = {
     if(this.round>=this.maxRounds){this.end();return;}
     this.round++;
     this.cards=[];
-    while(this.cards.length<4){
+    for(let _fg9=0;this.cards.length<4&&_fg9++<400;){
       const n=Math.floor(Math.random()*99)+1;
       if(!this.cards.includes(n)) this.cards.push(n);
     }
@@ -20282,7 +20282,7 @@ const RomanGame = {
   next(){if(this.q>=this.questions.length){this.end();return;}
     this.current=this.questions[this.q];
     const distract=[];
-    while(distract.length<3){
+    for(let _fg10=0;distract.length<3&&_fg10++<400;){
       const v=this.current.v + (Math.random()<.5?-1:1)*(Math.floor(Math.random()*9)+1);
       if(v>0 && v!==this.current.v && !distract.includes(v)) distract.push(v);
     }
@@ -20328,7 +20328,7 @@ const OrderSortGame = {
     if(this.round>=this.maxRounds){this.end();return;}
     this.round++;
     this.cards=[];
-    while(this.cards.length<5){
+    for(let _fg11=0;this.cards.length<5&&_fg11++<400;){
       const n=Math.floor(Math.random()*999)+1;
       if(!this.cards.includes(n)) this.cards.push(n);
     }
@@ -20411,7 +20411,7 @@ const PyramidGame = {
     this.answer=b;
     // 4 multi-choice
     const distract=[];
-    while(distract.length<3){
+    for(let _fg12=0;distract.length<3&&_fg12++<400;){
       const v=b+(Math.random()<.5?-1:1)*(Math.floor(Math.random()*5)+1);
       if(v>0 && v!==b && !distract.includes(v)) distract.push(v);
     }
@@ -20800,7 +20800,7 @@ const NewWordRecallGame = (()=>{
     this.targetIdx=Math.floor(Math.random()*4);
     this.target=this.shown[this.targetIdx];
     const distract=[];
-    while(distract.length<3){
+    for(let _fg13=0;distract.length<3&&_fg13++<400;){
       const w=pool[Math.floor(Math.random()*pool.length)];
       if(!this.shown.includes(w) && !distract.includes(w)) distract.push(w);
     }
@@ -20930,7 +20930,7 @@ const CALC_POOL = (()=>{
     else if(op==='-') answer=a-b;
     else answer=a*b;
     const distract=[];
-    while(distract.length<3){
+    for(let _fg14=0;distract.length<3&&_fg14++<400;){
       const d=answer+(Math.random()<.5?-1:1)*(Math.floor(Math.random()*5)+1);
       if(d!==answer && !distract.includes(d)) distract.push(d);
     }
